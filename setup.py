@@ -16,7 +16,7 @@ setup(
     extras_require={
         "test": ["pytest"],
     },
-    package_data={"nagra": ["nagra/template/*/*sql"]},  # TODO test this works!
+    package_data={"nagra": ["template/*/*sql"]},  # TODO test this works!
     entry_points={
         "console_scripts": [
             "nagra = nagra.cli:run",
