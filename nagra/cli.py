@@ -42,7 +42,7 @@ def schema(args):
 def run():
     # top-level parser
     parser = argparse.ArgumentParser(
-        prog="jv",
+        prog="nagra",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
