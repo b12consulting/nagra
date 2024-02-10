@@ -48,7 +48,7 @@ class Schema:
                 "create_table",
                 table=name,
                 columns=ctypes,
-                required_columns=table.required_columns,
+                not_null=table.not_null,
             )
             yield stmt()
 
@@ -56,7 +56,7 @@ class Schema:
         if Transaction.flavor == "sqlite":
             fks = set()
             for name in self.tables:
-                stmt = Statement("select_foreign_keys", name=name)
+                stmt = Statement("select_foreign_keys").name(name)
                 rows = execute(stmt())
                 fks.update(
                     (name, column, other_table)
@@ -79,7 +79,7 @@ class Schema:
                     column=column,
                     col_def=ctypes[column],
                     other_table=other_table,
-                    required=column in table.required_columns,
+                    not_nulld=column in table.not_null,
                 )
                 yield stmt()
 
