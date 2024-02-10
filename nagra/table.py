@@ -10,8 +10,10 @@ from nagra.transaction import Transaction
 
 
 _SQLITE_TYPE_MAP = {
-    "varchar": "text",
-    "int": "integer",
+    "varchar": "TEXT",
+    "int": "INTEGER",
+    "float": "FLOAT",
+    "timestamp": "DATETIME",
 }
 
 
