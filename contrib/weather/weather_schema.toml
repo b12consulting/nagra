@@ -1,0 +1,15 @@
+[weather]
+natural_key = ["city", "timestamp"]
+[weather.columns]
+city = "int"
+timestamp = "timestamp"
+temperature = "float"
+wind_speed = "float"
+[weather.foreign_keys]
+city = "city"
+
+
+[city]
+natural_key = ["name"]
+[city.columns]
+name = "varchar"

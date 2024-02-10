@@ -1,0 +1,281 @@
+
+# Weather Example
+
+This folder contains a miniature version of a data project, with an
+ETL, a reporting dashboard and an api. It serve as a showcase on how
+Nagra simply data modeling and data access and how it can be composed
+with the usual tooling of a data pipeline.
+
+We use sqlite for all the examples, but you should be able to switch
+`sqlite://weather.db` to `postgresql:///weather` and run the exact same
+code.
+
+## Data sources
+
+Our two sources in this example are the files `city.csv` and
+`weather.csv`. By chance, we the cities given in the wearther file are
+exactly the same as the ones in the city file, with the same spelling
+or capitalization.
+
+``` shell
+$ cat city.csv
+name
+Bruxelles
+Louvain-la-Neuve
+Leuven
+
+$ cat weather.csv
+city,timestamp,temperature,wind_speed
+Bruxelles, "2024-06-01 12:00", 20, 30
+Louvain-la-Neuve, "2024-06-01 12:00", 21, 20
+Leuven, "2024-06-01 12:00", 19, 10
+```
+
+
+
+## Data Model
+
+The first problem to solve is to define a data model. With Nagra one
+can define a table like this:
+
+``` python
+city = Table(
+    name="city",
+    columns={
+        "name": "varchar",
+    },
+    natural_key=["name"],
+)
+```
+
+This definition gives the name "city" to the table, and defines one
+column "name" of type varchar (aka an `str` in Python parlance). This
+also express the fact that the natural key is composed of the column
+name, so we can have no two cities with the same name and conversely a
+city is uniquely identified by its name.
+
+Similarly we can define another table like this
+
+``` python
+weather = Table(
+    "weather",
+    columns={
+        "city": "int",
+        "timestamp": "timestamp",
+        "temperature": "float",
+        "wind_speed": "float",
+    },
+    natural_key=["city", "timestamp"],
+    foreign_keys={
+        "city": "city",
+    }
+)
+```
+
+
+The `foreign_key` parameter tells that the "city" column (the dict
+key) is a reference to the "city" table (the dict value).
+
+As a the number of table growth, tt can become quickly burdersome to
+define the table definition like this, that's why nagra comes with a
+function helper that can load all of those from a toml file.
+
+## Schema
+
+The `weather_schema.toml` contains our table definitions and can be
+loaded with `load_schema`, like this:
+
+
+``` python
+from nagra import Transaction, Table, load_schema
+
+db = "sqlite://weather.db"
+with Transaction(db):
+    load_schema("weather_schema.toml", create_tables=True)
+```
+
+
+The example here above also introduces the `Transaction` object, this
+context manager wraps the block of code under it in a database
+transaction, making it fully atomic. It is usually used in a program
+entry point, guaranteeing that your database is kept in a consistent
+state even in case of a crash.
+
+What we also see is that `load_schema` takes a `create_tables`
+parameter, so it is not onoly able to instanciate our `Table` object
+but also to create actual table in the database.
+
+If your run the above code, you should see a new file `weather.db` and
+this sqlite database should contain two tables:
+
+``` shell
+$ sqlite3 weather.db ".tables"
+city     weather
+```
+
+
+## ETL - City
+
+Now that our data model is in place, we can finally load some
+data. Thanks to pandas, its easy to create a dataframe out of the csv
+files:
+
+``` python
+df = read_csv(HERE / "city.csv")
+```
+
+Whe can then use `Table.get` to get back our city table and ask it for
+an upsert statement:
+
+``` python
+city_upsert = Table.get("city").upsert("name")
+```
+
+We passed "name" as argument, simply to tell that we will update (or
+insert) values in the "name" column. If no argument is given upsert
+will default to all. We can ask to get the sql statement:
+
+``` python
+>>> print(city_upsert.stm())
+INSERT INTO "city" (name)
+VALUES (
+  ?
+)
+ON CONFLICT (
+ name
+)
+
+DO NOTHING
+```
+
+Or we can execute it like this:
+
+``` python
+city_upsert.execute("Bruxelles")
+```
+
+This will add a line in the table. Since we already have a dataframe,
+we can use `executemany` to loads all the lines:
+
+``` python
+city_upsert.executemany(df.values)
+```
+
+
+## Interlude
+
+Lets pause our work here and run a stripped-down version of what we
+did until now.
+
+``` python
+from nagra import Transaction, Table, load_schema
+
+db = "sqlite://weather.db"
+with Transaction(db):
+    load_schema("weather_schema.toml", create_tables=True)
+    city_upsert = Table.get("city").upsert("name")
+    records = [
+        ("Bruxelles",),
+        ("Louvain-la-Neuve",),
+    ]
+    city_upsert.executemany(records)
+```
+
+
+If you run the above code, you will be able to inspect the result with
+the sqlite3 cli:
+
+``` shell
+$ sqlite3 weather.db
+SQLite version 3.43.2 2023-10-10 13:08:14
+Enter ".help" for usage hints.
+sqlite> .mode col
+sqlite> SELECT * FROM city;
+id  name              STRICT
+--  ----------------  ------
+1   Bruxelles
+2   Louvain-la-Neuve
+```
+
+As you can see, the table also contains and `id` column, this column
+is added automatically on every table created by nagra, and is used as
+a reference to every foreign that needs to model a link to the table.
+
+If you define the `NAGRA_DB` and `NAGRA_SCHEMA` environment variables,
+you can also use the `nagra` cli:
+
+
+``` shell
+export NAGRA_DB=sqlite://weather.db
+export NAGRA_SCHEMA="weather_schema.toml"
+```
+
+and then for example:
+
+``` shell
+$ nagra select city
+name
+----------------
+Bruxelles
+Louvain-la-Neuve
+```
+
+Here `id` is not shown by default, but you can specify the column name
+you want to see:
+
+``` shell
+$ nagra select city name id
+name                id
+----------------  ----
+Bruxelles            1
+Louvain-la-Neuve     2
+```
+
+
+## ETL - Weather Data
+
+Just like we loaded `city.csv` we can load `weather.csv`:
+
+    ``` python
+    df = read_csv(HERE / "weather.csv")
+    weather_upsert = Table.get("weather").upsert(
+        "city.name",
+        "timestamp",
+        "temperature",
+        "wind_speed",
+    )
+    weather_upsert.executemany(df.values)
+    ```
+
+
+Here again the arguments to `Table.upsert` are the columns names we
+want to update.
+
+There is a little difference though, we used `city.name` instead of
+simply `city`. This means that we don't plan to have integer in our
+records. Worded differently: we won't resolve the city names we have
+in `weather.csv`. We don't plan to read the existing city names and
+their corresponding `id` in order give the proper values to the `city`
+column, we let the library deal it for us.
+
+## ETL - Full Run
+
+All the steps explain here above are combined for you in
+`weather-etl.py`. You have to invoque it like this:
+
+``` shell
+$ python weather-etl.py city
+$ python weather-etl.py weather
+```
+
+Feel free to to inspect the content of the database after every step,
+to remove the database file and run those in a reverse order.
+
+## Streamlit Report
+
+TODO
+
+
+## API with FastAPI
+
+TODO
