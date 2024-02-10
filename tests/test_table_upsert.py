@@ -116,3 +116,51 @@ def test_many_upsert(transaction, person):
     rows = list(person.select("name", "parent.name").execute())
     assert len(rows) == 4
 
+
+def test_dbl_fk_upsert(transaction, person):
+    # GP
+    upsert = person.upsert("name")
+    records = [("GP Alice",), ("GP Bob",)]
+    upsert.executemany(records)
+
+    # Parents
+    upsert = person.upsert("name", "parent.name")
+    records = [
+        (
+            "P Alice",
+            "GP Alice",
+        ),
+        (
+            "P Bob",
+            "GP Bob",
+        ),
+    ]
+    upsert.executemany(records)
+
+    # children
+    upsert = person.upsert("name", "parent.parent.name")
+    records = [
+        (
+            "Alice",
+            "GP Alice",
+        ),
+        (
+            "Bob",
+            "GP Bob",
+        ),
+    ]
+    upsert.executemany(records)
+
+
+    select = person.select(
+        "name",
+        "parent.name",
+        "parent.parent.name",
+    ).where(
+        '(not (is parent.parent.name null))'
+    ).orderby("name")
+    rows = list(select)
+    assert rows == [
+        ('Alice', 'P Alice', 'GP Alice'),
+        ('Bob', 'P Bob', 'GP Bob'),
+    ]
