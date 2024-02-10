@@ -47,13 +47,13 @@ def run():
     )
 
     default_db = os.environ.get('NAGRA_DB')
+    default_schema = os.environ.get('NAGRA_SCHEMA')
     parser.add_argument(
         "--db",
         "-d",
         default=default_db,
         help=f"DB uri, (default: {default_db})",
     )
-    default_schema = os.environ.get('NAGRA_SCHEMA')
     parser.add_argument(
         "--schema",
         "-s",

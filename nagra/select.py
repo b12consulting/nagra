@@ -47,6 +47,7 @@ class Select(Executable):
         return self
 
     def to_dataclass(self, *aliases):
+        # TODO return nullable union type if a column is not required
         return dataclasses.make_dataclass(
             self.table.name,
             fields=[(clean_col(c), d) for c, d in self.dtypes(*aliases)]
@@ -134,5 +135,13 @@ class Select(Executable):
         df = DataFrame()
         for name, dt, col in zip(names, dtypes, by_col):
             # FIXME Series(col, dtype=dt) fail on json cols!
-            df[name] = Series(col).astype(dt)
+            srs = Series(col)
+            if dt == int:
+                # Make sure we have no nan for int columns
+                srs = srs.fillna(0)
+            df[name] = srs.astype(dt)
         return df
+
+    def to_dict(self):
+        columns = [f.name for f in dataclasses.fields(self.to_dataclass())]
+        return [dict(zip(columns, record)) for record in self]

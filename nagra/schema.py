@@ -48,6 +48,7 @@ class Schema:
                 "create_table",
                 table=name,
                 columns=ctypes,
+                required_columns=table.required_columns,
             )
             yield stmt()
 
@@ -78,7 +79,7 @@ class Schema:
                     column=column,
                     col_def=ctypes[column],
                     other_table=other_table,
-                    required=False,  # TODO should come from table param
+                    required=column in table.required_columns,
                 )
                 yield stmt()
 

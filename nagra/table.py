@@ -23,11 +23,13 @@ class Table:
         columns: Dict,
         natural_key: List = None,
         foreign_keys: Dict = None,
+        required_columns: List = None,
     ):
         self.name = name
         self.columns = columns
         self.natural_key = natural_key or list(columns)
         self.foreign_keys = foreign_keys or {}
+        self.required_columns = set(self.natural_key) | set(required_columns or [])
         self.schema = Schema.default
         self.schema.add(self.name, self)
 
