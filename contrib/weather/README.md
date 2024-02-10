@@ -164,8 +164,8 @@ city_upsert.executemany(df.values)
 
 ## Interlude
 
-Lets pause our work here and run a stripped-down version of what we
-did until now.
+Lets pause our work here and prepare a stripped-down version of what
+we did until now.
 
 ``` python
 from nagra import Transaction, Table, load_schema
@@ -255,8 +255,10 @@ There is a little difference though, we used `city.name` instead of
 simply `city`. This means that we won't resolve the city names we got
 from `weather.csv`.  Worded differently: We don't have to read the
 existing city names and their corresponding `id` from the records in
-the database in order give the proper values to the `city` column, we
-let the library deal with it for us.
+the database in order give the proper values to the `city` column. We
+let the library deal with it based on the fact that `city.name`
+identifies the `name` column of the `city` table (or more precisely
+the table referred by the foreign key column `city`).
 
 
 ## ETL - Full Run
