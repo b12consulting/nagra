@@ -98,7 +98,8 @@ class Schema:
 
     def drop(self):
         for name in self.tables:
-            execute(f'DROP TABLE IF EXISTS "{name}" CASCADE')
+            stmt = Statement("drop_table", name=name)
+            execute(stmt())
 
     def generate_d2(self):
         tpl = Template(D2_TPL)
