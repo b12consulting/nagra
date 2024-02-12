@@ -117,9 +117,6 @@ class ExecMany:
             cursor.executemany(self.stm, self.values, returning=True)
             while True:
                 vals = cursor.fetchone()
-                if vals:
-                    yield vals
-                else:
-                    yield None
+                yield vals
                 if not cursor.nextset():
                     break

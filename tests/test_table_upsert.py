@@ -1,4 +1,7 @@
 from nagra.utils import strip_lines
+from nagra.exceptions import UnresolvedFK
+
+import pytest
 
 
 def test_simple_upsert_stm(person):
@@ -164,3 +167,19 @@ def test_dbl_fk_upsert(transaction, person):
         ('Alice', 'P Alice', 'GP Alice'),
         ('Bob', 'P Bob', 'GP Bob'),
     ]
+
+
+def test_missing_fk(transaction, person):
+    # If pass None in parent.name, we get None back
+    upsert = person.upsert("name", "parent.name")
+    records = [("Big Alice", None), ("Big Bob", None)]
+    upsert.executemany(records)
+
+    rows = list(person.select("parent").execute())
+    assert rows == [(None,), (None,)]
+
+    # If given a non-existing name upsert raises UnresolvedFK exception
+    upsert = person.upsert("name", "parent.name")
+    records = [("Big Alice", "I do not exist")]
+    with pytest.raises(UnresolvedFK):
+        upsert.executemany(records)

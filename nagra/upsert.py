@@ -5,6 +5,7 @@ from nagra import Statement, executemany, execute, Transaction
 from nagra.transaction import ExecMany
 from nagra.sexpr import AST
 from nagra.schema import Schema
+from nagra.exceptions import UnresolvedFK
 
 
 class Upsert:
@@ -68,16 +69,7 @@ class Upsert:
         for col, to_select in self.groups.items():
             if to_select:
                 values = list(zip(*(value_df[f"{col}.{s}"] for s in to_select)))
-                stm = self.resolve_stm[col]
-                exm = list(ExecMany(stm, values))
-                try:
-                    # TODO logic here should depends on that nullable property
-                    # OR select stm in ExecMany could be adapted
-                    # OR add a `lenient` param
-                    # arg_df[col] = [id for id, in exm]
-                    arg_df[col] = [ids[0] if ids is not None else None for ids in exm ]
-                except:
-                    breakpoint()
+                arg_df[col] = self._resolve(col, values)
             else:
                 arg_df[col] = value_df[col]
 
@@ -93,6 +85,18 @@ class Upsert:
                     execute(stm, item)
             else:
                 executemany(stm, chunk)
+
+    def _resolve(self, col, values):
+        stm = self.resolve_stm[col]
+        exm = ExecMany(stm, values)
+        for res, vals in zip(exm, values):
+            if res is not None:
+                yield res[0]
+            elif any(v is None for v in vals):
+                # One of the values is not given
+                yield None
+            else:
+                raise UnresolvedFK("Unable to resolve '{vals}' (for column '{col}')")
 
     def __call__(self, records):
         return self.executemany(records)

@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="Nagra",
-    version="0.0",
+    version="0.0.1",
     description="Query databases without models",
     install_requires=[
         "jinja2",
