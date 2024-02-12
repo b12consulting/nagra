@@ -277,7 +277,51 @@ to remove the database file and run those in a reverse order.
 
 ## Streamlit Report
 
-TODO
+The Streamlit example in `streamlit-weather.py`, shows how to create a
+select box based on the list of cities and then display the
+corresponding lines in the `weather` table.
+
+The select box is created like this:
+
+``` python
+cities = Table.get("city").select("name").orderby("name")
+name = st.selectbox("City", [c for c, in cities])
+```
+
+The first line creates a select object:
+- We get the table object with `Table.get("city")`
+- Then `.select(..)` returns a select object, we pass `"name"` to
+  specify which column we want to read
+- Methods on select are chainable, so `orderby(...)` also returns the
+  select object
+
+Here we don't call `.execute` on it, we simply loop on it:
+`[c for c, in cities]`. This is because a select is also iterable, it's only
+possible when no parameter have to passed to the execute.
+
+The DataFrame with weather data is created like this:
+
+``` python
+select =  Table.get("weather").select(
+    "timestamp",
+    "temperature",
+    "wind_speed",
+).where(
+    '(= city.name {})'
+).orderby("timestamp")
+rows = select.execute(name)
+df = DataFrame(rows, columns=select.columns)
+```
+
+Here again we use `Table.get` to get a table object and `.select(...)`
+to choose the column to read. We then filter the results with
+`.where`: it takes one or more boolean expression. Those expressions
+use a polish notation and are composable, eg:
+
+    '(or (= city.name "Bruxelles") (> timestamp "2024-01-01") )'
+
+If more than one expression is given, a conjunction is implied:
+`.where(A, B)` becomes `.where("(and A B)")`.
 
 
 ## API with FastAPI
