@@ -88,8 +88,8 @@ class Table:
             delete.where(where)
         return delete
 
-    def upsert(self, *columns):
-        return Upsert(self, *columns)
+    def upsert(self, *columns, lenient=False):
+        return Upsert(self, *columns, lenient=lenient)
 
     def insert(self, *columns):
         """

@@ -183,3 +183,11 @@ def test_missing_fk(transaction, person):
     records = [("Big Alice", "I do not exist")]
     with pytest.raises(UnresolvedFK):
         upsert.executemany(records)
+
+    # If lenient is given a None is inserted
+    for lenient in [True, ["parent"]]:
+        upsert = person.upsert("name", "parent.name", lenient=lenient)
+        records = [("Big Alice", "I do not exist")]
+        upsert.executemany(records)
+        rows = list(person.select("parent").where("(= name 'Big Alice')").execute())
+        assert rows == [(None,)]

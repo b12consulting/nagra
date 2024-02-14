@@ -6,15 +6,17 @@ from nagra.transaction import ExecMany
 from nagra.sexpr import AST
 from nagra.schema import Schema
 from nagra.exceptions import UnresolvedFK
+from nagra.utils import logger
 
 
 class Upsert:
-    def __init__(self, table, *columns):
+    def __init__(self, table, *columns, lenient=None):
         self.table = table
         self.columns = columns
         self.columns_ast = [AST.parse(c) for c in columns]
         self.groups, self.resolve_stm = self.prepare()
         self._insert_only = False
+        self.lenient = lenient or []
 
     def stm(self):
         conflict_key = ["id"] if "id" in self.groups else self.table.natural_key
@@ -95,8 +97,12 @@ class Upsert:
             elif any(v is None for v in vals):
                 # One of the values is not given
                 yield None
+            elif self.lenient is True or col in self.lenient:
+                msg = "Value '%s' not found for foreign key column '%s' of table %s"
+                logger.info(msg, vals, col, self.table)
+                yield None
             else:
-                raise UnresolvedFK("Unable to resolve '{vals}' (for column '{col}')")
+                raise UnresolvedFK(f"Unable to resolve '{vals}' (for column '{col}')")
 
     def __call__(self, records):
         return self.executemany(records)

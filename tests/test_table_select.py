@@ -111,3 +111,31 @@ def test_groupby(person):
         res
         == 'SELECT "person"."name", count(*) FROM "person" GROUP BY "person"."name" ;'
     )
+
+
+def test_orderby(person):
+    # asc
+    stm = person.select("name").orderby("name").stm()
+    res = " ".join(strip_lines(stm))
+    assert (
+        res
+        == 'SELECT "person"."name" FROM "person" ORDER BY "person"."name" asc ;'
+    )
+
+    # desc
+    stm = person.select("name").orderby(("name", "desc")).stm()
+    res = " ".join(strip_lines(stm))
+    assert (
+        res
+        == 'SELECT "person"."name" FROM "person" ORDER BY "person"."name" desc ;'
+    )
+
+
+    # with join
+    stm = person.select("name").orderby("parent.name").stm()
+    res = " ".join(strip_lines(stm))
+    assert res == (
+        'SELECT "person"."name" FROM "person" '
+        'LEFT JOIN "person" as parent_0 ON (parent_0.id = "person"."parent") '
+        'ORDER BY "parent_0"."name" asc ;'
+    )
