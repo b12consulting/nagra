@@ -122,8 +122,7 @@ class Table:
             cond.append("(like " + remote_col + " {})")
 
         ftable = Schema.get(self.foreign_keys[local_col])
-        select = ftable.select(remote_col).where(*cond)  # TODO group by remote_col!
-        # TODO sort results
+        select = ftable.select(remote_col).where(*cond).groupby(remote_col).orderby(remote_col)
         if like:
             cur = execute(select.stm(), (like,))
             return (x for x, in cur)
