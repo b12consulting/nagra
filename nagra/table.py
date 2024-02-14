@@ -88,15 +88,26 @@ class Table:
             delete.where(where)
         return delete
 
-    def upsert(self, *columns, lenient=False):
+    def upsert(self, *columns, lenient=None):
+        """
+        Create an upsert object based on the given columns, if
+        lenient is set, foreign keys wont be enforced on the given
+        columns even if a value is passed on the subsequent execute or
+        executemany. Example:
+
+        >>> upsert = Table.get("comment").upsert("body", "blog_post.title", lenient=["blog_post"])
+        >>> upsert.execute(("Nice post!", "A post title that will change soon."))
+
+        If lenient is set to True all foreign keys will be treated as such.
+        """
         return Upsert(self, *columns, lenient=lenient)
 
-    def insert(self, *columns):
+    def insert(self, *columns, lenient=None):
         """
         Provide an insert-only statement (won't raise error if
-        record already exists)
+        record already exists). See `Table.upsert` for `lenient` role.
         """
-        return Upsert(self, *columns).insert_only()
+        return Upsert(self, *columns, lenient=None).insert_only()
 
     def suggest(self, column, like=None):
         """
