@@ -1,3 +1,4 @@
+from itertools import chain
 import argparse
 import os
 
@@ -10,7 +11,8 @@ from nagra import load_schema
 def select(args):
     select = Table.get(args.table).select(*args.columns)
     if args.where:
-        select.where(*args.where)
+        where = chain.from_iterable(args.where)
+        select.where(*where)
     if args.limit:
         select = select.limit(args.limit)
     if args.orderby:
@@ -22,7 +24,8 @@ def select(args):
 
 def delete(args):
     delete = Table.get(args.table).delete()
-    delete.where(*args.where)
+    where = chain.from_iterable(args.where)
+    delete.where(*where)
     delete.execute()
 
 
@@ -65,14 +68,14 @@ def run():
     parser_select = subparsers.add_parser("select")
     parser_select.add_argument("table")
     parser_select.add_argument("columns", nargs="*")
-    parser_select.add_argument("--where", "-W", type=str, nargs="*")
+    parser_select.add_argument("--where", "-W", type=str, action='append', nargs="*")
     parser_select.add_argument("--limit", "-L", type=int)
     parser_select.add_argument("--orderby", "-O", help="Order by given column")
     parser_select.set_defaults(func=select)
 
     parser_delete = subparsers.add_parser("delete")
     parser_delete.add_argument("table")
-    parser_delete.add_argument("--where", "-W", type=str, nargs="*")
+    parser_delete.add_argument("--where", "-W", type=str, action='append', nargs="*")
     parser_delete.set_defaults(func=delete)
 
     parser_schema = subparsers.add_parser("schema")
