@@ -6,7 +6,7 @@ from nagra.mixin import Executable
 from nagra.sexpr import Env, AST, AggToken
 
 
-RE_VALID_IDENTIFIER = re.compile('\W|^(?=\d)')
+RE_VALID_IDENTIFIER = re.compile(r"\W|^(?=\d)")
 
 def clean_col(name):
     return RE_VALID_IDENTIFIER.sub('_', name)
@@ -103,7 +103,6 @@ class Select(Executable):
         return groupby_ast
 
     def stm(self):
-        joins = list(self.table.join(self.env))
         groupby_ast = self.groupby_ast or self.infer_groupby()
         groupby = [a.eval(self.env) for a in groupby_ast]
 
@@ -111,6 +110,7 @@ class Select(Executable):
             self.order_ast,
             self.order_directions,
         )]
+        joins = self.table.join(self.env)
         stm = Statement(
             "select",
             table=self.table.name,
