@@ -1,11 +1,12 @@
 """
-Usage: start this script first, it will populate a db:
-"sqlite://fastapi_example.sqlite".
+First run the etl to populate the example db
+
+    python weather-etl.py city
+    python weather-etl.py city
 
 You can then run the api like this:
 
-    uvicorn fastapi_example:app
-
+    uvicorn fastapi-example:app
 """
 
 from pathlib import Path
@@ -19,16 +20,17 @@ app = FastAPI()
 DB = "sqlite://weather.db"
 here = Path(__file__).parent
 
+
 def endpoint(app, name, select):
     dclass = select.to_dataclass()
     @app.get(f"/{name}", response_model=List[dclass])
     def getter():
         with Transaction(DB):
             records = select.to_dict()
-            print(records)
             return records
 
 
+# Init automate the creation of GET endpoint for every table
 def init():
     with Transaction(DB):
         load_schema(here / "weather_schema.toml")
@@ -37,7 +39,7 @@ def init():
         select = table.select()
         endpoint(app, name, select)
 
-
+# Custom endpoint
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
