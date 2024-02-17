@@ -27,6 +27,7 @@ def test_simple_upsert_stm(person):
         ")",
         "DO UPDATE SET",
         "parent = EXCLUDED.parent",
+        "RETURNING id",
     ]
 
 
@@ -34,8 +35,8 @@ def test_simple_upsert(transaction, person):
     # First upsert
     upsert = person.upsert("name")
     upsert.execute("Big Bob")
-    (rows,) = list(person.select("name").execute())
-    assert rows == ("Big Bob",)
+    (record,) = list(person.select("name").execute())
+    assert record == ("Big Bob",)
 
     # Second one
     upsert = person.upsert("name", "parent.name")
@@ -70,6 +71,7 @@ def test_upsert_stmt_with_id(person):
         ")",
         "DO UPDATE SET",
         "name = EXCLUDED.name , parent = EXCLUDED.parent",
+        "RETURNING id",
     ]
 
 
@@ -191,3 +193,21 @@ def test_missing_fk(transaction, person):
         upsert.executemany(records)
         rows = list(person.select("parent").where("(= name 'Big Alice')").execute())
         assert rows == [(None,)]
+
+
+def test_return_ids(transaction, person):
+    # Create an "on conflict update" upsert
+    upsert = person.upsert("name", "parent.name")
+    records = [("Big Alice", None), ("Big Bob", None)]
+    insert_ids = upsert.executemany(records)
+    update_ids= upsert.executemany(records)
+    assert len(insert_ids) == 2
+    assert insert_ids == update_ids
+    assert insert_ids != [None, None]
+
+    # Create an "on conflict do nothing" upsert
+    upsert = person.upsert("name")
+    records = [("Big Alice",), ("Big Bob",)]
+    insert_ids = upsert.executemany(records)
+    update_ids= upsert.executemany(records)
+    assert update_ids == update_ids == [None, None]

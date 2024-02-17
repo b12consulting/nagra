@@ -58,13 +58,12 @@ class Transaction:
         else:
             return cursor
 
-
     @classmethod
     def executemany(cls, stmt, args=None):
         logger.debug(stmt)
         transaction = cls.current
         cursor = transaction.cursor
-        cursor.executemany(stmt, args)
+        cursor.executemany(stmt, args, returning=True)
         if transaction.flavor == "duckdb":
             return yield_from_cursor(cursor)
         else:

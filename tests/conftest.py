@@ -31,10 +31,12 @@ kitchensink_table = Table(
 
 @pytest.fixture(scope="session")
 def person():
+    person_table.delete()
     return person_table
 
 @pytest.fixture(scope="session")
 def kitchensink():
+    kitchensink_table.delete()
     return kitchensink_table
 
 

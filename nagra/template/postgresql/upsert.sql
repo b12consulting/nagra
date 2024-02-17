@@ -4,6 +4,7 @@ VALUES (
   {{ "%s," if not loop.last else "%s" }}
   {%- endfor %}
 )
+
 ON CONFLICT (
  {{conflict_key | join(', ') }}
 )
@@ -15,3 +16,4 @@ DO UPDATE SET
 {% else %}
 DO NOTHING
 {% endif %}
+RETURNING id

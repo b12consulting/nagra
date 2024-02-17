@@ -29,9 +29,6 @@ class Upsert:
             conflict_key=conflict_key,
             do_update=do_update,
         )
-
-        # TODO add returning id to upsert sql and re-query those ids to make sure acl are respected
-
         return stm()
 
     def insert_only(self):
@@ -62,7 +59,9 @@ class Upsert:
         return groups, resolve_stm
 
     def execute(self, *values):
-        self.executemany([values])
+        ids = self.executemany([values])
+        if ids:
+            return ids[0]
 
     def executemany(self, records):
         # Transform list of records into a dataframe-like dict
@@ -78,15 +77,24 @@ class Upsert:
         args = zip(*(arg_df[c] for c in self.groups))
         # Work by chunks
         stm = self.stm()
+        ids = []
         while True:
             chunk = list(islice(args, 1000))
             if not chunk:
                 break
             if Transaction.flavor == "sqlite":
                 for item in chunk:
-                    execute(stm, item)
+                    cursor = execute(stm, item)
+                    new_id = cursor.fetchone()
+                    ids.append(new_id)
             else:
-                executemany(stm, chunk)
+                cursor = executemany(stm, chunk)
+                while True:
+                    new_id = cursor.fetchone()
+                    ids.append(new_id[0] if new_id else None)
+                    if not cursor.nextset():
+                        break
+        return ids
 
     def _resolve(self, col, values):
         stm = self.resolve_stm[col]
