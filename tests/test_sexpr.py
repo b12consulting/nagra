@@ -1,5 +1,5 @@
-from nagra.sexpr import AST, Env
-from nagra import Table
+from nagra.sexpr import AST
+from nagra.table import Table, Env
 
 
 def test_sexpr():

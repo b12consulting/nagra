@@ -1,12 +1,12 @@
 from nagra import Statement
 from nagra.mixin import Executable
-from nagra.sexpr import Env, AST
+from nagra.sexpr import AST
 
 
 class Delete(Executable):
-    def __init__(self, table):
+    def __init__(self, table, env):
         self.table = table
-        self.env = Env(table)
+        self.env = env
         self.where_asts = []
         self.where_conditions = []
         super().__init__()

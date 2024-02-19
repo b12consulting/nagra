@@ -52,26 +52,6 @@ class KWargs:
         return f'<KWargs "{self.value}">'
 
 
-class Env:
-    def __init__(self, table):
-        self.table = table
-        self.refs = {}
-
-    def add_ref(self, path):
-        *head, name, tail = path
-        prefix = tuple([*head, name])
-        table_alias = self.refs.get(prefix)
-        if not table_alias:
-            if len(prefix) >= 2:
-                self.add_ref(prefix)
-            table_alias = f"{name}_{len(self.refs)}"
-            self.refs[prefix] = table_alias
-        return f'"{table_alias}"."{tail}"'
-
-    def __repr__(self):
-        content = repr(self.refs)
-        return f"<Env {self.table.name} {content}>"
-
 
 class Alias:
     """
@@ -136,6 +116,8 @@ class AST:
         "sum": "sum({})".format,
         "avg": "avg({})".format,
         "every": "every({})".format,
+        "array_agg": "array_agg({})".format,
+        "group_concat": "group_concat({})".format,
         "count": lambda x="*": f"count({x})",
     }
 
@@ -303,7 +285,7 @@ class VarToken(Token):
         # TODO handle paramtoken here?
         if self.is_relation():
             *head, tail = self.value.split(".")
-            ftable, _ = env.table.join_on(tuple(head))
+            ftable, _, _ = env.table.join_on(tuple(head), env=env)
             col_type = ftable.columns[tail]
         else:
             col_type = env.table.columns[self.value]

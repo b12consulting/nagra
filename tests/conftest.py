@@ -15,6 +15,29 @@ person_table = Table(
 )
 
 
+address_table = Table(
+    "address",
+    columns={
+        "person": "int",
+        "city": "varchar",
+        "country": "int",
+    },
+    foreign_keys={
+        "person": "person",
+        "country": "country",
+    },
+    natural_key=["city", "person"],
+)
+
+country_table = Table(
+    "country",
+    columns={
+        "name": "varchar",
+    },
+    natural_key=["name"],
+)
+
+
 kitchensink_table = Table(
     "kitchensink",
     columns={
@@ -33,6 +56,13 @@ kitchensink_table = Table(
 def person():
     person_table.delete()
     return person_table
+
+
+@pytest.fixture(scope="session")
+def address():
+    address_table.delete()
+    return address_table
+
 
 @pytest.fixture(scope="session")
 def kitchensink():

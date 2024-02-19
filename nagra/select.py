@@ -3,7 +3,7 @@ import dataclasses
 
 from nagra import Statement
 from nagra.mixin import Executable
-from nagra.sexpr import Env, AST, AggToken
+from nagra.sexpr import AST, AggToken
 
 
 RE_VALID_IDENTIFIER = re.compile(r"\W|^(?=\d)")
@@ -13,12 +13,9 @@ def clean_col(name):
 
 
 class Select(Executable):
-    def __init__(self, table, *columns):
+    def __init__(self, table, *columns, env):
         self.table = table
-        self.env = Env(table)
-        self.columns = columns
-        self.columns_ast = [AST.parse(c) for c in columns]
-        self.query_columns = [a.eval(self.env) for a in self.columns_ast]
+        self.env = env #Env(table)
         self.where_asts = []
         self.where_conditions = []
         self._offset = None
@@ -26,12 +23,25 @@ class Select(Executable):
         self.groupby_ast = None
         self.order_ast = []
         self.order_directions = []
+        self.columns = []
+        self.columns_ast = []
+        self.query_columns = []
+        self._add_columns(columns)
         super().__init__()
+
+    def _add_columns(self, columns):
+        self.columns += columns
+        self.columns_ast += [AST.parse(c) for c in columns]
+        self.query_columns += [a.eval(self.env) for a in self.columns_ast]
 
     def where(self, *conditions):
         asts = [AST.parse(cond) for cond in conditions]
         self.where_asts += asts
         self.where_conditions += [ast.eval(self.env) for ast in asts]
+        return self
+
+    def select(self, *columns):
+        self._add_columns(columns)
         return self
 
     def offset(self, value):

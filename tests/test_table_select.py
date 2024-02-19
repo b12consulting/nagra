@@ -13,13 +13,16 @@ def test_select_with_join(person):
     stm = person.select("name", "parent.parent.name").stm()
     res = list(strip_lines(stm))
     assert res == [
-        "SELECT",
+        'SELECT',
         '"person"."name", "parent_1"."name"',
         'FROM "person"',
-        'LEFT JOIN "person" as parent_0 ON (parent_0.id = "person"."parent")',
-        'LEFT JOIN "person" as parent_1 ON (parent_1.id = "parent_0"."parent")',
-        ";",
-    ]
+        'LEFT JOIN "person" as parent_0 ON (',
+        'parent_0."id" = "person"."parent"',
+        ')',
+        'LEFT JOIN "person" as parent_1 ON (',
+        'parent_1."id" = "parent_0"."parent"',
+        ')',
+        ';']
 
 
 def test_select_with_where(person):
@@ -52,13 +55,15 @@ def test_select_where_and_join(person):
     stm = select.stm()
     res = list(strip_lines(stm))
     assert res == [
-        "SELECT",
+        'SELECT',
         '"person"."name"',
         'FROM "person"',
-        'LEFT JOIN "person" as parent_0 ON (parent_0.id = "person"."parent")',
-        "WHERE",
+        'LEFT JOIN "person" as parent_0 ON (',
+        'parent_0."id" = "person"."parent"',
+        ')',
+        'WHERE',
         '"parent_0"."name" = \'foo\'',
-        ";",
+        ';'
     ]
 
 
@@ -117,25 +122,47 @@ def test_orderby(person):
     # asc
     stm = person.select("name").orderby("name").stm()
     res = " ".join(strip_lines(stm))
-    assert (
-        res
-        == 'SELECT "person"."name" FROM "person" ORDER BY "person"."name" asc ;'
-    )
+    assert res == 'SELECT "person"."name" FROM "person" ORDER BY "person"."name" asc ;'
 
     # desc
     stm = person.select("name").orderby(("name", "desc")).stm()
     res = " ".join(strip_lines(stm))
-    assert (
-        res
-        == 'SELECT "person"."name" FROM "person" ORDER BY "person"."name" desc ;'
-    )
-
+    assert res == 'SELECT "person"."name" FROM "person" ORDER BY "person"."name" desc ;'
 
     # with join
     stm = person.select("name").orderby("parent.name").stm()
     res = " ".join(strip_lines(stm))
-    assert res == (
-        'SELECT "person"."name" FROM "person" '
-        'LEFT JOIN "person" as parent_0 ON (parent_0.id = "person"."parent") '
-        'ORDER BY "parent_0"."name" asc ;'
+    assert res == ('SELECT "person"."name" FROM "person" LEFT JOIN "person" as parent_0 ON ( '
+                   'parent_0."id" = "person"."parent" ) ORDER BY "parent_0"."name" asc ;')
+
+
+def test_alias(person, address):
+    select = person.alias(addresses="address.person").select(
+        "name",
+        "addresses.city",
+        "addresses.country.name",
+        "parent.name",
+        "parent.parent.name",
     )
+    stm = select.stm()
+    res = list(strip_lines(stm))
+    expected = [
+        'SELECT',
+        '"person"."name", "addresses_0"."city", "country_1"."name", '
+        '"parent_2"."name", "parent_3"."name"',
+        'FROM "person"',
+        'LEFT JOIN "address" as addresses_0 ON (',
+        'addresses_0."person" = "person"."id"',
+        ')',
+        'LEFT JOIN "country" as country_1 ON (',
+        'country_1."id" = "addresses_0"."country"',
+        ')',
+        'LEFT JOIN "person" as parent_2 ON (',
+        'parent_2."id" = "person"."parent"',
+        ')',
+        'LEFT JOIN "person" as parent_3 ON (',
+        'parent_3."id" = "parent_2"."parent"',
+        ')',
+        ';'
+    ]
+    assert res == expected

@@ -45,19 +45,22 @@ class Table:
     def select(self, *columns, where=None):
         if not columns:
             columns = list(self.default_columns())
-        slct = Select(self, *columns)
+        slct = Select(self, *columns, env=Env(self))
         if where:
             slct.where(where)
         return slct
 
-    def join(self, env):
-        for prefix, alias in env.refs.items():
-            # Find alias of previous join in the chain
-            *head, tail = prefix
-            prev_table = env.refs[tuple(head)] if head else self.name
-            # Identify last table & column of the chain
-            ftable, join_col = self.join_on(prefix)
-            yield (ftable.name, alias, prev_table, join_col)
+    def alias(self, **kw):
+        """
+        Create a join alias. Mainly usefull for one to many relations.
+        Example:
+        >>> select = table_person.join(addresses="adress.person")
+        >>> select.select("name", "addresses.city")
+        """
+        env = Env(self)
+        for name, path in kw.items():
+            env.add_alias(name, path)
+        return Select(self, env=env)
 
     def default_columns(self, nk_only=False):
         columns = self.natural_key if nk_only else self.columns
@@ -69,21 +72,47 @@ class Table:
             ftable = self.schema.get(self.foreign_keys[column])
             yield from (f"{column}.{k}" for k in ftable.default_columns(nk_only=True))
 
+    def join(self, env):
+        for prefix, alias in env.refs.items():
+            # Find alias of previous join in the chain
+            *head, tail = prefix
+            prev_table = env.refs[tuple(head)] if head else self.name
+            # Identify last table & column of the chain
+            ftable, alias_col, join_col = self.join_on(prefix, env)
+            yield (ftable.name, alias, prev_table, alias_col, join_col)
+
     @lru_cache
-    def join_on(self, path):
+    def join_on(self, path, env):
+        """
+        `path` is a tuple containing names of column, each of
+        which is a foreign key to another table.
+
+        Returns the next table to join and the column to join on.
+        """
         if len(path) == 1:
-            join_col = path[0]
-            table = self
-            ftable = self.schema.get(self.foreign_keys[join_col])
-            return ftable, join_col
-        ftable, _ = self.join_on(path[:-1])
-        table = ftable
+            head = path[0]
+            if alias := env.aliases.get(head):
+                # An alias is a string containing "table_name.fk_name"
+                table_name, alias_col = alias.split(".")
+                join_col = "id"
+                ftable = Table.get(table_name)
+            else:
+                # not an alias we implictly join on self, based on the
+                # given column
+                join_col = head
+                alias_col = "id"
+                fname= self.foreign_keys[join_col]
+                ftable = self.schema.get(fname)
+            return ftable, alias_col, join_col
+
+        # recurse to find the previous table in the chain
+        prev_table, _, _  = self.join_on(path[:-1], env)
         join_col = path[-1]
-        ftable = self.schema.get(table.foreign_keys[join_col])
-        return ftable, join_col
+        ftable = self.schema.get(prev_table.foreign_keys[join_col])
+        return ftable,  "id", join_col
 
     def delete(self, where=None):
-        delete = Delete(self)
+        delete = Delete(self, env=Env(self))
         if where:
             delete.where(where)
         return delete
@@ -134,3 +163,31 @@ class Table:
                 c: _SQLITE_TYPE_MAP.get(d, d) for c, d in self.columns.items()
             }
         return self.columns
+
+    def __repr__(self):
+        return f"<Table {self.name}>"
+
+
+class Env:
+    def __init__(self, table):
+        self.table = table
+        self.refs = {}
+        self.aliases = {}
+
+    def add_alias(self, name, path):
+        self.aliases[name] = path
+
+    def add_ref(self, path):
+        *head, name, tail = path
+        prefix = tuple([*head, name])
+        table_alias = self.refs.get(prefix)
+        if not table_alias:
+            if len(prefix) >= 2:
+                self.add_ref(prefix)
+            table_alias = f"{name}_{len(self.refs)}"
+            self.refs[prefix] = table_alias
+        return f'"{table_alias}"."{tail}"'
+
+    def __repr__(self):
+        content = repr(self.refs)
+        return f"<Env {self.table.name} {content}>"
