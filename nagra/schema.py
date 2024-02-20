@@ -25,8 +25,8 @@ class Schema:
         self.tables = {}
 
     def add(self, name, table):
-        # if name in self.tables: TODO
-        #     raise RuntimeError(f"Table {name} already in schema!")
+        if name in self.tables:
+            raise RuntimeError(f"Table {name} already in schema!")
         self.tables[name] = table
 
     @classmethod

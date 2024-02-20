@@ -26,12 +26,14 @@ class Table:
         natural_key: List = None,
         foreign_keys: Dict = None,
         not_null: List = None,
+        one2many: Dict = None,
     ):
         self.name = name
         self.columns = columns
         self.natural_key = natural_key or list(columns)
         self.foreign_keys = foreign_keys or {}
         self.not_null = set(self.natural_key) | set(not_null or [])
+        self.one2many = one2many or {}
         self.schema = Schema.default
         self.schema.add(self.name, self)
 
@@ -49,18 +51,6 @@ class Table:
         if where:
             slct.where(where)
         return slct
-
-    def alias(self, **kw):
-        """
-        Create a join alias. Mainly usefull for one to many relations.
-        Example:
-        >>> select = table_person.join(addresses="adress.person")
-        >>> select.select("name", "addresses.city")
-        """
-        env = Env(self)
-        for name, path in kw.items():
-            env.add_alias(name, path)
-        return Select(self, env=env)
 
     def default_columns(self, nk_only=False):
         columns = self.natural_key if nk_only else self.columns
@@ -91,11 +81,11 @@ class Table:
         """
         if len(path) == 1:
             head = path[0]
-            if alias := env.aliases.get(head):
+            if alias := self.one2many.get(head):
                 # An alias is a string containing "table_name.fk_name"
                 table_name, alias_col = alias.split(".")
                 join_col = "id"
-                ftable = Table.get(table_name)
+                ftable = self.schema.get(table_name)
             else:
                 # not an alias we implictly join on self, based on the
                 # given column
@@ -105,11 +95,10 @@ class Table:
                 ftable = self.schema.get(fname)
             return ftable, alias_col, join_col
 
-        # recurse to find the previous table in the chain
-        prev_table, _, _  = self.join_on(path[:-1], env)
-        join_col = path[-1]
-        ftable = self.schema.get(prev_table.foreign_keys[join_col])
-        return ftable,  "id", join_col
+        # Recurse to find the previous table in the chain
+        prev_table, *_  = self.join_on(path[:-1], env)
+        # Resolve last step
+        return prev_table.join_on(path[-1:], env)
 
     def delete(self, where=None):
         delete = Delete(self, env=Env(self))
@@ -172,10 +161,6 @@ class Env:
     def __init__(self, table):
         self.table = table
         self.refs = {}
-        self.aliases = {}
-
-    def add_alias(self, name, path):
-        self.aliases[name] = path
 
     def add_ref(self, path):
         *head, name, tail = path

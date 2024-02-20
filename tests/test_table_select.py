@@ -136,11 +136,11 @@ def test_orderby(person):
                    'parent_0."id" = "person"."parent" ) ORDER BY "parent_0"."name" asc ;')
 
 
-def test_alias(person, address):
-    select = person.alias(addresses="address.person").select(
+def test_alias_stm(person, org):
+    # Combine one2many and implicit joins
+    select = person.select(
         "name",
-        "addresses.city",
-        "addresses.country.name",
+        "orgs.name",
         "parent.name",
         "parent.parent.name",
     )
@@ -148,21 +148,63 @@ def test_alias(person, address):
     res = list(strip_lines(stm))
     expected = [
         'SELECT',
-        '"person"."name", "addresses_0"."city", "country_1"."name", '
-        '"parent_2"."name", "parent_3"."name"',
+        '"person"."name", "orgs_0"."name", "parent_1"."name", '
+        '"parent_2"."name"',
         'FROM "person"',
-        'LEFT JOIN "address" as addresses_0 ON (',
-        'addresses_0."person" = "person"."id"',
+        'LEFT JOIN "org" as orgs_0 ON (',
+        'orgs_0."person" = "person"."id"',
         ')',
-        'LEFT JOIN "country" as country_1 ON (',
-        'country_1."id" = "addresses_0"."country"',
+        'LEFT JOIN "person" as parent_1 ON (',
+        'parent_1."id" = "person"."parent"',
         ')',
         'LEFT JOIN "person" as parent_2 ON (',
-        'parent_2."id" = "person"."parent"',
-        ')',
-        'LEFT JOIN "person" as parent_3 ON (',
-        'parent_3."id" = "parent_2"."parent"',
+        'parent_2."id" = "parent_1"."parent"',
         ')',
         ';'
     ]
+    assert res == expected
+
+
+    # Multiple one2many
+    select = person.select(
+        "name",
+        "orgs.country",
+        "skills.name",
+    )
+    stm = select.stm()
+    res = list(strip_lines(stm))
+    expected = [
+        'SELECT',
+        '"person"."name", "orgs_0"."country", "skills_1"."name"',
+        'FROM "person"',
+        'LEFT JOIN "org" as orgs_0 ON (',
+        'orgs_0."person" = "person"."id"',
+        ')',
+        'LEFT JOIN "skill" as skills_1 ON (',
+        'skills_1."person" = "person"."id"',
+        ')',
+        ';'
+    ]
+    assert res == expected
+
+
+    # Use a on2many after a many2one
+    select = org.select(
+        "name",
+        "person.name",
+        "person.skills.name",
+    )
+    stm = select.stm()
+    res = list(strip_lines(stm))
+    expected = [
+        'SELECT',
+        '"org"."name", "person_0"."name", "skills_1"."name"',
+        'FROM "org"',
+        'LEFT JOIN "person" as person_0 ON (',
+        'person_0."id" = "org"."person"',
+        ')',
+        'LEFT JOIN "skill" as skills_1 ON (',
+        'skills_1."person" = "person_0"."id"',
+        ')',
+        ';']
     assert res == expected

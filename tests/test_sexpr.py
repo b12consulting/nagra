@@ -48,21 +48,9 @@ def test_simple_eval():
     assert ast.eval(env) == '"spam"."a" = (1 = 1)'
 
 
-def test_join_eval():
-    table = Table(
-        "person",
-        columns={
-            "name": "varchar",
-            "parent": "int",
-        },
-        foreign_keys={
-            "parent": "person",
-        },
-        natural_key=["name"],
-    )
-
+def test_join_eval(person):
     # Unique  join
-    env = Env(table=table)
+    env = Env(table=person)
     expr = "(and (= parent.name 'Roger')"
     ast = AST.parse(expr)
     res = ast.eval(env)
@@ -72,7 +60,7 @@ def test_join_eval():
     assert res == """("parent_0"."name" = 'Roger')"""
 
     # Double join with two different depth
-    env = Env(table=table)
+    env = Env(table=person)
     expr = "(and (= parent.name 'Roger') (= parent.parent.name 'George')"
     ast = AST.parse(expr)
     res = ast.eval(env)
@@ -83,7 +71,7 @@ def test_join_eval():
     assert res == """("parent_0"."name" = 'Roger') AND ("parent_1"."name" = 'George')"""
 
     # Double join with same depth
-    env = Env(table=table)
+    env = Env(table=person)
     expr = "(and (= parent.name 'Roger') (= parent.id 1)"
     ast = AST.parse(expr)
     res = ast.eval(env)

@@ -2,6 +2,7 @@ import pytest
 
 from nagra import Table, Transaction, Schema
 
+
 person_table = Table(
     "person",
     columns={
@@ -12,22 +13,39 @@ person_table = Table(
         "parent": "person",
     },
     natural_key=["name"],
+    one2many = {
+        "orgs": "org.person",
+        "skills": "skill.person",
+    }
+)
+
+
+org_table = Table(
+    "org",
+    columns={
+        "name": "varchar",
+        "person": "int",
+    },
+    foreign_keys={
+        "person": "person",
+    },
+    natural_key=["name"],
 )
 
 
 address_table = Table(
     "address",
     columns={
-        "person": "int",
+        "org": "int",
         "city": "varchar",
         "country": "int",
     },
     foreign_keys={
-        "person": "person",
-        "country": "country",
+        "org": "org",
     },
     natural_key=["city", "person"],
 )
+
 
 country_table = Table(
     "country",
@@ -36,6 +54,20 @@ country_table = Table(
     },
     natural_key=["name"],
 )
+
+
+skill_table = Table(
+    "skill",
+    columns={
+        "name": "varchar",
+        "person": "int",
+    },
+    natural_key=["name"],
+    foreign_keys={
+        "person": "person",
+ }
+)
+
 
 
 kitchensink_table = Table(
@@ -59,9 +91,9 @@ def person():
 
 
 @pytest.fixture(scope="session")
-def address():
-    address_table.delete()
-    return address_table
+def org():
+    org_table.delete()
+    return org_table
 
 
 @pytest.fixture(scope="session")
