@@ -30,6 +30,9 @@ org_table = Table(
         "person": "person",
     },
     natural_key=["name"],
+    one2many = {
+        "addresses": "address.org",
+    }
 )
 
 

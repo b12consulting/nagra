@@ -136,7 +136,7 @@ def test_orderby(person):
                    'parent_0."id" = "person"."parent" ) ORDER BY "parent_0"."name" asc ;')
 
 
-def test_alias_stm(person, org):
+def test_o2m_stm(person, org):
     # Combine one2many and implicit joins
     select = person.select(
         "name",
@@ -205,6 +205,27 @@ def test_alias_stm(person, org):
         ')',
         'LEFT JOIN "skill" as skills_1 ON (',
         'skills_1."person" = "person_0"."id"',
+        ')',
+        ';']
+    assert res == expected
+
+
+    # Use a on2many after a one2many
+    select = person.select(
+        "name",
+        "orgs.addresses.city"
+    )
+    stm = select.stm()
+    res = list(strip_lines(stm))
+    expected = [
+        'SELECT',
+        '"person"."name", "addresses_1"."city"',
+        'FROM "person"',
+        'LEFT JOIN "org" as orgs_0 ON (',
+        'orgs_0."person" = "person"."id"',
+        ')',
+        'LEFT JOIN "address" as addresses_1 ON (',
+        'addresses_1."org" = "orgs_0"."id"',
         ')',
         ';']
     assert res == expected
