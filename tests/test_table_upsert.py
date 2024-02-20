@@ -23,10 +23,10 @@ def test_simple_upsert_stm(person):
         "%s,%s",
         ")",
         "ON CONFLICT (",
-        "name",
+        '"name"',
         ")",
         "DO UPDATE SET",
-        "parent = EXCLUDED.parent",
+        '"parent" = EXCLUDED."parent"',
         "RETURNING id",
     ]
 
@@ -67,10 +67,10 @@ def test_upsert_stmt_with_id(person):
         "%s,%s,%s",
         ")",
         "ON CONFLICT (",
-        "id",
+        '"id"',
         ")",
         "DO UPDATE SET",
-        "name = EXCLUDED.name , parent = EXCLUDED.parent",
+        '"name" = EXCLUDED."name" , "parent" = EXCLUDED."parent"',
         "RETURNING id",
     ]
 

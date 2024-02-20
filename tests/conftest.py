@@ -39,14 +39,14 @@ org_table = Table(
 address_table = Table(
     "address",
     columns={
-        "org": "int",
         "city": "varchar",
+        "org": "int",
         "country": "int",
     },
     foreign_keys={
         "org": "org",
     },
-    natural_key=["city", "person"],
+    natural_key=["city"],
 )
 
 
@@ -97,6 +97,11 @@ def person():
 def org():
     org_table.delete()
     return org_table
+
+@pytest.fixture(scope="session")
+def address():
+    address_table.delete()
+    return address_table
 
 
 @pytest.fixture(scope="session")

@@ -6,12 +6,12 @@ VALUES (
 )
 
 ON CONFLICT (
- {{conflict_key | join(', ') }}
+ {{conflict_key | map('autoquote') | join(', ') }}
 )
 {% if do_update %}
 DO UPDATE SET
   {% for col in columns if col not in conflict_key-%}
-  {{col}} = EXCLUDED.{{col}} {{", " if not loop.last}}
+  "{{col}}" = EXCLUDED."{{col}}" {{", " if not loop.last}}
   {%- endfor %}
 {% else %}
 DO NOTHING

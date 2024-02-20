@@ -229,3 +229,21 @@ def test_o2m_stm(person, org):
         ')',
         ';']
     assert res == expected
+
+
+def test_o2m_select(transaction, person, org, address):
+    # Test with actual data
+    person.upsert("name").execute("Charly")
+    org.upsert("name", "person.name").execute("Alpha", "Charly")
+    org.upsert("name", "person.name").execute("Beta", "Charly")
+    address.upsert("city", "org.name").executemany([
+        ("Ankara", "Alpha"),
+        ("Athens", "Alpha"),
+        ("Beirut", "Beta"),
+    ])
+
+    rows = list(person.select(
+        "name",
+        "orgs.addresses.city"
+    ).orderby("orgs.addresses.city"))
+    assert rows == [('Charly', 'Ankara'), ('Charly', 'Athens'), ('Charly', 'Beirut')]
