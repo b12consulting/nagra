@@ -63,7 +63,7 @@ FROM "person"
  );
 ```
 
-**New feature:** Table.upsert now returns ids of inserted or updated
+**New feature:** `Table.upsert` now returns ids of inserted or updated
 rows (no id is returned when a row is left untouched).
 
 ``` python
@@ -79,14 +79,14 @@ rows (no id is returned when a row is left untouched).
 
 ## 0.0.2
 
-**Breaking change:** `Table.upsert` now supports `lenient` parameters
+**Breaking change:** `Table.upsert` now supports a `lenient` parameter
 (default to `None`). If set to `True` (or to a list of column names),
 allows a foreign key to not be resoled and simply put a null value in
 database. If not set raises `UnresolvedFK` exception when a foreign
 key can not be resolved (the corresponding value is not found in the
 database)
 
-**New feature:** `--where` parameters in the command line now accept
+**New feature:** `--where` argument in the command line now accept
 multiple expressions. `--where` can also be repeated multiple times.
 
 **New feature:** Proper support for `not_null` parameter. All column
