@@ -1,3 +1,6 @@
+from pathlib import Path
+from io import IOBase
+
 import toml
 from jinja2 import Template
 
@@ -28,6 +31,9 @@ class Schema:
         if name in self.tables:
             raise RuntimeError(f"Table {name} already in schema!")
         self.tables[name] = table
+
+    def reset(self):
+        self.tables = {}
 
     @classmethod
     def get(cls, name):
@@ -108,13 +114,22 @@ class Schema:
         return res
 
 
-def load_schema(toml_file, create_tables=False):
+def load_schema(toml_src, create_tables=False, reset=True):
     # Late import to avoid circual deps (should put this code in a
     # "misc" sumodule)
     from nagra.table import  Table
 
+    if reset:
+        Schema.default.reset()
     # load table definitions
-    tables = toml.loads(open(toml_file).read())
+    match toml_src:
+        case IOBase():
+            content = toml_src.read()
+        case Path():
+            content =  toml_src.open().read()
+        case _:
+            content = toml_src
+    tables = toml.loads(content)
     for name, info in tables.items():
         Table(name, **info)
     if create_tables:

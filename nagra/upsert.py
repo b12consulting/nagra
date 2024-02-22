@@ -110,7 +110,10 @@ class Upsert:
                 logger.info(msg, vals, col, self.table)
                 yield None
             else:
-                raise UnresolvedFK(f"Unable to resolve '{vals}' (for column '{col}')")
+                raise UnresolvedFK(
+                    f"Unable to resolve '{vals}' (for foreign key "
+                    f"{col} of table {self.table.name})"
+                )
 
     def __call__(self, records):
         return self.executemany(records)
