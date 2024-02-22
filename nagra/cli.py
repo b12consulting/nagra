@@ -16,7 +16,8 @@ def select(args):
     if args.limit:
         select = select.limit(args.limit)
     if args.orderby:
-        select = select.orderby(args.orderby)
+        orderby = chain.from_iterable(args.where)
+        select = select.orderby(*orderby)
     rows = list(select.execute())
     headers = [d[0] for d in select.dtypes()]
     print(tabulate(rows, headers))
@@ -36,7 +37,7 @@ def schema(args):
         return
 
     rows = []
-    for name in sch.tables:
+    for name in sorted(sch.tables.keys()):
         rows.append([name])
     headers = ["table"]
     print(tabulate(rows, headers))
@@ -70,7 +71,8 @@ def run():
     parser_select.add_argument("columns", nargs="*")
     parser_select.add_argument("--where", "-W", type=str, action='append', nargs="*")
     parser_select.add_argument("--limit", "-L", type=int)
-    parser_select.add_argument("--orderby", "-O", help="Order by given column")
+    parser_select.add_argument("--orderby", "-O", type=str,
+                               action='append', nargs="*", help="Order by given columns")
     parser_select.set_defaults(func=select)
 
     parser_delete = subparsers.add_parser("delete")
@@ -91,7 +93,7 @@ def run():
 
     try:
         with Transaction(args.db):
-            load_schema(args.schema)
+            load_schema(open(args.schema))
             args.func(args)
     except (BrokenPipeError, KeyboardInterrupt):
         pass
