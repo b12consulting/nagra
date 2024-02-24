@@ -88,6 +88,7 @@ def scan(tokens, end_tk=")"):
 
 class AST:
     builtins = {
+        # Boolean
         "!=": "{} != {}".format,
         "<": "{} < {}".format,
         "<=": "{} <= {}".format,
@@ -98,16 +99,23 @@ class AST:
         "or": lambda *x: " OR ".join(x),
         "not": "NOT {}".format,
         "is": "{} is {}".format,
-        "in": lambda x, *ys: f"{x} in (%s)" % ", ".join(ys),
-        "null": lambda: "NULL",
         "true": lambda: "true",
         "false": lambda: "false",
-        "like": "{} LIKE {}".format,
-        "ilike": "{} ILIKE {}".format,
+        # Arithmetic
         "+" :lambda *xs: (' + '.join("{}" for _ in xs)).format(*xs),
         "-": lambda *xs: (' - '.join("{}" for _ in xs)).format(*xs),
         "*": lambda *xs: (' * '.join("{}" for _ in xs)).format(*xs),
         "/": lambda *xs: (' / '.join("{}" for _ in xs)).format(*xs),
+        # dates and time
+        "strftime": "strftime({}, {})".format,
+        "extract": "EXTRACT({} FROM {})".format,
+        # Strings
+        "like": "{} LIKE {}".format,
+        "ilike": "{} ILIKE {}".format,
+        # Others
+        "in": lambda x, *ys: f"{x} in (%s)" % ", ".join(ys),
+        "null": lambda: "NULL",
+
     }
 
     aggregates = {

@@ -1,5 +1,6 @@
 import pytest
 
+from nagra import Transaction
 from nagra.utils import strip_lines
 
 
@@ -247,3 +248,62 @@ def test_o2m_select(transaction, person, org, address):
         "orgs.addresses.city"
     ).orderby("orgs.addresses.city"))
     assert rows == [('Charly', 'Ankara'), ('Charly', 'Athens'), ('Charly', 'Beirut')]
+
+
+def test_agg(transaction, temperature):
+    temperature.upsert("timestamp", "city", "value").executemany([
+        ("1970-01-01", "Berlin", 10),
+        ("1970-01-01", "London", 12),
+        ])
+    rows = list(temperature.select(
+        "city",
+    ))
+    assert len(rows) == 2
+
+    # String aggregation
+    is_pg = Transaction.flavor == "postgresql"
+    if is_pg:
+        select = temperature.select("(array_agg city)")
+    else:
+        select = temperature.select("(group_concat city)")
+    rows = list(select)
+    assert len(rows) == 1
+    record, = rows
+    if is_pg:
+        assert sorted(record[0]) == ['Berlin', 'London']
+    else:
+        # group_concat generate a simple string
+        assert record[0] == 'Berlin,London'
+
+    # sum, avg, min and max
+    for op, expected in [("sum", 22), ("min", 10), ("max", 12), ("avg", 11)]:
+        select = temperature.select(f"({op} value)")
+        record, = list(select)
+        assert expected == record[0]
+
+    # Add more rows
+    temperature.upsert("timestamp", "city", "value").executemany([
+        ("1970-01-02", "Berlin", 10),
+        ("1970-01-02", "London", 12),
+        ])
+
+    records = dict(temperature.select("city", "(sum value)").groupby("city"))
+    assert records == {'Berlin': 20.0, 'London': 24.0}
+
+
+def test_date_op(transaction, temperature):
+    is_pg = Transaction.flavor == "postgresql"
+
+    temperature.upsert("timestamp", "city", "value").executemany([
+        ("1970-01-02", "Berlin", 10),
+        ("1970-01-02", "London", 12),
+    ])
+    if is_pg:
+        select = temperature.select("(extract 'year' timestamp)")
+        records = list(select)
+        assert records[0][0] == 1970
+    else:
+        select = temperature.select("(strftime '%Y' timestamp)")
+        records = list(select)
+        assert records[0][0] == "1970"
+    assert len(records) == 2

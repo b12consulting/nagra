@@ -86,6 +86,16 @@ kitchensink_table = Table(
     natural_key=["varchar"],
 )
 
+temperature_table = Table(
+    "temperature",
+    columns={
+        "timestamp": "timestamp",
+        "city": "varchar",
+        "value": "float",
+    },
+    natural_key=["timestamp", "city"],
+)
+
 
 @pytest.fixture(scope="session")
 def person():
@@ -108,6 +118,11 @@ def address():
 def kitchensink():
     kitchensink_table.delete()
     return kitchensink_table
+
+@pytest.fixture(scope="session")
+def temperature():
+    temperature_table.delete()
+    return temperature_table
 
 
 DSN= [
