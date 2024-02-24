@@ -260,20 +260,22 @@ def test_agg(transaction, temperature):
     ))
     assert len(rows) == 2
 
-    # String aggregation
+    # String concat
     is_pg = Transaction.flavor == "postgresql"
     if is_pg:
-        select = temperature.select("(array_agg city)")
+        select = temperature.select("(string_agg city ',')")
     else:
         select = temperature.select("(group_concat city)")
     rows = list(select)
     assert len(rows) == 1
     record, = rows
+    assert record[0] == 'Berlin,London'
+
+    # Strings into array
     if is_pg:
+        record, = list(temperature.select("(array_agg city)"))
         assert sorted(record[0]) == ['Berlin', 'London']
-    else:
-        # group_concat generate a simple string
-        assert record[0] == 'Berlin,London'
+
 
     # sum, avg, min and max
     for op, expected in [("sum", 22), ("min", 10), ("max", 12), ("avg", 11)]:
@@ -289,6 +291,13 @@ def test_agg(transaction, temperature):
 
     records = dict(temperature.select("city", "(sum value)").groupby("city"))
     assert records == {'Berlin': 20.0, 'London': 24.0}
+
+    # Json agg
+    if is_pg:
+        select = temperature.select("(json_object_agg city value)")
+        record, = list(select)
+        assert record[0] == {'Berlin': 10, 'London': 12}
+
 
 
 def test_date_op(transaction, temperature):

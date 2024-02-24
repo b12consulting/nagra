@@ -124,9 +124,16 @@ class AST:
         "sum": "sum({})".format,
         "avg": "avg({})".format,
         "every": "every({})".format,
-        "array_agg": "array_agg({})".format,
-        "group_concat": "group_concat({})".format,
         "count": lambda x="*": f"count({x})",
+        # Sqlite specific
+        "group_concat": lambda *xs: ("group_concat(%s)") % (", ".join("{}" for _ in xs)).format(*xs),
+        # Pg specific
+        "string_agg": "string_agg({}, {})".format,
+        "array_agg": "array_agg({})".format,
+        "json_agg": "json_agg({})".format,
+        "bool_or": "bool_or({})".format,
+        "bool_and": "bool_and({})".format,
+        "json_object_agg": "json_object_agg({}, {})".format,
     }
 
     def __init__(self, tokens):
