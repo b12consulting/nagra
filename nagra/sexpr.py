@@ -29,7 +29,7 @@ ValueError: Unexpected token: "x"
 """
 
 import shlex
-from datetime import datetime
+from datetime import datetime, date
 
 from nagra import Transaction
 
@@ -311,6 +311,8 @@ class VarToken(Token):
                 return bool
             case "json":
                 return str
+            case "date":
+                return date
             case _:
                 msg = f"Columns of type {col_type} not supported (for {self.value})"
                 raise NotImplementedError(msg)

@@ -1,5 +1,5 @@
 from dataclasses import fields, dataclass
-from datetime import datetime
+from datetime import datetime, date
 
 
 def equivalent_classes(A, B):
@@ -81,7 +81,7 @@ def test_kitchensink(kitchensink):
         int: int
         timestamp: datetime
         bool: bool
-
+        date: date
     assert equivalent_classes(dclass, KitchenSink)
 
 
@@ -93,7 +93,8 @@ def test_aggregates(kitchensink):
         "(max int)",
         "(max timestamp)",
         "(count)",
-        "(every bool)"
+        "(every bool)",
+        "(max date)",
     )
     dclass = select.to_dataclass(
         "varchar",
@@ -103,6 +104,7 @@ def test_aggregates(kitchensink):
         "timestamp",
         "count",
         "bool",
+        "date",
     )
 
     @dataclass
@@ -114,5 +116,6 @@ def test_aggregates(kitchensink):
         timestamp: datetime
         count: int
         bool: bool
+        date: date
 
     assert equivalent_classes(dclass, KitchenSink)
