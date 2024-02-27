@@ -82,6 +82,7 @@ def test_kitchensink(kitchensink):
         timestamp: datetime
         bool: bool
         date: date
+        json: str
     assert equivalent_classes(dclass, KitchenSink)
 
 
