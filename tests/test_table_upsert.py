@@ -1,7 +1,11 @@
-from nagra.utils import strip_lines
-from nagra.exceptions import UnresolvedFK
+from datetime import datetime, date
 
 import pytest
+from pandas import DataFrame
+
+from nagra import Transaction
+from nagra.utils import strip_lines
+from nagra.exceptions import UnresolvedFK
 
 
 def test_simple_upsert_stm(person):
@@ -156,18 +160,19 @@ def test_dbl_fk_upsert(transaction, person):
     ]
     upsert.executemany(records)
 
-
-    select = person.select(
-        "name",
-        "parent.name",
-        "parent.parent.name",
-    ).where(
-        '(not (is parent.parent.name null))'
-    ).orderby("name")
+    select = (
+        person.select(
+            "name",
+            "parent.name",
+            "parent.parent.name",
+        )
+        .where("(not (is parent.parent.name null))")
+        .orderby("name")
+    )
     rows = list(select)
     assert rows == [
-        ('Alice', 'P Alice', 'GP Alice'),
-        ('Bob', 'P Bob', 'GP Bob'),
+        ("Alice", "P Alice", "GP Alice"),
+        ("Bob", "P Bob", "GP Bob"),
     ]
 
 
@@ -200,7 +205,7 @@ def test_return_ids(transaction, person):
     upsert = person.upsert("name", "parent.name")
     records = [("Big Alice", None), ("Big Bob", None)]
     insert_ids = upsert.executemany(records)
-    update_ids= upsert.executemany(records)
+    update_ids = upsert.executemany(records)
     assert len(insert_ids) == 2
     assert insert_ids == update_ids
     assert insert_ids != [None, None]
@@ -209,5 +214,36 @@ def test_return_ids(transaction, person):
     upsert = person.upsert("name")
     records = [("Big Alice",), ("Big Bob",)]
     insert_ids = upsert.executemany(records)
-    update_ids= upsert.executemany(records)
+    update_ids = upsert.executemany(records)
     assert update_ids == update_ids == [None, None]
+
+
+def test_from_pandas(transaction, kitchensink):
+    df = DataFrame(
+        {
+            "varchar": ["ham"],
+            "bigint": [1],
+            "float": [1.0],
+            "int": [1],
+            "timestamp": ["1970-01-01 00:00:00"],
+            "bool": [True],
+            "date": ["1970-01-01"],
+            "json": ["{}"],
+        }
+    )
+    kitchensink.upsert().from_pandas(df)
+
+    (row,) = kitchensink.select()
+    if Transaction.flavor == "postgresql":
+        assert row == (
+            "ham",
+            1,
+            1.0,
+            1,
+            datetime(1970, 1, 1, 0, 0),
+            True,
+            date(1970, 1, 1),
+            {},
+        )
+    else:
+        assert row == ("ham", 1, 1.0, 1, "1970-01-01 00:00:00", 1, "1970-01-01", "{}")

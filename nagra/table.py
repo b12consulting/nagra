@@ -46,7 +46,7 @@ class Table:
 
     def select(self, *columns, where=None):
         if not columns:
-            columns = list(self.default_columns())
+            columns = self.default_columns()
         slct = Select(self, *columns, env=Env(self))
         if where:
             slct.where(where)
@@ -118,6 +118,8 @@ class Table:
 
         If lenient is set to True all foreign keys will be treated as such.
         """
+        if not columns:
+            columns = self.default_columns()
         return Upsert(self, *columns, lenient=lenient)
 
     def insert(self, *columns, lenient=None):

@@ -12,7 +12,7 @@ from nagra.utils import logger
 class Upsert:
     def __init__(self, table, *columns, lenient=None):
         self.table = table
-        self.columns = columns
+        self.columns = list(columns)
         self.columns_ast = [AST.parse(c) for c in columns]
         self.groups, self.resolve_stm = self.prepare()
         self._insert_only = False
@@ -117,3 +117,7 @@ class Upsert:
 
     def __call__(self, records):
         return self.executemany(records)
+
+    def from_pandas(self, df:"DataFrame"):
+        rows =  df[self.columns].values
+        self.executemany(rows)

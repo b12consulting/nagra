@@ -83,6 +83,7 @@ kitchensink_table = Table(
         "timestamp": "timestamp",
         "bool": "bool",
         "date": "date",
+        "json": "json",
     },
     natural_key=["varchar"],
 )
