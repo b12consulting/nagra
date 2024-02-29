@@ -113,7 +113,7 @@ class AST:
         "like": "{} LIKE {}".format,
         "ilike": "{} ILIKE {}".format,
         # Others
-        "in": lambda x, *ys: f"{x} in (%s)" % ", ".join(ys),
+        "in": lambda x, *ys: f"{x} in (%s)" % ", ".join(map(str, ys)),
         "null": lambda: "NULL",
 
     }

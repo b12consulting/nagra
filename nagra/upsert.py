@@ -5,7 +5,7 @@ from nagra import Statement, executemany, execute, Transaction
 from nagra.transaction import ExecMany
 from nagra.sexpr import AST
 from nagra.schema import Schema
-from nagra.exceptions import UnresolvedFK
+from nagra.exceptions import UnresolvedFK, ValidationError
 from nagra.utils import logger
 
 
@@ -17,6 +17,7 @@ class Upsert:
         self.groups, self.resolve_stm = self.prepare()
         self._insert_only = False
         self.lenient = lenient or []
+        self._where = None
 
     def stm(self):
         conflict_key = ["id"] if "id" in self.groups else self.table.natural_key
@@ -58,6 +59,12 @@ class Upsert:
             resolve_stm[col] = select.stm()
         return groups, resolve_stm
 
+    def where(self, *conditions):
+        if self._where is None:
+            self._where = []
+        self._where.extend(conditions)
+        return self
+
     def execute(self, *values):
         ids = self.executemany([values])
         if ids:
@@ -86,7 +93,8 @@ class Upsert:
                 for item in chunk:
                     cursor = execute(stm, item)
                     new_id = cursor.fetchone()
-                    ids.append(new_id)
+                    if new_id is not None:
+                        ids.append(new_id[0])
             else:
                 cursor = executemany(stm, chunk)
                 while True:
@@ -94,7 +102,24 @@ class Upsert:
                     ids.append(new_id[0] if new_id else None)
                     if not cursor.nextset():
                         break
+
+        # If conditions are present, enforce those
+        if self._where:
+            self.validate(ids)
         return ids
+
+    def validate(self, ids):
+        iter_ids = iter(ids)
+        while True:
+            chunk = list(islice(iter_ids, 1000))
+            if not chunk:
+                return
+            cond = self._where + ["(in id %s)" % (" {}" * len(chunk))]
+            select = self.table.select("(count)").where(*cond)
+            count, = select.execute(*chunk).fetchone()
+            if count != len(chunk):
+                msg = f"Validation failed! Condition is: {self._where} )"
+                raise ValidationError(msg)
 
     def _resolve(self, col, values):
         stm = self.resolve_stm[col]

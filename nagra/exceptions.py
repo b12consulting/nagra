@@ -8,3 +8,7 @@ class NoActiveTransaction(BaseException):
 
 class UnresolvedFK(BaseException):
     pass
+
+
+class ValidationError(BaseException):
+    pass
