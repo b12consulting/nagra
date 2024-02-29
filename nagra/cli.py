@@ -16,7 +16,7 @@ def select(args):
     if args.limit:
         select = select.limit(args.limit)
     if args.orderby:
-        orderby = chain.from_iterable(args.where)
+        orderby = chain.from_iterable(args.orderby)
         select = select.orderby(*orderby)
     rows = list(select.execute())
     headers = [d[0] for d in select.dtypes()]
@@ -36,6 +36,17 @@ def schema(args):
         print(sch.generate_d2())
         return
 
+    # If tables name are given, print details
+    if args.tables:
+        rows = []
+        headers = ["table", "column", "type"]
+        for table_name in args.tables:
+            for col, dtype in Table.get(table_name).columns.items():
+                rows.append([table_name, col, dtype])
+        print(tabulate(rows, headers))
+        return
+
+    # List all tables
     rows = []
     for name in sorted(sch.tables.keys()):
         rows.append([name])
@@ -83,6 +94,7 @@ def run():
     parser_schema = subparsers.add_parser("schema")
     parser_schema.add_argument("--d2", action="store_true",
                                help="Generate d2 file")
+    parser_schema.add_argument("tables", nargs="*")
     parser_schema.set_defaults(func=schema)
 
     # Parse args
