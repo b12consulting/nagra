@@ -1,8 +1,7 @@
 
 # Changelog
 
-## 0.0.3
-
+## 0.0.3 (released: 2024-02-29)
 
 **Breaking change:** `load_schema()` now accept a io object or a path object or a toml
 payload. A simple file name is not accepted anymore
@@ -76,8 +75,21 @@ rows (no id is returned when a row is left untouched).
 []
 ```
 
+**New feature:** `Table.upsert` can now be used without giving the
+columns of the statement. It defaults to the table columns (like
+`Table.select`).
 
-## 0.0.2
+**New feature:** New method `from_pandas` on Upsert, this allows to
+directly pass a dataframe to be written:
+
+``` python
+>>> df = DataFrame({"city": [...], "timestamp": [...], "value": [...]})
+>>> upsert = temperature.upsert("city", "timestamp", "value")
+>>> upsert.from_pandas(df)
+```
+
+
+## 0.0.2 (released: 2024-02-15)
 
 **Breaking change:** `Table.upsert` now supports a `lenient` parameter
 (default to `None`). If set to `True` (or to a list of column names),

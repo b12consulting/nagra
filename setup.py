@@ -4,7 +4,7 @@ from setuptools import setup
 
 
 def get_version():
-    ini_path = Path(__file__).parent / "nebula" / "__init__.py"
+    ini_path = Path(__file__).parent / "nagra" / "__init__.py"
     for line in ini_path.open():
         if line.startswith("__version__"):
             return line.split("=")[1].strip("' \"\n")
