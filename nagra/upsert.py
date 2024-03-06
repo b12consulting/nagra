@@ -122,6 +122,9 @@ class Upsert:
                 raise ValidationError(msg)
 
     def _resolve(self, col, values):
+        # XXX Detect situation where more than on result is found for
+        # a given value (we could also enforce that we only resolve
+        # columns with unique constraints) ?
         stm = self.resolve_stm[col]
         exm = ExecMany(stm, values)
         for res, vals in zip(exm, values):

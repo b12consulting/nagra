@@ -247,3 +247,34 @@ def test_from_pandas(transaction, kitchensink):
         )
     else:
         assert row == ("ham", 1, 1.0, 1, "1970-01-01 00:00:00", 1, "1970-01-01", "{}")
+
+
+def test_double_insert(transaction, person):
+    """
+    Show that 'last write win' when duplicates are given
+    """
+    upsert = person.upsert("name")
+    upsert.execute("Tango")
+
+    upsert = person.upsert("name", "parent.name")
+    upsert.executemany([
+        ("Charly", "Tango"),
+        ("Charly", None),
+    ])
+    rows = list(person.select())
+    assert rows == [('Tango', None), ('Charly', None)]
+
+
+def test_one2many_ref(transaction, person, org):
+    person.upsert("name").execute("Charly")
+    person.upsert("name").execute("Juliet")
+    org.upsert("name", "person.name").execute("Alpha", "Charly")
+    org.upsert("name", "person.name").execute("Bravo", "Juliet")
+
+    # update parent based on org
+    upsert = person.upsert("name", "parent.orgs.name")
+    upsert.execute("Juliet", "Alpha")
+
+    # Check results
+    rows = list(person.select().where("(= name 'Juliet')"))
+    assert rows == [('Juliet', 'Charly')]
