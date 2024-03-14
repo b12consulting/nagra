@@ -23,7 +23,7 @@ setup(
     url="https://github.com/b12consulting/nagra",
     install_requires=[
         "jinja2",
-        "tabulate",
+        "rich",
         "toml",
     ],
     packages=[

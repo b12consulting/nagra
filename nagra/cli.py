@@ -2,10 +2,29 @@ from itertools import chain
 import argparse
 import os
 
-from tabulate import tabulate
+from rich.console import Console
+from rich import box
+import rich.table
 
 from nagra import Transaction, Table, Schema
 from nagra import load_schema
+
+
+def print_table(rows, headers, cli_args):
+    console = Console()
+
+    if not cli_args.pivot:
+        table = rich.table.Table(*headers, box=box.SIMPLE)
+        for row in rows:
+            table.add_row(*map(str, row))
+        console.print(table)
+        return
+
+    for row in rows:
+        table = rich.table.Table(box=box.SIMPLE)
+        for pivot_row in zip(headers, row):
+            table.add_row(*map(str, pivot_row))
+        console.print(table)
 
 
 def select(args):
@@ -20,9 +39,7 @@ def select(args):
         select = select.orderby(*orderby)
     rows = list(select.execute())
     headers = [d[0] for d in select.dtypes()]
-
-    col_widths = [int(c) for c in args.col_widths.split()] if rows else None
-    print(tabulate(rows, headers, maxcolwidths=col_widths, tablefmt=args.format))
+    print_table(rows, headers, args)
 
 
 def delete(args):
@@ -38,7 +55,6 @@ def schema(args):
         print(sch.generate_d2())
         return
 
-    col_widths = [int(c) for c in args.col_widths.split()]
     # If tables name are given, print details
     if args.tables:
         rows = []
@@ -46,7 +62,7 @@ def schema(args):
         for table_name in args.tables:
             for col, dtype in Table.get(table_name).columns.items():
                 rows.append([table_name, col, dtype])
-        print(tabulate(rows, headers, maxcolwidths=col_widths if rows else None, tablefmt=args.format))
+        print_table(rows, headers, args)
         return
 
     # List all tables
@@ -54,7 +70,7 @@ def schema(args):
     for name in sorted(sch.tables.keys()):
         rows.append([name])
     headers = ["table"]
-    print(tabulate(rows, headers, maxcolwidths=col_widths, tablefmt=args.format))
+    print_table(rows, headers, args)
 
 
 def run():
@@ -79,18 +95,10 @@ def run():
         help=f"DB schema, (default: {default_schema})",
     )
     parser.add_argument(
-        "--col-widths",
-        "-c",
-        type=str,
-        default="",
-        help='Define maximum column widths (example: "20 20 30")',
-    )
-    parser.add_argument(
-        "--format",
-        "-f",
-        type=str,
-        default="simple",
-        help='Select table format (see tabulate documentation: https://pypi.org/project/tabulate/)',
+        "--pivot",
+        "-p",
+        action="store_true",
+        help='Pivot results (one key-value table per record)',
     )
     subparsers = parser.add_subparsers(dest="command")
 
