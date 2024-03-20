@@ -8,6 +8,11 @@ from time import perf_counter
 
 
 from jinja2 import FileSystemLoader, Environment
+from rich import box
+from rich.console import Console
+from rich.markup import escape
+import rich.table
+
 
 HERE = Path(__file__).parent
 DEFAULT_FLAVOR = "postgresql"  # TODO use a "settings" dataclass
@@ -61,3 +66,21 @@ def timeit(title=""):
     yield
     delta = perf_counter() - start
     print(title, pretty_nb(delta) + "s", file=sys.stderr)
+
+
+def print_table(rows, headers, pivot=False):
+    console = Console()
+    escstr = lambda s: escape(str(s))
+
+    if pivot:
+        for row in rows:
+            table = rich.table.Table(box=box.SIMPLE)
+            for pivot_row in zip(headers, row):
+                table.add_row(*map(escstr, pivot_row))
+            console.print(table)
+        return
+
+    table = rich.table.Table(*headers, box=box.ROUNDED)
+    for row in rows:
+        table.add_row(*map(escstr, row))
+    console.print(table)

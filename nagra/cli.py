@@ -2,29 +2,9 @@ from itertools import chain
 import argparse
 import os
 
-from rich.console import Console
-from rich import box
-import rich.table
-
 from nagra import Transaction, Table, Schema
 from nagra import load_schema
-
-
-def print_table(rows, headers, cli_args):
-    console = Console()
-
-    if not cli_args.pivot:
-        table = rich.table.Table(*headers, box=box.SIMPLE)
-        for row in rows:
-            table.add_row(*map(str, row))
-        console.print(table)
-        return
-
-    for row in rows:
-        table = rich.table.Table(box=box.SIMPLE)
-        for pivot_row in zip(headers, row):
-            table.add_row(*map(str, pivot_row))
-        console.print(table)
+from nagra.utils import print_table
 
 
 def select(args):
@@ -39,7 +19,7 @@ def select(args):
         select = select.orderby(*orderby)
     rows = list(select.execute())
     headers = [d[0] for d in select.dtypes()]
-    print_table(rows, headers, args)
+    print_table(rows, headers, args.pivot)
 
 
 def delete(args):
@@ -62,7 +42,7 @@ def schema(args):
         for table_name in args.tables:
             for col, dtype in Table.get(table_name).columns.items():
                 rows.append([table_name, col, dtype])
-        print_table(rows, headers, args)
+        print_table(rows, headers, args.pivot)
         return
 
     # List all tables
@@ -70,7 +50,7 @@ def schema(args):
     for name in sorted(sch.tables.keys()):
         rows.append([name])
     headers = ["table"]
-    print_table(rows, headers, args)
+    print_table(rows, headers, args.pivot)
 
 
 def run():
