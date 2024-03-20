@@ -27,7 +27,7 @@ def test_select_with_join(person):
 
 
 def test_select_with_where(person):
-    select = person.select("name", where="(= id {})")
+    select = person.select("name").where("(= id {})")
     stm = select.stm()
     res = list(strip_lines(stm))
     assert res == [
@@ -52,7 +52,7 @@ def test_select_with_where(person):
 
 
 def test_select_where_and_join(person):
-    select = person.select("name", where="(= parent.name 'foo')")
+    select = person.select("name").where("(= parent.name 'foo')")
     stm = select.stm()
     res = list(strip_lines(stm))
     assert res == [

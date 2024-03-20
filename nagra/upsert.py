@@ -4,7 +4,6 @@ from itertools import islice
 from nagra import Statement, executemany, execute, Transaction
 from nagra.transaction import ExecMany
 from nagra.sexpr import AST
-from nagra.schema import Schema
 from nagra.exceptions import UnresolvedFK, ValidationError
 from nagra.utils import logger
 
@@ -54,7 +53,7 @@ class Upsert:
             if not to_select:
                 continue
             cond = ["(= %s {})" % c for c in to_select]
-            ftable = Schema.get(self.table.foreign_keys[col])
+            ftable = self.table.schema.get(self.table.foreign_keys[col])
             select = ftable.select("id").where(*cond)
             resolve_stm[col] = select.stm()
         return groups, resolve_stm
@@ -93,8 +92,7 @@ class Upsert:
                 for item in chunk:
                     cursor = execute(stm, item)
                     new_id = cursor.fetchone()
-                    if new_id is not None:
-                        ids.append(new_id[0])
+                    ids.append(new_id[0] if new_id else None)
             else:
                 cursor = executemany(stm, chunk)
                 while True:

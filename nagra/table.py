@@ -27,6 +27,7 @@ class Table:
         foreign_keys: Dict = None,
         not_null: List = None,
         one2many: Dict = None,
+        schema: Schema = Schema.default,
     ):
         self.name = name
         self.columns = columns
@@ -34,22 +35,20 @@ class Table:
         self.foreign_keys = foreign_keys or {}
         self.not_null = set(self.natural_key) | set(not_null or [])
         self.one2many = one2many or {}
-        self.schema = Schema.default
+        self.schema = schema
         self.schema.add(self.name, self)
 
     @classmethod
-    def get(self, name):
+    def get(self, name, schema=Schema.default):
         """
         Shortcut method to Schema.default().get()
         """
-        return Schema.default.get(name)
+        return schema.get(name)
 
-    def select(self, *columns, where=None):
+    def select(self, *columns):
         if not columns:
             columns = self.default_columns()
         slct = Select(self, *columns, env=Env(self))
-        if where:
-            slct.where(where)
         return slct
 
     def default_columns(self, nk_only=False):
@@ -141,7 +140,7 @@ class Table:
         if like:
             cond.append("(like " + remote_col + " {})")
 
-        ftable = Schema.get(self.foreign_keys[local_col])
+        ftable = self.schema.get(self.foreign_keys[local_col])
         select = ftable.select(remote_col).where(*cond).groupby(remote_col).orderby(remote_col)
         if like:
             cur = execute(select.stm(), (like,))
@@ -160,9 +159,9 @@ class Table:
 
 
 class Env:
-    def __init__(self, table):
+    def __init__(self, table, refs=None):
         self.table = table
-        self.refs = {}
+        self.refs = refs or {}
 
     def add_ref(self, path):
         *head, name, tail = path
@@ -178,3 +177,6 @@ class Env:
     def __repr__(self):
         content = repr(self.refs)
         return f"<Env {self.table.name} {content}>"
+
+    def clone(self):
+        return Env(self.table, self.refs.copy())

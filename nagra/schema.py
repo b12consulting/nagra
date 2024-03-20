@@ -8,7 +8,7 @@ from nagra import Statement, execute, Transaction
 
 
 D2_TPL = """
-{{table.name}}: {
+{{table.name}}_: "{{table.name}}" {
   shape: sql_table
   {%- for col, dt in table.columns.items() %}
   {{col}}: {{dt}}
@@ -35,9 +35,8 @@ class Schema:
     def reset(self):
         self.tables = {}
 
-    @classmethod
-    def get(cls, name):
-        return cls.default.tables[name]
+    def get(self, name):
+        return self.tables[name]
 
     @classmethod
     @property
@@ -114,13 +113,13 @@ class Schema:
         return res
 
 
-def load_schema(toml_src, create_tables=False, reset=True):
+def load_schema(toml_src, create_tables=False, reset=True, schema=Schema.default):
     # Late import to avoid circual deps (should put this code in a
-    # "misc" sumodule)
+    # "misc" submodule)
     from nagra.table import  Table
 
     if reset:
-        Schema.default.reset()
+        schema.reset()
     # load table definitions
     match toml_src:
         case IOBase():
@@ -131,6 +130,6 @@ def load_schema(toml_src, create_tables=False, reset=True):
             content = toml_src
     tables = toml.loads(content)
     for name, info in tables.items():
-        Table(name, **info)
+        Table(name, **info, schema=schema)
     if create_tables:
-        Schema.default.setup()
+        schema.setup()

@@ -1,5 +1,6 @@
 import re
 import dataclasses
+from datetime import datetime
 
 from nagra import Statement
 from nagra.mixin import Executable
@@ -13,14 +14,13 @@ def clean_col(name):
 
 
 class Select(Executable):
-    def __init__(self, table, *columns, env):
+    def __init__(self, table, *columns, env, ):
         self.table = table
         self.env = env #Env(table)
         self.where_asts = []
-        self.where_conditions = []
         self._offset = None
         self._limit = None
-        self.groupby_ast = None
+        self.groupby_ast = []
         self.order_ast = []
         self.order_directions = []
         self.columns = []
@@ -34,27 +34,62 @@ class Select(Executable):
         self.columns_ast += [AST.parse(c) for c in columns]
         self.query_columns += [a.eval(self.env) for a in self.columns_ast]
 
+    def clone(self):
+        """
+        Return a copy of select with updated parameters
+        """
+        cln = Select(self.table, *self.columns, env=self.env.clone())
+        cln.where_asts = self.where_asts.copy()
+        cln.groupby_ast = self.groupby_ast.copy()
+        cln.order_ast = self.order_ast
+        cln.order_directions  = self.order_directions
+        return cln
+
     def where(self, *conditions):
-        asts = [AST.parse(cond) for cond in conditions]
-        self.where_asts += asts
-        self.where_conditions += [ast.eval(self.env) for ast in asts]
-        return self
+        cln = self.clone()
+        cln.where_asts += [AST.parse(cond) for cond in conditions]
+        return cln
 
     def select(self, *columns):
-        self._add_columns(columns)
-        return self
+        cln = self.clone()
+        cln._add_columns(columns)
+        return cln
 
     def offset(self, value):
-        self._offset = value
-        return self
+        cln = self.clone()
+        cln._offset = value
+        return cln
 
     def limit(self, value):
-        self._limit = value
-        return self
+        cln = self.clone()
+        cln._limit = value
+        return cln
 
     def groupby(self, *groups):
-        self.groupby_ast = [AST.parse(g) for g in groups]
-        return self
+        cln = self.clone()
+        cln.groupby_ast += [AST.parse(g) for g in groups]
+        return cln
+
+    def orderby(self, *orders):
+        expressions = []
+        directions = []
+        for o in orders:
+            if isinstance(o, tuple):
+                expression = o[0]
+                direction = o[1]
+            else:
+                expression = o
+                direction = "asc"
+
+        if isinstance(expression, int):
+            expression = self.columns[expression]
+        expressions.append(expression)
+        directions.append(direction)
+
+        cln = self.clone()
+        cln.order_ast += [AST.parse(e) for e in expressions]
+        cln.order_directions += directions
+        return cln
 
     def to_dataclass(self, *aliases):
         # TODO return nullable union type if a column is not required
@@ -75,26 +110,6 @@ class Select(Executable):
             fields.append((col_name, col_type))
         return fields
 
-    def orderby(self, *orders):
-        expressions = []
-        directions = []
-        for o in orders:
-            if isinstance(o, tuple):
-                expression = o[0]
-                direction = o[1]
-            else:
-                expression = o
-                direction = "asc"
-
-        if isinstance(expression, int):
-            expression = self.columns[expression]
-        expressions.append(expression)
-        directions.append(direction)
-
-        self.order_ast = [AST.parse(e) for e in expressions]
-        self.order_directions = directions
-        return self
-
     def infer_groupby(self):
         # Detect aggregates
         for a in self.columns_ast:
@@ -113,20 +128,25 @@ class Select(Executable):
         return groupby_ast
 
     def stm(self):
+        # Eval where conditions
+        where_conditions = [ast.eval(self.env) for ast in self.where_asts]
+        # Eval Groupby
         groupby_ast = self.groupby_ast or self.infer_groupby()
         groupby = [a.eval(self.env) for a in groupby_ast]
-
+        # Eval Oder by
         orderby = [a.eval(self.env) + f" {d}" for a, d in zip(
             self.order_ast,
             self.order_directions,
         )]
+        # Create joins
         joins = self.table.join(self.env)
+
         stm = Statement(
             "select",
             table=self.table.name,
             columns=self.query_columns,
             joins=joins,
-            conditions=self.where_conditions,
+            conditions=where_conditions,
             limit=self._limit,
             offset=self._offset,
             groupby=groupby,
@@ -134,14 +154,14 @@ class Select(Executable):
         )
         return stm()
 
-    def to_pandas(self, rows, aliases=[]):
+    def to_pandas(self, *aliases):
         """
         Convert the rows into columns and return a df with the
         proper column types, and the given aliases as column names.
         """
         from pandas import DataFrame, Series
         names, dtypes = zip(*(self.dtypes(*aliases)))
-        by_col = zip(*rows)
+        by_col = zip(*self)
         df = DataFrame()
         for name, dt, col in zip(names, dtypes, by_col):
             # FIXME Series(col, dtype=dt) fail on json cols!
@@ -149,6 +169,8 @@ class Select(Executable):
             if dt == int:
                 # Make sure we have no nan for int columns
                 srs = srs.fillna(0)
+            elif dt == datetime:
+                dt = str
             df[name] = srs.astype(dt)
         return df
 

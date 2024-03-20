@@ -13,7 +13,8 @@ DO UPDATE SET
   {% for col in columns if col not in conflict_key-%}
   "{{col}}" = EXCLUDED."{{col}}" {{", " if not loop.last}}
   {%- endfor %}
-RETURNING id
+
 {% else %}
 DO NOTHING
 {% endif %}
+RETURNING id

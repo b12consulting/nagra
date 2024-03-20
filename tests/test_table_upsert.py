@@ -215,7 +215,7 @@ def test_return_ids(transaction, person):
     records = [("Big Alice",), ("Big Bob",)]
     insert_ids = upsert.executemany(records)
     update_ids = upsert.executemany(records)
-    assert update_ids == update_ids == [None, None]
+    assert insert_ids == update_ids == [None, None]
 
 
 def test_from_pandas(transaction, kitchensink):
