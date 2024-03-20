@@ -11,7 +11,7 @@ def select(args):
     select = Table.get(args.table).select(*args.columns)
     if args.where:
         where = chain.from_iterable(args.where)
-        select.where(*where)
+        select = select.where(*where)
     if args.limit:
         select = select.limit(args.limit)
     if args.orderby:
