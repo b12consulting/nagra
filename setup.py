@@ -30,7 +30,7 @@ setup(
         "nagra",
     ],
     extras_require={
-        "test": ["pytest"],
+        "test": ["pytest", "pandas"],
     },
     package_data={"nagra": ["template/*/*sql"]},
     entry_points={

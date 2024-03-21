@@ -154,13 +154,13 @@ class Select(Executable):
         )
         return stm()
 
-    def to_pandas(self, *aliases, args=None):
+    def to_pandas(self, *args):
         """
         Convert the rows into columns and return a df with the
         proper column types, and the given aliases as column names.
         """
         from pandas import DataFrame, Series
-        names, dtypes = zip(*(self.dtypes(*aliases)))
+        names, dtypes = zip(*(self.dtypes()))
         by_col = zip(*self.execute(*args))
         df = DataFrame()
         for name, dt, col in zip(names, dtypes, by_col):
