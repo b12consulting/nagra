@@ -17,37 +17,37 @@ class Select(Executable):
     def __init__(self, table, *columns, env, ):
         self.table = table
         self.env = env #Env(table)
-        self.where_asts = []
+        self.where_asts = tuple()
         self._offset = None
         self._limit = None
-        self.groupby_ast = []
-        self.order_ast = []
-        self.order_directions = []
-        self.columns = []
-        self.columns_ast = []
-        self.query_columns = []
+        self.groupby_ast = tuple()
+        self.order_ast = tuple()
+        self.order_directions = tuple()
+        self.columns = tuple()
+        self.columns_ast = tuple()
+        self.query_columns = tuple()
         self._add_columns(columns)
         super().__init__()
 
     def _add_columns(self, columns):
         self.columns += columns
-        self.columns_ast += [AST.parse(c) for c in columns]
-        self.query_columns += [a.eval(self.env) for a in self.columns_ast]
+        self.columns_ast += tuple(AST.parse(c) for c in columns)
+        self.query_columns += tuple(a.eval(self.env) for a in self.columns_ast)
 
     def clone(self):
         """
         Return a copy of select with updated parameters
         """
         cln = Select(self.table, *self.columns, env=self.env.clone())
-        cln.where_asts = self.where_asts.copy()
-        cln.groupby_ast = self.groupby_ast.copy()
+        cln.where_asts = self.where_asts
+        cln.groupby_ast = self.groupby_ast
         cln.order_ast = self.order_ast
         cln.order_directions  = self.order_directions
         return cln
 
     def where(self, *conditions):
         cln = self.clone()
-        cln.where_asts += [AST.parse(cond) for cond in conditions]
+        cln.where_asts += tuple(AST.parse(cond) for cond in conditions)
         return cln
 
     def select(self, *columns):
@@ -67,7 +67,7 @@ class Select(Executable):
 
     def groupby(self, *groups):
         cln = self.clone()
-        cln.groupby_ast += [AST.parse(g) for g in groups]
+        cln.groupby_ast += tuple(AST.parse(g) for g in groups)
         return cln
 
     def orderby(self, *orders):
@@ -87,8 +87,8 @@ class Select(Executable):
         directions.append(direction)
 
         cln = self.clone()
-        cln.order_ast += [AST.parse(e) for e in expressions]
-        cln.order_directions += directions
+        cln.order_ast += tuple(AST.parse(e) for e in expressions)
+        cln.order_directions += tuple(directions)
         return cln
 
     def to_dataclass(self, *aliases):
