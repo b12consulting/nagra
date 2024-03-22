@@ -10,7 +10,7 @@ def get_version():
             return line.split("=")[1].strip("' \"\n")
     raise ValueError(f"__version__ line not found in {ini_path}")
 
-long_description = """Nagra is a Python ORM that tries to emphasises
+long_description = """Nagra is a Python ORM that tries to emphasise
 the declarative nature of relational databases. It also comes with
 builtin features usually not available in traditonal ORM like
 declarative row-level permissions or a command-line interface"""
