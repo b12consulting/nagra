@@ -1,0 +1,6 @@
+[user]
+natural_key = ["first_name", "last_name"]
+[user.columns]
+first_name = "varchar"
+last_name = "varchar"
+birthdate = "date"
