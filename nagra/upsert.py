@@ -1,7 +1,7 @@
 from collections import defaultdict
 from itertools import islice
 
-from nagra import Statement, executemany, execute, Transaction
+from nagra import Statement, Transaction
 from nagra.transaction import ExecMany
 from nagra.sexpr import AST
 from nagra.exceptions import UnresolvedFK, ValidationError
@@ -9,7 +9,7 @@ from nagra.utils import logger
 
 
 class Upsert:
-    def __init__(self, table, *columns, lenient=None):
+    def __init__(self, table, *columns, lenient=None, transaction=None):
         self.table = table
         self.columns = list(columns)
         self.columns_ast = [AST.parse(c) for c in columns]
@@ -17,6 +17,7 @@ class Upsert:
         self._insert_only = False
         self.lenient = lenient or []
         self._where = None
+        self.transaction = transaction
 
     def stm(self):
         conflict_key = ["id"] if "id" in self.groups else self.table.natural_key
@@ -81,6 +82,7 @@ class Upsert:
                 arg_df[col] = value_df[col]
 
 
+        transaction = self.transaction or Transaction.current
         args = zip(*(arg_df[c] for c in self.groups))
         # Work by chunks
         stm = self.stm()
@@ -91,11 +93,11 @@ class Upsert:
                 break
             if Transaction.flavor == "sqlite":
                 for item in chunk:
-                    cursor = execute(stm, item)
+                    cursor = transaction.execute(stm, item)
                     new_id = cursor.fetchone()
                     ids.append(new_id[0] if new_id else None)
             else:
-                cursor = executemany(stm, chunk)
+                cursor = transaction.executemany(stm, chunk)
                 while True:
                     new_id = cursor.fetchone()
                     ids.append(new_id[0] if new_id else None)

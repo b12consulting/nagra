@@ -91,10 +91,6 @@ class Transaction:
             self.cursor.connection.commit()
 
 
-execute = Transaction.execute
-executemany = Transaction.executemany
-
-
 def yield_from_cursor(cursor):
     while rows := cursor.fetchmany(1000):
         yield from rows

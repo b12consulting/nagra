@@ -2,8 +2,7 @@ import re
 import dataclasses
 from datetime import datetime
 
-from nagra import Statement
-from nagra.mixin import Executable
+from nagra import Statement, Transaction
 from nagra.sexpr import AST, AggToken
 
 
@@ -13,8 +12,8 @@ def clean_col(name):
     return RE_VALID_IDENTIFIER.sub('_', name)
 
 
-class Select(Executable):
-    def __init__(self, table, *columns, env, ):
+class Select:
+    def __init__(self, table, *columns, env, transaction=None):
         self.table = table
         self.env = env #Env(table)
         self.where_asts = tuple()
@@ -26,8 +25,8 @@ class Select(Executable):
         self.columns = tuple()
         self.columns_ast = tuple()
         self.query_columns = tuple()
+        self.transaction = transaction
         self._add_columns(columns)
-        super().__init__()
 
     def _add_columns(self, columns):
         self.columns += columns
@@ -177,3 +176,14 @@ class Select(Executable):
     def to_dict(self):
         columns = [f.name for f in dataclasses.fields(self.to_dataclass())]
         return [dict(zip(columns, record)) for record in self]
+
+    def execute(self, *args):
+        transaction = self.transaction or Transaction.current
+        return transaction.execute(self.stm(), args)
+
+    def executemany(self, args):
+        transaction = self.transaction or Transaction.current
+        return transaction.executemany(self.stm(), args)
+
+    def __iter__(self):
+        return iter(self.execute())

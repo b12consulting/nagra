@@ -5,7 +5,7 @@ from io import IOBase
 import toml
 from jinja2 import Template
 
-from nagra import Statement, execute, Transaction
+from nagra import Statement, Transaction
 
 
 D2_TPL = """
@@ -25,8 +25,9 @@ D2_TPL = """
 class Schema:
     _default = None
 
-    def __init__(self):
+    def __init__(self, transaction=None):
         self.tables = {}
+        self.transaction = transaction
 
     def add(self, name, table):
         if name in self.tables:
@@ -49,7 +50,7 @@ class Schema:
     def _db_columns(self, pg_schema="public"):
         res = defaultdict(list)
         stmt = Statement("find_columns", pg_schema=pg_schema)
-        for tbl, col in execute(stmt()):
+        for tbl, col in self.execute(stmt()):
             res[tbl].append(col)
         return res
 
@@ -94,12 +95,16 @@ class Schema:
 
     def setup(self):
         for stm in self.setup_statements():
-            execute(stm)
+            self.execute(stm)
 
     def drop(self):
         for name in self.tables:
             stmt = Statement("drop_table", name=name)
-            execute(stmt())
+            self.execute(stmt())
+
+    def execute(self, stm):
+         transaction = self.transaction or Transaction.current
+         return transaction.execute(stm)
 
     def generate_d2(self):
         tpl = Template(D2_TPL)
