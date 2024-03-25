@@ -242,7 +242,6 @@ def test_o2m_select(transaction, person, org, address):
         ("Athens", "Alpha"),
         ("Beirut", "Beta"),
     ])
-
     rows = list(person.select(
         "name",
         "orgs.addresses.city"

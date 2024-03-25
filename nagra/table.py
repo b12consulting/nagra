@@ -1,3 +1,40 @@
+"""
+
+Examples of table definitions
+
+``` python
+from nagra import Table
+
+city = Table(
+    "city",
+    columns={
+        "name": "varchar",
+        "lat": "varchar",
+        "long": "varchar",
+    },
+    natural_key=["name"],
+    one2many = {
+        "temperatures": "temperature.city",
+    }
+)
+
+temperature = Table(
+    "temperature",
+    columns={
+        "timestamp": "timestamp",
+        "city": "int",
+        "value": "float",
+    },
+    natural_key=["city", "timestamp"],
+    foreign_keys={
+        "city": "city",
+    },
+
+)
+```
+
+
+"""
 from functools import lru_cache
 from typing import Dict, List
 

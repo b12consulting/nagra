@@ -80,6 +80,7 @@ class Upsert:
             else:
                 arg_df[col] = value_df[col]
 
+
         args = zip(*(arg_df[c] for c in self.groups))
         # Work by chunks
         stm = self.stm()

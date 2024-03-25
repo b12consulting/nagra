@@ -126,15 +126,18 @@ def temperature():
     temperature_table.delete()
     return temperature_table
 
-
 DSN= [
     "postgresql:///nagra",
     "sqlite://",
     # "duckdb://",
 ]
 @pytest.fixture(scope="function", params=DSN)
-def transaction(request):
+def empty_transaction(request):
     dsn = request.param
     with Transaction(dsn, rollback=True) as tr:
-        Schema.default.setup()
         yield tr
+
+@pytest.fixture(scope="function", params=DSN)
+def transaction(request, empty_transaction):
+    Schema.default.setup()
+    yield empty_transaction

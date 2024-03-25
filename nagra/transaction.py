@@ -59,6 +59,16 @@ class Transaction:
             return cursor
 
     @classmethod
+    def push(cls, transaction):
+        if not hasattr(cls._local, "current_transaction"):
+            cls._local.current_transaction = []
+        cls._local.current_transaction.append(transaction)
+
+    @classmethod
+    def pop(cls):
+        cls._local.current_transaction.pop()
+
+    @classmethod
     def executemany(cls, stmt, args=None):
         logger.debug(stmt)
         transaction = cls.current
@@ -70,13 +80,11 @@ class Transaction:
             return cursor
 
     def __enter__(self):
-        if not hasattr(self._local, "current_transaction"):
-            self._local.current_transaction = []
-        self._local.current_transaction.append(self)
-        return self.cursor
+        Transaction.push(self)
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self._local.current_transaction.pop()
+        Transaction.pop()
         if self.rollback or exc_type is not None:
             self.connection.rollback()
         else:

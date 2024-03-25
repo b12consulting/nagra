@@ -19,10 +19,8 @@ def test_create_table():
     doc = stmt()
     lines = list(strip_lines(doc))
     assert lines == [
-        'CREATE TABLE IF NOT EXISTS "my_table" (',
-        "id BIGSERIAL PRIMARY KEY,",
-        '"name" varchar NOT NULL,',
-        '"value" integer);',
+        'CREATE TABLE  "my_table" (',
+        'id BIGSERIAL PRIMARY KEY', ');'
     ]
 
 

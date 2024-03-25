@@ -1,3 +1,4 @@
+from collections import defaultdict
 from pathlib import Path
 from io import IOBase
 
@@ -45,46 +46,40 @@ class Schema:
             cls._default = Schema()
         return cls._default
 
+    def _db_columns(self, pg_schema="public"):
+        res = defaultdict(list)
+        stmt = Statement("find_columns", pg_schema=pg_schema)
+        for tbl, col in execute(stmt()):
+            res[tbl].append(col)
+        return res
+
     def setup_statements(self):
+        # Find existing tables and columns
+        db_columns = self._db_columns()
+
         # Create tables
         for name, table in self.tables.items():
-            ctypes = {c: t for c, t in table.ctypes().items() if c not in table.foreign_keys}
+            if name in db_columns:
+                continue
             stmt = Statement(
                 "create_table",
                 table=name,
-                columns=ctypes,
-                not_null=table.not_null,
             )
             yield stmt()
 
-        # Add foreign keys, we need to find existing ones first
-        if Transaction.flavor == "sqlite":
-            fks = set()
-            for name in self.tables:
-                stmt = Statement("select_foreign_keys").name(name)
-                rows = execute(stmt())
-                fks.update(
-                    (name, column, other_table)
-                    for _, _, other_table, column, *_ in rows
-                )
-        else:
-            stmt = Statement("select_foreign_keys")
-            fks = set(execute(stmt()))
-
-        for name, table in self.tables.items():
+        # Add columns
+        for table in self.tables.values():
             ctypes = table.ctypes()
-            for column, other_table in table.foreign_keys.items():
-                if (name, column, other_table) in fks:
+            for column in table.columns:
+                if column in db_columns[table.name]:
                     continue
-
-                # XXX this loop will fail on composite keys (but do we need it?)
                 stmt = Statement(
-                    "add_foreign_key",
-                    table=name,
+                    "add_column",
+                    table=table.name,
                     column=column,
                     col_def=ctypes[column],
-                    other_table=other_table,
-                    not_nulld=column in table.not_null,
+                    not_null=column in table.not_null,
+                    fk_table=table.foreign_keys.get(column)
                 )
                 yield stmt()
 
