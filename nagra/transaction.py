@@ -59,16 +59,6 @@ class Transaction:
             return cursor
 
     @classmethod
-    def push(cls, transaction):
-        if not hasattr(cls._local, "current_transaction"):
-            cls._local.current_transaction = []
-        cls._local.current_transaction.append(transaction)
-
-    @classmethod
-    def pop(cls):
-        cls._local.current_transaction.pop()
-
-    @classmethod
     def executemany(cls, stmt, args=None):
         logger.debug(stmt)
         transaction = cls.current
@@ -78,6 +68,16 @@ class Transaction:
             return yield_from_cursor(cursor)
         else:
             return cursor
+
+    @classmethod
+    def push(cls, transaction):
+        if not hasattr(cls._local, "current_transaction"):
+            cls._local.current_transaction = []
+        cls._local.current_transaction.append(transaction)
+
+    @classmethod
+    def pop(cls):
+        cls._local.current_transaction.pop()
 
     def __enter__(self):
         Transaction.push(self)

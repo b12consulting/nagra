@@ -54,3 +54,13 @@ with Transaction("sqlite://"):
         "(avg temperatures.value)"
     ).orderby("name")
     assert dict(select) == {'Brussels': 5.75, 'Louvain-la-Neuve': 6.0}
+
+    # Pandas example: generate df from table
+    df = temperature.select().to_pandas()
+    print(df)
+
+    # Update df and save it
+    df["value"] += 10
+    temperature.upsert().from_pandas(df)
+    row, = temperature.select("value").where("(= timestamp '2023-11-28T02:00')")
+    assert row == (13,)

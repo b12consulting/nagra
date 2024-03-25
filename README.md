@@ -117,7 +117,7 @@ an atomic semantic (either all statement are successful and the
 changes are commited or the transaction is rollbacked).
 
 Example of other values possible for transaction parameters:
-`sqlite://some-file.db`, `postgresql://user:pws@host/dbname`.
+`sqlite://some-file.db`, `postgresql://user:pwd@host/dbname`.
 
 We first add cities:
 
@@ -204,6 +204,31 @@ Similarly we can start from the `city` table and use the
 The complete code for this crashcourse is in
 [crashcourse.py](https://github.com/b12consulting/nagra/tree/master/examples/crashcourse.py)
 
+
+## Pandas support
+
+If pandas is installed you can use `Select.to_pandas` and
+`Upsert.from_pandas`, like this:
+
+``` python
+    # Generate df from select
+    df = temperature.select().to_pandas()
+    print(df)
+    # ->
+    #           city.name         timestamp  value
+    # 0  Louvain-la-Neuve  2023-11-27T16:00    6.0
+    # 1          Brussels  2023-11-27T17:00    7.0
+    # 2          Brussels  2023-11-27T20:00    8.0
+    # 3          Brussels  2023-11-27T23:00    5.0
+    # 4          Brussels  2023-11-28T02:00    3.0
+
+    # Update df and pass it to upsert
+    df["value"] += 10
+    temperature.upsert().from_pandas(df)
+    # Let's test one value
+    row, = temperature.select("value").where("(= timestamp '2023-11-28T02:00')")
+    assert row == (13,)
+```
 
 # Miscellaneous
 
