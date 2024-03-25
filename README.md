@@ -10,9 +10,9 @@ Optionally, to work with Postgresql:
 
 # Crash course
 
-## Table Definition
+## Define tables
 
-Tables are defined like this
+Tables can be defined with classes like this:
 
 ``` python
 from nagra import Table
@@ -25,6 +25,9 @@ city = Table(
         "long": "varchar",
     },
     natural_key=["name"],
+    one2many={
+        "temperatures": "temperature.city",
+    }
 )
 
 temperature = Table(
@@ -41,6 +44,34 @@ temperature = Table(
 
 )
 ```
+
+
+Or based on a toml string:
+
+```
+from nagra import load_schema
+
+schema_toml = """
+[city]
+natural_key = ["name"]
+[city.columns]
+name = "varchar"
+lat = "varchar"
+long = "date"
+[city.one2many]
+temperatures = "temperature.city"
+
+[temperature]
+natural_key = ["city", "timestamp"]
+[temperature.columns]
+city = "bigint"
+timestamp = "timestamp"
+value = "float"
+"""
+
+load_schema(schema_toml)
+```
+
 
 ## Generate SQL Statements
 
@@ -66,7 +97,7 @@ print(stm)
 # LEFT JOIN "city" as city_0 ON (city_0.id = "temperature"."city")
 ```
 
- One can explicitly ask for foreign key, with a dotted field
+One can explicitly ask for foreign key, with a dotted field
 
 ``` python
 stm = temperature.select("city.lat", "timestamp").stm()
@@ -78,13 +109,17 @@ print(stm)
 # LEFT JOIN "city" as city_0 ON (city_0.id = "temperature"."city")
 ```
 
+
 ## Add Data and Query Database
 
-Create transaction & execute. Example of other values possible for
- transation paramaters: `sqlite://some-file.db`,
- `postgresql://user:pws@host/dbname`:
+A `with Transaction ...` statemant defines a transaction block, with
+an atomic semantic (either all statement are successful and the
+changes are commited or the transaction is rollbacked).
 
-We first add cities
+Example of other values possible for transaction parameters:
+`sqlite://some-file.db`, `postgresql://user:pws@host/dbname`.
+
+We first add cities:
 
 ``` python
 with Transaction("sqlite://"):
@@ -121,7 +156,7 @@ We can then add temperatures
 ```
 
 
-Read data back
+Read data back:
 
 ``` python
     records = list(city.select())
@@ -129,7 +164,6 @@ Read data back
     # ->
     # [('Brussels', '50.8476° N', '4.3572° E'), ('Louvain-la-Neuve', '50.6681° N', '4.6118° E')]
 ```
-
 
 Aggregation example: average temperature per latitude:
 
@@ -139,4 +173,43 @@ Aggregation example: average temperature per latitude:
     print(list(select))
     # ->
     # [('50.6681° N', 6.0), ('50.8476° N', 5.75)]
+
+    print(select.stm())
+    # ->
+    # SELECT
+    #   "city_0"."lat", avg("temperature"."value")
+    # FROM "temperature"
+    #  LEFT JOIN "city" as city_0 ON (
+    #     city_0."id" = "temperature"."city"
+    #  )
+    # GROUP BY
+    #  "city_0"."lat"
+    #
+    # ;
 ```
+
+
+Similarly we can start from the `city` table and use the
+`temperatures` alias defined in the one2many dict:
+
+
+``` python
+    select = city.select(
+        "name",
+        "(avg temperatures.value)"
+    ).orderby("name")
+    assert dict(select) == {'Brussels': 5.75, 'Louvain-la-Neuve': 6.0}
+```
+
+The complete code for this crashcourse is in
+<https://github.com/b12consulting/nagra/tree/master/examples/crashcourse.py>
+
+
+# Miscellaneous
+
+The project changelog is available here:
+https://github.com/b12consulting/nagra/blob/master/changelog.md
+
+Future ideas:
+- Integration with FastAPI
+- Support for CockroachDB
