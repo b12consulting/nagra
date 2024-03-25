@@ -48,7 +48,7 @@ temperature = Table(
 
 Or based on a toml string:
 
-```
+``` python
 from nagra import load_schema
 
 schema_toml = """
@@ -202,13 +202,13 @@ Similarly we can start from the `city` table and use the
 ```
 
 The complete code for this crashcourse is in
-<https://github.com/b12consulting/nagra/tree/master/examples/crashcourse.py>
+[crashcourse.py](https://github.com/b12consulting/nagra/tree/master/examples/crashcourse.py)
 
 
 # Miscellaneous
 
 The project changelog is available here:
-https://github.com/b12consulting/nagra/blob/master/changelog.md
+[changelog.md](https://github.com/b12consulting/nagra/blob/master/changelog.md)
 
 Future ideas:
 - Integration with FastAPI
