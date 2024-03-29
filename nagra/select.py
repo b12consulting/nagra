@@ -1,6 +1,7 @@
 import re
 import dataclasses
 from datetime import datetime
+from typing import Optional
 
 from nagra import Statement
 from nagra.sexpr import AST, AggToken
@@ -33,11 +34,12 @@ class Select:
         self.columns_ast += tuple(AST.parse(c) for c in columns)
         self.query_columns += tuple(a.eval(self.env, self.trn.flavor) for a in self.columns_ast)
 
-    def clone(self):
+    def clone(self, trn=None):
         """
         Return a copy of select with updated parameters
         """
-        cln = Select(self.table, *self.columns, trn=self.trn, env=self.env.clone())
+        trn = trn or self.trn
+        cln = Select(self.table, *self.columns, trn=trn, env=self.env.clone())
         cln.where_asts = self.where_asts
         cln.groupby_ast = self.groupby_ast
         cln.order_ast = self.order_ast
@@ -91,13 +93,14 @@ class Select:
         return cln
 
     def to_dataclass(self, *aliases):
-        # TODO return nullable union type if a column is not required
         return dataclasses.make_dataclass(
             self.table.name,
-            fields=[(clean_col(c), d) for c, d in self.dtypes(*aliases)]
+            fields=[
+                (clean_col(c), d)
+                for c, d in self.dtypes(*aliases)]
         )
 
-    def dtypes(self, *aliases):
+    def dtypes(self, *aliases, with_optional=True):
         fields = []
         if aliases:
             assert len(aliases) == len(self.columns)
@@ -106,6 +109,12 @@ class Select:
             col_names = self.columns
         for col_name, col_ast in zip(col_names, self.columns_ast):
             col_type = col_ast.eval_type(self.env)
+            not_natural_key = col_name not in self.table.natural_key
+            is_nullable = col_name not in self.table.not_null
+            not_id = col_name != "id"
+            if with_optional and not_id and not_natural_key and is_nullable:
+                # Fixme Optional may depend on ast content
+                col_type = Optional[col_type]
             fields.append((col_name, col_type))
         return fields
 
@@ -159,7 +168,7 @@ class Select:
         proper column types, and the given aliases as column names.
         """
         from pandas import DataFrame, Series
-        names, dtypes = zip(*(self.dtypes()))
+        names, dtypes = zip(*(self.dtypes(with_optional=False)))
         by_col = zip(*self.execute(*args))
         df = DataFrame()
         for name, dt, col in zip(names, dtypes, by_col):

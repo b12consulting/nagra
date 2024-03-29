@@ -1,5 +1,6 @@
 from dataclasses import fields, dataclass
 from datetime import datetime, date
+from typing import Optional
 
 
 def equivalent_classes(A, B):
@@ -35,7 +36,7 @@ def test_select_with_fk(person):
     @dataclass
     class Person:
         id: int
-        parent_name: str
+        parent_name: Optional[str]
 
     assert equivalent_classes(dclass, Person)
 
@@ -46,7 +47,7 @@ def test_select_with_fk(person):
     @dataclass
     class Person:
         id: int
-        parent_parent_name: str
+        parent_parent_name: Optional[str]
 
     assert equivalent_classes(dclass, Person)
 
@@ -62,10 +63,10 @@ def test_select_with_sexp(person):
 
     @dataclass
     class Expected:
-        str_like: str
-        bool_like: bool
-        float_like: float
-        int_like: int
+        str_like: Optional[str]
+        bool_like: Optional[bool]
+        float_like: Optional[float]
+        int_like: Optional[int]
     assert equivalent_classes(dclass, Expected)
 
 
@@ -76,13 +77,13 @@ def test_kitchensink(kitchensink):
     @dataclass
     class KitchenSink:
         varchar: str
-        bigint: int
-        float: float
-        int: int
-        timestamp: datetime
-        bool: bool
-        date: date
-        json: str
+        bigint: Optional[int]
+        float: Optional[float]
+        int: Optional[int]
+        timestamp: Optional[datetime]
+        bool: Optional[bool]
+        date: Optional[date]
+        json: Optional[str]
     assert equivalent_classes(dclass, KitchenSink)
 
 
@@ -111,12 +112,12 @@ def test_aggregates(kitchensink):
     @dataclass
     class KitchenSink:
         varchar: str
-        bigint: int
-        float: float
-        int: int
-        timestamp: datetime
-        count: int
-        bool: bool
-        date: date
+        bigint: Optional[int]
+        float: Optional[float]
+        int: Optional[int]
+        timestamp: Optional[datetime]
+        count: Optional[int]
+        bool: Optional[bool]
+        date: Optional[date]
 
     assert equivalent_classes(dclass, KitchenSink)
