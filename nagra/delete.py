@@ -1,16 +1,17 @@
-from nagra import Statement, Transaction
+from nagra import Statement
 from nagra.sexpr import AST
 
 
 class Delete:
-    def __init__(self, table, env, transaction=None):
+    def __init__(self, table, trn, env):
         self.table = table
         self.env = env
         self.where_asts = []
         self.where_conditions = []
-        self.transaction = transaction
+        self.trn = trn
 
     def where(self, *conditions):
+        # TODO clone first
         asts = [AST.parse(cond) for cond in conditions]
         self.where_asts += asts
         self.where_conditions += [ast.eval(self.env) for ast in asts]
@@ -36,12 +37,10 @@ class Delete:
         return self.execute()
 
     def execute(self, *args):
-        transaction = self.transaction or Transaction.current
-        return transaction.execute(self.stm(), args)
+        return self.trn.execute(self.stm(), args)
 
     def executemany(self, args):
-        transaction = self.transaction or Transaction.current
-        return transaction.executemany(self.stm(), args)
+        return self.trn.executemany(self.stm(), args)
 
     def __iter__(self):
         return iter(self.execute())

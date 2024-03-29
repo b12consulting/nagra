@@ -15,9 +15,6 @@ import rich.table
 
 
 HERE = Path(__file__).parent
-DEFAULT_FLAVOR = "postgresql"  # TODO use a "settings" dataclass
-
-
 fmt = "%(levelname)s:%(asctime).19s: %(message)s"
 logging.basicConfig(format=fmt)
 logger = logging.getLogger("nagra")

@@ -2,7 +2,7 @@ import re
 import dataclasses
 from datetime import datetime
 
-from nagra import Statement, Transaction
+from nagra import Statement
 from nagra.sexpr import AST, AggToken
 
 
@@ -13,7 +13,7 @@ def clean_col(name):
 
 
 class Select:
-    def __init__(self, table, *columns, env, transaction=None):
+    def __init__(self, table, *columns, trn, env):
         self.table = table
         self.env = env #Env(table)
         self.where_asts = tuple()
@@ -25,19 +25,19 @@ class Select:
         self.columns = tuple()
         self.columns_ast = tuple()
         self.query_columns = tuple()
-        self.transaction = transaction
+        self.trn = trn
         self._add_columns(columns)
 
     def _add_columns(self, columns):
         self.columns += columns
         self.columns_ast += tuple(AST.parse(c) for c in columns)
-        self.query_columns += tuple(a.eval(self.env) for a in self.columns_ast)
+        self.query_columns += tuple(a.eval(self.env, self.trn.flavor) for a in self.columns_ast)
 
     def clone(self):
         """
         Return a copy of select with updated parameters
         """
-        cln = Select(self.table, *self.columns, env=self.env.clone())
+        cln = Select(self.table, *self.columns, trn=self.trn, env=self.env.clone())
         cln.where_asts = self.where_asts
         cln.groupby_ast = self.groupby_ast
         cln.order_ast = self.order_ast
@@ -128,12 +128,12 @@ class Select:
 
     def stm(self):
         # Eval where conditions
-        where_conditions = [ast.eval(self.env) for ast in self.where_asts]
+        where_conditions = [ast.eval(self.env, self.trn.flavor) for ast in self.where_asts]
         # Eval Groupby
         groupby_ast = self.groupby_ast or self.infer_groupby()
-        groupby = [a.eval(self.env) for a in groupby_ast]
+        groupby = [a.eval(self.env, self.trn.flavor) for a in groupby_ast]
         # Eval Oder by
-        orderby = [a.eval(self.env) + f" {d}" for a, d in zip(
+        orderby = [a.eval(self.env, self.trn.flavor) + f" {d}" for a, d in zip(
             self.order_ast,
             self.order_directions,
         )]
@@ -178,12 +178,10 @@ class Select:
         return [dict(zip(columns, record)) for record in self]
 
     def execute(self, *args):
-        transaction = self.transaction or Transaction.current
-        return transaction.execute(self.stm(), args)
+        return self.trn.execute(self.stm(), args)
 
     def executemany(self, args):
-        transaction = self.transaction or Transaction.current
-        return transaction.executemany(self.stm(), args)
+        return self.trn.executemany(self.stm(), args)
 
     def __iter__(self):
         return iter(self.execute())

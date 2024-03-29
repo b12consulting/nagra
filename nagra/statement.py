@@ -1,14 +1,14 @@
 from functools import partial
 
 from nagra.utils import template
-from nagra.transaction import Transaction
+from nagra.transaction import dummy_transaction
 
 
 class Statement:
-    def __init__(self, template, **params):
+    def __init__(self, template, flavor=None, **params):
         self._template = template
         self._params = params
-        self._flavor = params.get("flavor") or Transaction.flavor
+        self._flavor = flavor or dummy_transaction.flavor
 
     def __call__(self):
         path = f"{self._flavor}/{self._template}"

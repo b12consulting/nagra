@@ -42,7 +42,7 @@ from nagra.schema import Schema
 from nagra.delete import Delete
 from nagra.select import Select
 from nagra.upsert import Upsert
-from nagra.transaction import Transaction
+from nagra.transaction import Transaction, dummy_transaction
 
 
 _SQLITE_TYPE_MAP = {
@@ -81,11 +81,43 @@ class Table:
         """
         return schema.get(name)
 
-    def select(self, *columns):
+    def select(self, *columns, trn=None):
+        trn = trn or Transaction.current or dummy_transaction
         if not columns:
             columns = self.default_columns()
-        slct = Select(self, *columns, env=Env(self))
+        slct = Select(self, *columns, trn=trn, env=Env(self))
         return slct
+
+    def delete(self, where=None, trn=None):
+        trn = trn or Transaction.current or dummy_transaction
+        delete = Delete(self, trn=trn, env=Env(self))
+        if where:
+            delete.where(where)
+        return delete
+
+    def upsert(self, *columns, trn=None, lenient=None):
+        """
+        Create an upsert object based on the given columns, if
+        lenient is set, foreign keys wont be enforced on the given
+        columns even if a value is passed on the subsequent execute or
+        executemany. Example:
+
+        >>> upsert = Table.get("comment").upsert("body", "blog_post.title", lenient=["blog_post"])
+        >>> upsert.execute(("Nice post!", "A post title that will change soon."))
+
+        If lenient is set to True all foreign keys will be treated as such.
+        """
+        if not columns:
+            columns = self.default_columns()
+        trn = trn or Transaction.current or dummy_transaction
+        return Upsert(self, *columns, trn=trn, lenient=lenient)
+
+    def insert(self, *columns, trn=None, lenient=None):
+        """
+        Provide an insert-only statement (won't raise error if
+        record already exists). See `Table.upsert` for `lenient` role.
+        """
+        return self.upsert(*columns, trn=trn, lenient=None).insert_only()
 
     def default_columns(self, nk_only=False):
         columns = self.natural_key if nk_only else self.columns
@@ -135,37 +167,8 @@ class Table:
         # Resolve last step
         return prev_table.join_on(path[-1:], env)
 
-    def delete(self, where=None):
-        delete = Delete(self, env=Env(self))
-        if where:
-            delete.where(where)
-        return delete
-
-    def upsert(self, *columns, lenient=None):
-        """
-        Create an upsert object based on the given columns, if
-        lenient is set, foreign keys wont be enforced on the given
-        columns even if a value is passed on the subsequent execute or
-        executemany. Example:
-
-        >>> upsert = Table.get("comment").upsert("body", "blog_post.title", lenient=["blog_post"])
-        >>> upsert.execute(("Nice post!", "A post title that will change soon."))
-
-        If lenient is set to True all foreign keys will be treated as such.
-        """
-        if not columns:
-            columns = self.default_columns()
-        return Upsert(self, *columns, lenient=lenient)
-
-    def insert(self, *columns, lenient=None):
-        """
-        Provide an insert-only statement (won't raise error if
-        record already exists). See `Table.upsert` for `lenient` role.
-        """
-        return Upsert(self, *columns, lenient=None).insert_only()
-
-    def ctypes(self):
-        if Transaction.flavor == "sqlite":
+    def ctypes(self, trn):
+        if trn.flavor == "sqlite":
             return {
                 c: _SQLITE_TYPE_MAP.get(d, d) for c, d in self.columns.items()
             }

@@ -1,14 +1,14 @@
 import sqlite3
 import threading
 
-from nagra.utils import logger, DEFAULT_FLAVOR
+from nagra.utils import logger
 from nagra.exceptions import NoActiveTransaction
 
 
 class Transaction:
 
     _local = threading.local()
-    _local.current_transaction = []
+    _local.stack = []
 
     def __init__(self, dsn, rollback=False):
         if dsn.startswith("postgresql://"):
@@ -29,66 +29,62 @@ class Transaction:
         else:
             raise ValueError(f"Invalid dsn string: {dsn}")
         self.cursor = self.connection.cursor()
-        self.rollback = rollback
+        self.auto_rollback = rollback
 
-    @classmethod
-    @property
-    def current(cls):
-        try:
-            return cls._local.current_transaction[-1]
-        except IndexError:
-            raise NoActiveTransaction()
-
-    @classmethod
-    @property
-    def flavor(cls):
-        try:
-            return Transaction.current and Transaction.current.flavor or DEFAULT_FLAVOR
-        except NoActiveTransaction:
-            return DEFAULT_FLAVOR
-
-    @classmethod
-    def execute(cls, stmt, args=tuple()):
+    def execute(self, stmt, args=tuple()):
         logger.debug(stmt)
-        transaction = cls.current
-        cursor = transaction.cursor
+        cursor = self.cursor
         cursor.execute(stmt, args)
-        if transaction.flavor == "duckdb":
+        if self.flavor == "duckdb":
             return yield_from_cursor(cursor)
         else:
             return cursor
 
-    @classmethod
-    def executemany(cls, stmt, args=None):
+    def executemany(self, stmt, args=None):
         logger.debug(stmt)
-        transaction = cls.current
-        cursor = transaction.cursor
+        cursor = self.cursor
         cursor.executemany(stmt, args, returning=True)
-        if transaction.flavor == "duckdb":
+        if self.flavor == "duckdb":
             return yield_from_cursor(cursor)
         else:
             return cursor
 
-    @classmethod
-    def push(cls, transaction):
-        if not hasattr(cls._local, "current_transaction"):
-            cls._local.current_transaction = []
-        cls._local.current_transaction.append(transaction)
+    def rollback(self):
+        self.connection.rollback()
 
-    @classmethod
-    def pop(cls):
-        cls._local.current_transaction.pop()
+    def commit(self):
+        self.cursor.connection.commit()
 
     def __enter__(self):
         Transaction.push(self)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        Transaction.pop()
-        if self.rollback or exc_type is not None:
-            self.connection.rollback()
+        Transaction.pop(self)
+        if self.auto_rollback or exc_type is not None:
+            self.rollback()
         else:
-            self.cursor.connection.commit()
+            self.commit()
+
+    @classmethod
+    def push(cls, transaction):
+        if not hasattr(cls._local, "stack"):
+            cls._local.stack = []
+        cls._local.stack.append(transaction)
+
+    @classmethod
+    def pop(cls, expected_trn):
+        trn = cls._local.stack.pop()
+        assert trn is expected_trn
+
+    @classmethod
+    @property
+    def current(cls):
+        try:
+            return cls._local.stack[-1]
+        except IndexError:
+            return None
+            # raise NoActiveTransaction()
 
 
 def yield_from_cursor(cursor):
@@ -102,14 +98,15 @@ class ExecMany:
     yielded to a (returning) executemany statement.
     """
 
-    def __init__(self, stm, values):
+    def __init__(self, stm, values, trn):
         self.stm = stm
         self.values = values
+        self.trn = trn
 
     def __iter__(self):
         # Create a dedicated cursor
-        cursor = Transaction.current.connection.cursor()
-        if Transaction.flavor == "sqlite":
+        cursor = self.trn.connection.cursor()
+        if self.trn.flavor == "sqlite":
             for vals in self.values:
                 logger.debug(self.stm)
                 cursor.execute(self.stm, vals)
@@ -123,3 +120,20 @@ class ExecMany:
                 yield vals
                 if not cursor.nextset():
                     break
+
+
+class DummyTransaction:
+    """
+    Postgresql flavored transaction look-alike
+    """
+    flavor = "postgresql"
+
+
+    def execute(self, stmt, args=tuple()):
+        raise NoActiveTransaction()
+
+    def executemany(self, stmt, args=None):
+        raise NoActiveTransaction()
+
+
+dummy_transaction = DummyTransaction()

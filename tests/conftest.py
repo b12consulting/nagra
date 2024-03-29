@@ -101,29 +101,29 @@ temperature_table = Table(
 
 @pytest.fixture(scope="session")
 def person():
-    person_table.delete()
+    # person_table.delete()
     return person_table
 
 
 @pytest.fixture(scope="session")
 def org():
-    org_table.delete()
+    # org_table.delete()
     return org_table
 
 @pytest.fixture(scope="session")
 def address():
-    address_table.delete()
+    # address_table.delete()
     return address_table
 
 
 @pytest.fixture(scope="session")
 def kitchensink():
-    kitchensink_table.delete()
+    # kitchensink_table.delete()
     return kitchensink_table
 
 @pytest.fixture(scope="session")
 def temperature():
-    temperature_table.delete()
+    # temperature_table.delete()
     return temperature_table
 
 DSN= [
@@ -140,5 +140,6 @@ def empty_transaction(request):
 
 @pytest.fixture(scope="function", params=DSN)
 def transaction(request, empty_transaction):
-    Schema.default.setup()
+    # Start from empty_transaction and load tables
+    Schema.default.create_tables(empty_transaction)
     yield empty_transaction

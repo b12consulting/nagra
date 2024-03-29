@@ -1,15 +1,14 @@
 from collections import defaultdict
 from itertools import islice
 
-from nagra import Statement, Transaction
-from nagra.transaction import ExecMany
+from nagra import Statement
 from nagra.sexpr import AST
 from nagra.exceptions import UnresolvedFK, ValidationError
 from nagra.utils import logger
-
+from nagra.transaction import ExecMany
 
 class Upsert:
-    def __init__(self, table, *columns, lenient=None, transaction=None):
+    def __init__(self, table, *columns, trn, lenient=None):
         self.table = table
         self.columns = list(columns)
         self.columns_ast = [AST.parse(c) for c in columns]
@@ -17,7 +16,7 @@ class Upsert:
         self._insert_only = False
         self.lenient = lenient or []
         self._where = None
-        self.transaction = transaction
+        self.trn = trn
 
     def stm(self):
         conflict_key = ["id"] if "id" in self.groups else self.table.natural_key
@@ -25,6 +24,7 @@ class Upsert:
         do_update = False if self._insert_only else len(columns) > len(conflict_key)
         stm = Statement(
             "upsert",
+            self.trn.flavor,
             table=self.table.name,
             columns=columns,
             conflict_key=conflict_key,
@@ -33,6 +33,7 @@ class Upsert:
         return stm()
 
     def insert_only(self):
+        # TODO clone first
         self._insert_only = True
         return self
 
@@ -81,8 +82,6 @@ class Upsert:
             else:
                 arg_df[col] = value_df[col]
 
-
-        transaction = self.transaction or Transaction.current
         args = zip(*(arg_df[c] for c in self.groups))
         # Work by chunks
         stm = self.stm()
@@ -91,13 +90,13 @@ class Upsert:
             chunk = list(islice(args, 1000))
             if not chunk:
                 break
-            if Transaction.flavor == "sqlite":
+            if self.trn.flavor == "sqlite":
                 for item in chunk:
-                    cursor = transaction.execute(stm, item)
+                    cursor = self.trn.execute(stm, item)
                     new_id = cursor.fetchone()
                     ids.append(new_id[0] if new_id else None)
             else:
-                cursor = transaction.executemany(stm, chunk)
+                cursor = self.trn.executemany(stm, chunk)
                 while True:
                     new_id = cursor.fetchone()
                     ids.append(new_id[0] if new_id else None)
@@ -127,7 +126,7 @@ class Upsert:
         # a given value (we could also enforce that we only resolve
         # columns with unique constraints) ?
         stm = self.resolve_stm[col]
-        exm = ExecMany(stm, values)
+        exm = ExecMany(stm, values, trn=self.trn)
         for res, vals in zip(exm, values):
             if res is not None:
                 yield res[0]

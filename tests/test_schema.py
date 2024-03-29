@@ -2,34 +2,33 @@ from  pathlib import Path
 
 import pytest
 
-from nagra import load_schema, Table, Schema
+from nagra import Table, Schema
 
 
 HERE = Path(__file__).parent
 def test_toml_loader():
-    test_schema = Schema()
 
-    # With a path
+    # With a Path
     src = HERE / "assets" / "sample_schema.toml"
-    load_schema(src.open(), schema=test_schema)
+    test_schema = Schema.from_toml(src)
     table = Table.get("user", schema=test_schema)
     assert table is not None
 
     # with a string
-    load_schema(src.open().read(), reset=True, schema=test_schema)
+    test_schema = Schema.from_toml(src.open().read())
     table = Table.get("user", schema=test_schema)
     assert table is not None
 
     # with an io base
-    load_schema(open(src), reset=True, schema=test_schema)
+    test_schema = Schema.from_toml(src.open())
     table = Table.get("user", schema=test_schema)
     assert table is not None
 
-    # Must fail on double loading (without reset)
+    # Must fail when a duplicate table is added
     with pytest.raises(RuntimeError):
-        load_schema(open(src), reset=False, schema=test_schema)
+        Table("user", columns=["name"], natural_key=["name"], schema=test_schema)
 
-    # Reset
+    # Test reset
     test_schema.reset()
     assert test_schema.tables == {}
 
@@ -39,10 +38,14 @@ def test_setup():
 
 
 def test_create_tables(empty_transaction):
+    # Associate schema with the transaction
+    schema = Schema.default
+
     # Make sure we start from empty db
-    assert not Schema.default._db_columns()
-    Schema.default.setup()
-    post = Schema.default._db_columns()
+    assert not schema._db_columns(trn=empty_transaction)
+    schema.create_tables(trn=empty_transaction)
+    post = schema._db_columns(trn=empty_transaction)
+
     # Test person table is properly created
     assert "person" in post
     assert sorted(post["person"]) ==  ["id", "name", "parent"]
@@ -50,8 +53,8 @@ def test_create_tables(empty_transaction):
     # Add a column to existing table
     person = Table.get("person")
     person.columns["email"] = "varchar"
-    Schema.default.setup()
-    post = Schema.default._db_columns()
+    schema.create_tables(trn=empty_transaction)
+    post = schema._db_columns(trn=empty_transaction)
     assert "person" in post
     assert sorted(post["person"]) ==  ["email", "id", "name", "parent"]
 

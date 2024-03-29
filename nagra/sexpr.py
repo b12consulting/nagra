@@ -31,8 +31,7 @@ ValueError: Unexpected token: "x"
 import shlex
 from datetime import datetime, date
 
-from nagra import Transaction
-
+DEFAULT_FLAVOR = "postgresql"
 __all__ = ["AST"]
 
 
@@ -158,14 +157,14 @@ class AST:
             else:
                 yield from tk.chain()
 
-    def _eval(self, env, top=False):
+    def _eval(self, env, flavor, top=False):
         head, tail = self.tokens[0], self.tokens[1:]
-        args = [tk._eval(env) for tk in tail]
-        res = head._eval(env, *args)
+        args = [tk._eval(env, flavor) for tk in tail]
+        res = head._eval(env, flavor, *args)
         return res if top else "({})".format(res)
 
-    def eval(self, env):
-        return self._eval(env, top=True)
+    def eval(self, env, flavor=DEFAULT_FLAVOR):
+        return self._eval(env, flavor, top=True)
 
     def relations(self):
         for tk in self.chain():
@@ -229,7 +228,7 @@ class Token:
     def get_arg(self):
         return None
 
-    def _eval(self, env, *args):
+    def _eval(self, env, flavor, *args):
         return None
 
 
@@ -240,8 +239,8 @@ class ParamToken(Token):
         # Remove braces
         self.value = value[1:-1]
 
-    def _eval(self, env, *args):
-        placeholder = "%s" if Transaction.flavor == "postgresql" else "?"
+    def _eval(self, env, flavor, *args):
+        placeholder = "%s" if flavor == "postgresql" else "?"
         return placeholder
 
 
@@ -252,7 +251,7 @@ class LitToken(Token):
         return self._type
 
 
-    def _eval(self, env, *args):
+    def _eval(self, env, flavor, *args):
         return self.value
 
 class FloatToken(LitToken):
@@ -275,7 +274,7 @@ class StrToken(LitToken):
     def _eval_type(self, env):
         return str
 
-    def _eval(self, env, *args):
+    def _eval(self, env, flavor, *args):
         return f"'{self.value}'"
 
 
@@ -287,7 +286,7 @@ class VarToken(Token):
     def is_relation(self):
         return "." in self.value
 
-    def _eval(self, env, *args):
+    def _eval(self, env, flavor, *args):
         if self.is_relation():
             self.join_alias = env.add_ref(self.value.split("."))
             return self.join_alias
@@ -328,7 +327,7 @@ class VarToken(Token):
 class OpToken(Token):
     ops = AST.builtins
 
-    def _eval(self, env, *args):
+    def _eval(self, env, flavor, *args):
         op = self.ops[self.value]
         return op(*args)
 

@@ -55,7 +55,7 @@ def test_insert(transaction, person):
     records = [("Big Bob",), ("Bob",)]
     upsert.executemany(records)
 
-    # Second one
+    # Second one (with insert instead of upsert)
     upsert = person.insert("name", "parent.name")
     upsert.execute("Bob", "Big Bob")
     rows = list(person.select("name", "parent.name").execute())
@@ -234,7 +234,7 @@ def test_from_pandas(transaction, kitchensink):
     kitchensink.upsert().from_pandas(df)
 
     (row,) = kitchensink.select()
-    if Transaction.flavor == "postgresql":
+    if Transaction.current.flavor == "postgresql":
         assert row == (
             "ham",
             1,

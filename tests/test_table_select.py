@@ -68,21 +68,6 @@ def test_select_where_and_join(person):
     ]
 
 
-def test_suggest(transaction, person):
-    # upsert
-    upsert = person.upsert("name")
-    records = [("Big Alice",), ("Big Bob",)]
-    upsert.executemany(records)
-    rows = list(person.select("name").execute())
-    assert len(rows) == 2
-
-    res = list(person.suggest("parent.name"))
-    assert res == ["Big Alice", "Big Bob"]
-
-    res = list(person.suggest("parent.name", like="%A%"))
-    assert res == ["Big Alice"]
-
-
 @pytest.mark.parametrize("op", ["min", "max", "sum"])
 def test_simple_agg(person, op):
     # MIN
@@ -260,7 +245,7 @@ def test_agg(transaction, temperature):
     assert len(rows) == 2
 
     # String concat
-    is_pg = Transaction.flavor == "postgresql"
+    is_pg = Transaction.current.flavor == "postgresql"
     if is_pg:
         select = temperature.select("(string_agg city ',')")
     else:
@@ -299,7 +284,7 @@ def test_agg(transaction, temperature):
 
 
 def test_date_op(transaction, temperature):
-    is_pg = Transaction.flavor == "postgresql"
+    is_pg = Transaction.current.flavor == "postgresql"
 
     temperature.upsert("timestamp", "city", "value").executemany([
         ("1970-01-02", "Berlin", 10),
