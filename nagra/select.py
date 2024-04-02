@@ -114,6 +114,7 @@ class Select:
             not_id = col_name != "id"
             if with_optional and not_id and not_natural_key and is_nullable:
                 # Fixme Optional may depend on ast content
+                # FIXME fail for auto-generated names)
                 col_type = Optional[col_type]
             fields.append((col_name, col_type))
         return fields
