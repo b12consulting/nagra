@@ -129,7 +129,9 @@ def temperature():
 DSN= [
     "postgresql:///nagra",
     "sqlite://",
-    "postgresql://root@localhost:26257/defaultdb?sslmode=disable" # crdb (command: cockroach start-single-node --insecure --sql-addr=localhost:26257)
+    # CRDB (command: cockroach start-single-node --insecure
+    # --store=type=mem,size=0.25 --advertise-addr=localhost )
+    "postgresql://root@localhost:26257/defaultdb?sslmode=disable"
     # "duckdb://",
 ]
 @pytest.fixture(scope="function", params=DSN)
