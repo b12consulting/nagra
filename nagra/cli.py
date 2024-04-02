@@ -2,8 +2,7 @@ from itertools import chain
 import argparse
 import os
 
-from nagra import Transaction, Table, Schema
-from nagra import load_schema
+from nagra import Transaction, Schema, Table
 from nagra.utils import print_table
 
 
@@ -40,7 +39,7 @@ def schema(args):
         rows = []
         headers = ["table", "column", "type"]
         for table_name in args.tables:
-            for col, dtype in Table.get(table_name).columns.items():
+            for col, dtype in sch.get(table_name).columns.items():
                 rows.append([table_name, col, dtype])
         print_table(rows, headers, args.pivot)
         return
@@ -110,7 +109,7 @@ def run():
 
     try:
         with Transaction(args.db):
-            load_schema(open(args.schema))
+            Schema.default.load(open(args.schema))
             args.func(args)
     except (BrokenPipeError, KeyboardInterrupt):
         pass
