@@ -1,5 +1,21 @@
 """
-Run me with: uvicorn fastapi-example:app
+Run me with first with `python fastapi-example.py` to populate the
+db.
+
+Start the api: `uvicorn fastapi-example:app`
+
+You can also do :
+
+    $ export NAGRA_DB=sqlite://example.db
+    $ export NAGRA_SCHEMA=schema.toml
+    $ nagra select city name
+    ╭──────────╮
+    │ name     │
+    ├──────────┤
+    │ Berlin   │
+    │ Brussels │
+    │ London   │
+    ╰──────────╯
 """
 
 from typing import List
