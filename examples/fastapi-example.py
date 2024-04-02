@@ -2,7 +2,6 @@
 Run me with: uvicorn fastapi-example:app
 """
 
-from pathlib import Path
 from typing import List
 
 from nagra import Transaction, Schema
@@ -14,7 +13,7 @@ natural_key = ["name"]
 [city.columns]
 name = "varchar"
 lat = "varchar"
-long = "date"
+long = "varchar"
 [city.one2many]
 temperatures = "temperature.city"
 
@@ -31,7 +30,6 @@ city = "city"
 
 app = FastAPI()
 DB = "sqlite://example.db"
-here = Path(__file__).parent
 sch = Schema.from_toml(schema_toml)
 
 
@@ -80,4 +78,12 @@ if __name__ == "__main__":
             ("Brussels",),
             ("London",),
             ("Berlin",),
+        ])
+
+        temp = sch.get("temperature")
+        temp.upsert("city.name", "timestamp", "value").executemany([
+            ("Brussels", "2000-01-01T00:00", 0),
+            ("London", "2000-01-01T00:00", 1),
+            ("Berlin", "2000-01-01T00:00", 3),
+            ("Berlin", "2000-01-01T01:00", 2),
         ])
