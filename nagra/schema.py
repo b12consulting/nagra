@@ -38,6 +38,11 @@ class Schema:
 
     @classmethod
     def from_toml(self, toml_src):
+        schema = Schema()
+        schema.load(toml_src)
+        return schema
+
+    def load(self, toml_src):
         # Late import to avoid import loops
         from nagra.table import Table
 
@@ -51,10 +56,8 @@ class Schema:
                 content = toml_src
         tables = toml.loads(content)
         # Instanciate tables
-        schema = Schema()
         for name, info in tables.items():
-            Table(name, **info, schema=schema)
-        return schema
+            Table(name, **info, schema=self)
 
     def add(self, name, table):
         if name in self.tables:
@@ -65,6 +68,9 @@ class Schema:
         self.tables = {}
 
     def get(self, name):
+        """
+        Return the table with name `name`
+        """
         return self.tables[name]
 
     def _db_columns(self, trn=None, pg_schema="public"):
