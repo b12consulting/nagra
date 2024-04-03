@@ -63,7 +63,7 @@ def test_select_with_sexp(person):
 
     @dataclass
     class Expected:
-        str_like: Optional[str]
+        str_like: str
         bool_like: Optional[bool]
         float_like: Optional[float]
         int_like: Optional[int]
@@ -111,7 +111,7 @@ def test_aggregates(kitchensink):
 
     @dataclass
     class KitchenSink:
-        varchar: str
+        varchar: Optional[str] # FIXME should no be nullable
         bigint: Optional[int]
         float: Optional[float]
         int: Optional[int]

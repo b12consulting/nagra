@@ -110,6 +110,7 @@ def org():
     # org_table.delete()
     return org_table
 
+
 @pytest.fixture(scope="session")
 def address():
     # address_table.delete()
@@ -121,10 +122,12 @@ def kitchensink():
     # kitchensink_table.delete()
     return kitchensink_table
 
+
 @pytest.fixture(scope="session")
 def temperature():
     # temperature_table.delete()
     return temperature_table
+
 
 DSN= [
     "postgresql:///nagra",
@@ -139,6 +142,7 @@ def empty_transaction(request):
     dsn = request.param
     with Transaction(dsn, rollback=True) as tr:
         yield tr
+
 
 @pytest.fixture(scope="function", params=DSN)
 def transaction(request, empty_transaction):

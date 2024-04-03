@@ -32,9 +32,10 @@ def test_concurrent_transaction(person):
     trn_a.commit()
     trn_b.rollback()
 
-    with Transaction(uri):
+    with Transaction(uri) as tr:
         records = list(person.select("name"))
         assert records == [("Romeo",)]
 
         # Cleanup
-        person.delete()
+        for name in Schema.default.tables:
+            tr.execute(f"DROP TABLE {name} CASCADE")

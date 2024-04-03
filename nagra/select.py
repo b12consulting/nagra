@@ -104,19 +104,23 @@ class Select:
         fields = []
         if aliases:
             assert len(aliases) == len(self.columns)
-            col_names = aliases
         else:
-            col_names = self.columns
-        for col_name, col_ast in zip(col_names, self.columns_ast):
+            aliases = self.columns
+
+        # Construct fields
+        for alias, col_name, col_ast in zip(aliases, self.columns, self.columns_ast):
+            # Keep first part of dotted chains
+            col_name = col_name.split(".", 1)[0]
+            # Eval type
             col_type = col_ast.eval_type(self.env)
+            # Eval nullable
             not_natural_key = col_name not in self.table.natural_key
             is_nullable = col_name not in self.table.not_null
             not_id = col_name != "id"
             if with_optional and not_id and not_natural_key and is_nullable:
                 # Fixme Optional may depend on ast content
-                # FIXME fail for auto-generated names)
                 col_type = Optional[col_type]
-            fields.append((col_name, col_type))
+            fields.append((alias, col_type))
         return fields
 
     def infer_groupby(self):
