@@ -5,7 +5,7 @@ from pandas import DataFrame
 
 from nagra import Transaction
 from nagra.utils import strip_lines
-from nagra.exceptions import UnresolvedFK
+from nagra.exceptions import UnresolvedFK, ValidationError
 
 
 def test_simple_upsert_stm(person):
@@ -278,3 +278,17 @@ def test_one2many_ref(transaction, person, org):
     # Check results
     rows = list(person.select().where("(= name 'Juliet')"))
     assert rows == [('Juliet', 'Charly')]
+
+
+def test_where_cond(transaction, person):
+    """
+    Show that an exception is raised when a row infrige a where condition
+    """
+    upsert = person.upsert("name")
+    upsert.execute("Tango")
+
+    cond = "(!= name parent.name)" # Forbid self-reference
+    upsert = person.upsert("name", "parent.name").where(cond)
+    with pytest.raises(ValidationError):
+        upsert.execute("Tango", "Tango")
+
