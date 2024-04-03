@@ -3,4 +3,4 @@ from .table import Table
 from .schema import Schema
 from .transaction import Transaction
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"

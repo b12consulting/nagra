@@ -1,6 +1,31 @@
 
 # Changelog
 
+### 0.0.4 (released: 2024-04-03)
+
+**Breaking change:** `load_schema()` has been replaced by Schema.load
+(and Schema.from_toml).
+
+**New feature:** Transaction can now be used without a context
+manager, this provide more flexibility in multi-threaded app.
+
+**New feature:** CockroachDB support
+
+**New feature:** Add new column on existing tables on schema
+creation. Before any existing table was kept as-is.
+
+**New feature:** Auto validation of rows when a condition is given to
+an upsert
+
+**New feature:** New method `to_pandas` on Select.
+
+**New feature:** Add support for one-to-many through table aliases
+
+**New feature:** Upsert now returns the id of the rows created or
+updated
+
+
+
 ## 0.0.3 (released: 2024-02-29)
 
 **Breaking change:** `load_schema()` now accept a io object or a path object or a toml
