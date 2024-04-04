@@ -122,12 +122,14 @@ class ExecMany:
                     break
 
 
-class DummyTransaction:
+class DummyTransaction(Transaction):
     """
     Postgresql flavored transaction look-alike
     """
     flavor = "postgresql"
 
+    def __init__(self):
+        pass
 
     def execute(self, stmt, args=tuple()):
         raise NoActiveTransaction()

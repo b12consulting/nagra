@@ -1,14 +1,24 @@
 from collections import defaultdict
 from itertools import islice
+from typing import Union, TYPE_CHECKING
+
+try:
+    from pandas import DataFrame
+except ImportError:
+    DataFrame = None
 
 from nagra import Statement
 from nagra.sexpr import AST
 from nagra.exceptions import UnresolvedFK, ValidationError
 from nagra.utils import logger
-from nagra.transaction import ExecMany
+from nagra.transaction import ExecMany, Transaction
+
+if TYPE_CHECKING:
+    from nagra.table import Table
+
 
 class Upsert:
-    def __init__(self, table, *columns, trn, lenient=None):
+    def __init__(self, table: "Table", *columns: str, trn: Transaction, lenient: Union[bool, list[str], None]=None):
         self.table = table
         self.columns = list(columns)
         self.columns_ast = [AST.parse(c) for c in columns]
@@ -146,6 +156,6 @@ class Upsert:
     def __call__(self, records):
         return self.executemany(records)
 
-    def from_pandas(self, df:"DataFrame"):
+    def from_pandas(self, df: "DataFrame"):
         rows =  df[self.columns].values
         self.executemany(rows)

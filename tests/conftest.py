@@ -1,5 +1,8 @@
 import pytest
 
+from typeguard import install_import_hook
+install_import_hook('nagra')
+
 from nagra import Table, Transaction, Schema
 
 

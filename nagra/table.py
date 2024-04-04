@@ -36,7 +36,7 @@ temperature = Table(
 
 """
 from functools import lru_cache
-from typing import Dict, List
+from typing import Optional
 
 from nagra.schema import Schema
 from nagra.delete import Delete
@@ -58,11 +58,11 @@ class Table:
     def __init__(
         self,
         name: str,
-        columns: Dict,
-        natural_key: List = None,
-        foreign_keys: Dict = None,
-        not_null: List = None,
-        one2many: Dict = None,
+        columns: dict,
+        natural_key: Optional[list] = None,
+        foreign_keys: Optional[dict] = None,
+        not_null: Optional[list] = None,
+        one2many: Optional[dict] = None,
         schema: Schema = Schema.default,
     ):
         self.name = name

@@ -26,7 +26,7 @@ def test_toml_loader():
 
     # Must fail when a duplicate table is added
     with pytest.raises(RuntimeError):
-        Table("user", columns=["name"], natural_key=["name"], schema=test_schema)
+        Table("user", columns={"name": "varchar"}, natural_key=["name"], schema=test_schema)
 
     # Test reset
     test_schema.reset()

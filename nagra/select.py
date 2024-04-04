@@ -169,8 +169,8 @@ class Select:
 
     def to_pandas(self, *args):
         """
-        Convert the rows into columns and return a df with the
-        proper column types, and the given aliases as column names.
+        Execute the query with given args and return a pandas
+        DataFrame
         """
         from pandas import DataFrame, Series
         names, dtypes = zip(*(self.dtypes(with_optional=False)))
