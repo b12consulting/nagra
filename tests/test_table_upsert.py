@@ -282,7 +282,7 @@ def test_one2many_ref(transaction, person, org):
 
 def test_where_cond(transaction, person):
     """
-    Show that an exception is raised when a row infrige a where condition
+    Shows that an exception is raised when a row infrige a where condition
     """
     upsert = person.upsert("name")
     upsert.execute("Tango")
@@ -292,3 +292,14 @@ def test_where_cond(transaction, person):
     with pytest.raises(ValidationError):
         upsert.execute("Tango", "Tango")
 
+
+def test_default_value(transaction, org):
+    """
+    Shows that default values are applied on row creation
+    """
+    upsert = org.upsert("name")
+    upsert.execute("Lima")
+
+    record, = org.select("name", "status")
+    name, status = record
+    assert (name, status) == ("Lima", "OK")

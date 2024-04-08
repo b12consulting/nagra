@@ -32,7 +32,7 @@ updated
 payload. A simple file name is not accepted anymore
 
 **New feature:** Add one to many support in select queries: Table constructor now
-accepts a `many2one` parameters that can be used like this:
+accepts a `one2many` parameters that can be used like this:
 
 ``` python
 person_table = Table(

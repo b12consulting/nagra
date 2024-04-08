@@ -63,6 +63,7 @@ class Table:
         foreign_keys: Optional[dict] = None,
         not_null: Optional[list] = None,
         one2many: Optional[dict] = None,
+        default: Optional[dict] = None,
         schema: Schema = Schema.default,
     ):
         self.name = name
@@ -71,6 +72,7 @@ class Table:
         self.foreign_keys = foreign_keys or {}
         self.not_null = set(self.natural_key) | set(not_null or [])
         self.one2many = one2many or {}
+        self.default = default or {}
         self.schema = schema
         self.schema.add(self.name, self)
 

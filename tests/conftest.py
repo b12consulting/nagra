@@ -28,6 +28,7 @@ org_table = Table(
     columns={
         "name": "varchar",
         "person": "int",
+        "status": "varchar",
     },
     foreign_keys={
         "person": "person",
@@ -35,6 +36,9 @@ org_table = Table(
     natural_key=["name"],
     one2many = {
         "addresses": "address.org",
+    },
+    default = {
+        "status": "'OK'",
     }
 )
 

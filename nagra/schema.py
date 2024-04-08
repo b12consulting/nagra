@@ -109,7 +109,8 @@ class Schema:
                     column=column,
                     col_def=ctypes[column],
                     not_null=column in table.not_null,
-                    fk_table=table.foreign_keys.get(column)
+                    fk_table=table.foreign_keys.get(column),
+                    default=table.default.get(column),
                 )
                 yield stmt()
 
