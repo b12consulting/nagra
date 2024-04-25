@@ -1,6 +1,6 @@
 import re
 import dataclasses
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 
 from nagra import Statement
@@ -172,19 +172,21 @@ class Select:
         Execute the query with given args and return a pandas
         DataFrame
         """
-        from pandas import DataFrame, Series
+        from pandas import DataFrame, Series, to_datetime
         names, dtypes = zip(*(self.dtypes(with_optional=False)))
         by_col = zip(*self.execute(*args))
         df = DataFrame()
         for name, dt, col in zip(names, dtypes, by_col):
             # FIXME Series(col, dtype=dt) fail on json cols!
             srs = Series(col)
-            if dt == int:
-                # Make sure we have no nan for int columns
-                srs = srs.fillna(0)
-            elif dt == datetime:
-                dt = str
-            df[name] = srs.astype(dt)
+            if dt in (datetime, date):
+                srs = to_datetime(srs)
+            else:
+                if dt == int:
+                    # Make sure we have no nan for int columns
+                    srs = srs.fillna(0)
+                srs = srs.astype(dt)
+            df[name] = srs
         return df
 
     def to_dict(self):
