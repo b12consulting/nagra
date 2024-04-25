@@ -64,7 +64,7 @@ class Alias:
 
 def tokenize(expr):
     lexer = shlex.shlex(expr)
-    lexer.wordchars += ".!=<>:{}-"
+    lexer.wordchars += ".!=<>:{}-|"
     for i in lexer:
         yield Token.from_value(i)
 
@@ -111,6 +111,7 @@ class AST:
         # Strings
         "like": "{} LIKE {}".format,
         "ilike": "{} ILIKE {}".format,
+        "||": lambda *xs: (' || '.join("{}" for _ in xs)).format(*xs),
         # Others
         "in": lambda x, *ys: f"{x} in (%s)" % ", ".join(map(str, ys)),
         "null": lambda: "NULL",
@@ -303,6 +304,7 @@ class VarToken(Token):
             col_type = ftable.columns[tail]
         else:
             col_type = env.table.columns[self.value]
+
         match col_type:
             # TODO validate type names int Table.__init__
             case "int" | "bigint":

@@ -23,6 +23,11 @@ def test_sexpr():
     ast = AST.parse(expr)
     assert str(ast.tokens) == "[<BuiltinToken =>, <VarToken ham.spam>, <ParamToken >]"
 
+    # With string operator
+    expr = "(|| 'one' 'two')"
+    ast = AST.parse(expr)
+    assert str(ast.tokens) == "[<BuiltinToken ||>, <StrToken one>, <StrToken two>]"
+
 
 def test_find_relations():
     expr = "(= ham.spam foo.bar)"
