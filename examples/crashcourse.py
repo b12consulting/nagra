@@ -1,4 +1,5 @@
-from nagra import load_schema, Transaction, Table
+from nagra import Schema, Transaction
+
 
 schema_toml = """
 [city]
@@ -6,7 +7,7 @@ natural_key = ["name"]
 [city.columns]
 name = "varchar"
 lat = "varchar"
-long = "date"
+long = "varchar"
 [city.one2many]
 temperatures = "temperature.city"
 
@@ -21,26 +22,27 @@ city = "city"
 """
 
 with Transaction("sqlite://"):
-    load_schema(schema_toml, create_tables=True)
+    schema = Schema.from_toml(schema_toml)
+    schema.create_tables()
 
     # Add cities
     cities = [
         ("Brussels","50.8476° N", "4.3572° E"),
         ("Louvain-la-Neuve", "50.6681° N", "4.6118° E"),
     ]
-    city = Table.get("city")
+    city = schema.get("city")
     upsert = city.upsert("name", "lat", "long")
     upsert.executemany(cities) # Execute upsert
 
     # Add temperatures
-    temperature = Table.get("temperature")
+    temperature = schema.get("temperature")
     upsert = temperature.upsert("city.name", "timestamp", "value")
-    upsert.execute("Louvain-la-Neuve", "2023-11-27T16:00", 6)
+    upsert.execute("Louvain-la-Neuve", "2023-11-27 16:00:00", 6)
     upsert.executemany([
-        ("Brussels", "2023-11-27T17:00", 7),
-        ("Brussels", "2023-11-27T20:00", 8),
-        ("Brussels", "2023-11-27T23:00", 5),
-        ("Brussels", "2023-11-28T02:00", 3),
+        ("Brussels", "2023-11-27 17:00:00", 7),
+        ("Brussels", "2023-11-27 20:00:00", 8),
+        ("Brussels", "2023-11-27 23:00:00", 5),
+        ("Brussels", "2023-11-28 02:00:00", 3),
     ])
 
     # Read data back
@@ -61,6 +63,8 @@ with Transaction("sqlite://"):
 
     # Update df and save it
     df["value"] += 10
+    df["timestamp"] = df["timestamp"].astype(str)
+
     temperature.upsert().from_pandas(df)
-    row, = temperature.select("value").where("(= timestamp '2023-11-28T02:00')")
+    row, = temperature.select("value").where("(= timestamp '2023-11-28 02:00:00')")
     assert row == (13,)
