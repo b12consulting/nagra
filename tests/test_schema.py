@@ -61,3 +61,20 @@ def test_create_tables(empty_transaction):
     # Needed to not polute other tests
     person.columns.pop("email")
 
+
+def test_custom_id_type(empty_transaction):
+    sch = Schema()
+    city = Table(
+        "city",
+        columns={
+            "id": "varchar",
+            "name": "varchar",
+        },
+        schema=sch,
+    )
+    with empty_transaction:
+        sch.drop()
+        sch.create_tables()
+        row_id = city.upsert("id", "name").execute("this-is-an-uuid", "test")
+        assert row_id == "this-is-an-uuid"
+        assert list(city.select()) == [("this-is-an-uuid", "test")]

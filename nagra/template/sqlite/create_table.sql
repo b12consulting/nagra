@@ -1,3 +1,3 @@
 CREATE TABLE  "{{table}}" (
-  id INTEGER PRIMARY KEY
+  id  {{id_type or "INTEGER"}} PRIMARY KEY
 );

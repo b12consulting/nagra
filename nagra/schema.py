@@ -89,10 +89,12 @@ class Schema:
         for name, table in self.tables.items():
             if name in db_columns:
                 continue
+            ctypes = table.ctypes(trn)
             stmt = Statement(
                 "create_table",
                 trn.flavor,
                 table=name,
+                id_type=ctypes.get("id")
             )
             yield stmt()
 
@@ -100,6 +102,8 @@ class Schema:
         for table in self.tables.values():
             ctypes = table.ctypes(trn)
             for column in table.columns:
+                if column == "id":
+                    continue
                 if column in db_columns[table.name]:
                     continue
                 stmt = Statement(
@@ -132,7 +136,7 @@ class Schema:
         for stm in self.setup_statements(trn):
             trn.execute(stm)
 
-    def drop(self, trn):
+    def drop(self, trn=None):
         trn = trn or Transaction.current
         for name in self.tables:
             stmt = Statement("drop_table", trn.flavor, name=name)

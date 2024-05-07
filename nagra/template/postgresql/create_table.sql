@@ -1,3 +1,3 @@
 CREATE TABLE  "{{table}}" (
-  id BIGSERIAL PRIMARY KEY
+  id {{id_type or "BIGSERIAL"}} PRIMARY KEY
 );
