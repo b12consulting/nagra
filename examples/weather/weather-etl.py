@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from nagra import Transaction, Table, load_schema
+from nagra import Transaction, Table, Schema
 from pandas import read_csv
 
 
@@ -9,9 +9,10 @@ DB = "sqlite://weather.db"
 
 
 def init():
+    Schema.default.load(HERE / "weather_schema.toml")
     db_ok = Path(DB).exists()
-    load_schema(HERE / "weather_schema.toml", create_tables=not db_ok)
-
+    if not db_ok:
+        Schema.default.create_tables()
 
 def load_city():
     # load cities

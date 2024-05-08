@@ -122,6 +122,11 @@ class Table:
         return self.upsert(*columns, trn=trn, lenient=None).insert_only()
 
     def default_columns(self, nk_only=False):
+        """
+        Return the list of default column for the current
+        table. Used by `Table.select` and `Table.upsert` when no
+        columns are provided.
+        """
         columns = self.natural_key if nk_only else self.columns
         for column in columns:
             if column not in self.foreign_keys:

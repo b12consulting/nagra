@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from nagra import Transaction, Table, load_schema
+from nagra import Transaction, Table, Schema
 from pandas import DataFrame
 import streamlit as st
 
@@ -10,7 +10,7 @@ here = Path(__file__).parent
 
 @st.cache_data
 def init():
-    load_schema(here / "weather_schema.toml")
+    Schema.default.load(here / "weather_schema.toml")
 
 
 def main():

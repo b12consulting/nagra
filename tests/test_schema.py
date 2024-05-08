@@ -67,7 +67,7 @@ def test_custom_id_type(empty_transaction):
     city = Table(
         "city",
         columns={
-            "id": "varchar",
+            "id": "varchar",  # XXX it's prob better to not put id in columns
             "name": "varchar",
         },
         schema=sch,
