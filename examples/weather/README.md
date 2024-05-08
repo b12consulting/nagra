@@ -84,15 +84,17 @@ function helper that can load all of those from a toml file.
 ## Schema
 
 The `weather_schema.toml` contains our table definitions and can be
-loaded with `load_schema`, like this:
+loaded with `Schema.load`, like this:
 
 
 ``` python
-from nagra import Transaction, Table, load_schema
+from nagra import Transaction, Table, Schema
 
 db = "sqlite://weather.db"
+schema = Schema.default
 with Transaction(db):
-    load_schema("weather_schema.toml", create_tables=True)
+    schema.load("weather_schema.toml")
+    schema.create_tables()
 ```
 
 
@@ -102,9 +104,9 @@ transaction, making it fully atomic. It is usually used in a program
 entry point, guaranteeing that the database is kept in a consistent
 state even in case of a crash.
 
-What we also see is that `load_schema` takes a `create_tables`
-parameter, so it is not only able to instanciate our `Table` objects
-but also to create actual tables in the database.
+What we also see is that `schema` also provides a `create_tables`
+method, so it is not only able to instanciate our `Table` objects but
+also to create actual tables in the database.
 
 If your run the above code, you should see a new file `weather.db` and
 this sqlite database should contain two tables:
@@ -168,11 +170,13 @@ Lets pause our work here and prepare a stripped-down version of what
 we did until now.
 
 ``` python
-from nagra import Transaction, Table, load_schema
+from nagra import Transaction, Table, Schema
 
 db = "sqlite://weather.db"
+schema = Schema.default
 with Transaction(db):
-    load_schema("weather_schema.toml", create_tables=True)
+    schema.load("weather_schema.toml")
+    schema.create_tables()
     city_upsert = Table.get("city").upsert("name")
     records = [
         ("Bruxelles",),
