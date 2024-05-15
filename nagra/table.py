@@ -108,7 +108,12 @@ class Table:
             delete.where(where)
         return delete
 
-    def upsert(self, *columns, trn=None, lenient=None):
+    def upsert(
+        self,
+        *columns,
+        trn: Optional[Transaction] = None,
+        lenient: Union[bool, list[str]] = False,
+    ):
         """
         Create an upsert object based on the given columns, if
         lenient is set, foreign keys wont be enforced on the given
@@ -129,13 +134,13 @@ class Table:
         self,
         *columns,
         trn: Optional[Transaction] = None,
-        lenien: Union[bool, list[str], None] = None,
+        lenient: Union[bool, list[str]] = False,
     ):
         """
         Provide an insert-only statement (won't raise error if
         record already exists). See `Table.upsert` for `lenient` role.
         """
-        return self.upsert(*columns, trn=trn, lenient=None).insert_only()
+        return self.upsert(*columns, trn=trn, lenient=lenient).insert_only()
 
     def default_columns(self, nk_only: bool = False):
         """
