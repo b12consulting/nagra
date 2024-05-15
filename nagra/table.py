@@ -36,13 +36,14 @@ temperature = Table(
 
 """
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, Union
 
 from nagra.schema import Schema
 from nagra.delete import Delete
 from nagra.select import Select
 from nagra.upsert import Upsert
 from nagra.transaction import Transaction, dummy_transaction
+from nagra.exceptions import IncorrectTable
 
 
 _SQLITE_TYPE_MAP = {
@@ -74,6 +75,17 @@ class Table:
         self.one2many = one2many or {}
         self.default = default or {}
         self.schema = schema
+
+        # Detect malformed fk definitions
+        if len(self.natural_key) == 1:
+            nk, = self.natural_key
+        for fk, fk_table in self.foreign_keys.items():
+            if fk != nk or fk_table != name:
+                continue
+            msg = f"Table '{name}': Foreign key '{fk}' refers to table natural key"
+            raise IncorrectTable(msg)
+
+        # Add table to schema
         self.schema.add(self.name, self)
 
     @classmethod
@@ -114,14 +126,14 @@ class Table:
         trn = trn or Transaction.current or dummy_transaction
         return Upsert(self, *columns, trn=trn, lenient=lenient)
 
-    def insert(self, *columns, trn=None, lenient=None):
+    def insert(self, *columns, trn:Optional[Transaction]=None, lenien:Union[bool, list[str], None]=None):
         """
         Provide an insert-only statement (won't raise error if
         record already exists). See `Table.upsert` for `lenient` role.
         """
         return self.upsert(*columns, trn=trn, lenient=None).insert_only()
 
-    def default_columns(self, nk_only=False):
+    def default_columns(self, nk_only:bool=False):
         """
         Return the list of default column for the current
         table. Used by `Table.select` and `Table.upsert` when no
@@ -136,7 +148,7 @@ class Table:
             ftable = self.schema.get(self.foreign_keys[column])
             yield from (f"{column}.{k}" for k in ftable.default_columns(nk_only=True))
 
-    def join(self, env):
+    def join(self, env:"Env"):
         for prefix, alias in env.refs.items():
             # Find alias of previous join in the chain
             *head, tail = prefix
@@ -146,7 +158,7 @@ class Table:
             yield (ftable.name, alias, prev_table, alias_col, join_col)
 
     @lru_cache
-    def join_on(self, path, env):
+    def join_on(self, path:tuple[str, ...], env:"Env"):
         """
         `path` is a tuple containing names of column, each of
         which is a foreign key to another table.
@@ -186,7 +198,7 @@ class Table:
 
 
 class Env:
-    def __init__(self, table, refs=None):
+    def __init__(self, table:"Table", refs:Optional[dict]=None):
         self.table = table
         self.refs = refs or {}
 

@@ -3,6 +3,7 @@ from  pathlib import Path
 import pytest
 
 from nagra import Table, Schema
+from nagra.exceptions import IncorrectTable
 
 
 HERE = Path(__file__).parent
@@ -35,6 +36,20 @@ def test_toml_loader():
 
 def test_setup():
     pass # TODO test generated sql
+
+
+def test_bogus_fk(empty_transaction):
+    with pytest.raises(IncorrectTable):
+        Table(
+            "bogus",
+            columns={
+                "key": "uuid",
+            },
+            natural_key=["key"],
+            foreign_keys={
+                "key": "bogus",
+            },
+        )
 
 
 def test_create_tables(empty_transaction):

@@ -1,7 +1,7 @@
 from collections import defaultdict
 from itertools import islice
 from typing import Union, TYPE_CHECKING
-
+from collections.abc import Iterable
 try:
     from pandas import DataFrame
 except ImportError:
@@ -70,7 +70,7 @@ class Upsert:
             resolve_stm[col] = select.stm()
         return groups, resolve_stm
 
-    def where(self, *conditions):
+    def where(self, *conditions: str):
         if self._where is None:
             self._where = []
         self._where.extend(conditions)
@@ -81,7 +81,7 @@ class Upsert:
         if ids:
             return ids[0]
 
-    def executemany(self, records):
+    def executemany(self, records: Iterable[tuple]):
         # Transform list of records into a dataframe-like dict
         value_df = dict(zip(self.columns, zip(*records)))
         arg_df = {}
@@ -118,7 +118,7 @@ class Upsert:
             self.validate(ids)
         return ids
 
-    def validate(self, ids):
+    def validate(self, ids: list[int]):
         iter_ids = iter(ids)
         while True:
             chunk = list(islice(iter_ids, 1000))

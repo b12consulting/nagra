@@ -1,16 +1,22 @@
+from typing import TYPE_CHECKING
+
 from nagra import Statement
 from nagra.sexpr import AST
 
+if TYPE_CHECKING:
+    from nagra.table import Table
+    from nagra.transaction import Transaction
+
 
 class Delete:
-    def __init__(self, table, trn, env):
+    def __init__(self, table: "Table", trn: "Transaction", env):
         self.table = table
         self.env = env
         self.where_asts = []
         self.where_conditions = []
         self.trn = trn
 
-    def where(self, *conditions):
+    def where(self, *conditions:str):
         # TODO clone first
         asts = [AST.parse(cond) for cond in conditions]
         self.where_asts += asts

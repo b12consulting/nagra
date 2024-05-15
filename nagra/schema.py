@@ -2,11 +2,14 @@ from collections import defaultdict
 from jinja2 import Template
 from pathlib import Path
 from io import IOBase
+from typing import TYPE_CHECKING
 
 import toml
-
 from nagra.statement import Statement
 from nagra.transaction import Transaction
+
+if TYPE_CHECKING:
+    from nagra.table import Table
 
 
 D2_TPL = """
@@ -37,12 +40,12 @@ class Schema:
         return cls._default
 
     @classmethod
-    def from_toml(self, toml_src):
+    def from_toml(self, toml_src: IOBase | Path | str) -> "Schema":
         schema = Schema()
         schema.load(toml_src)
         return schema
 
-    def load(self, toml_src):
+    def load(self, toml_src: IOBase | Path | str):
         # Late import to avoid import loops
         from nagra.table import Table
 
@@ -59,7 +62,7 @@ class Schema:
         for name, info in tables.items():
             Table(name, **info, schema=self)
 
-    def add(self, name, table):
+    def add(self, name: str, table: "Table"):
         if name in self.tables:
             raise RuntimeError(f"Table {name} already in schema!")
         self.tables[name] = table
@@ -67,7 +70,7 @@ class Schema:
     def reset(self):
         self.tables = {}
 
-    def get(self, name):
+    def get(self, name: str) -> "Table":
         """
         Return the table with name `name`
         """

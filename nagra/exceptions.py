@@ -12,3 +12,6 @@ class UnresolvedFK(BaseException):
 
 class ValidationError(BaseException):
     pass
+
+class IncorrectTable(BaseException):
+    pass

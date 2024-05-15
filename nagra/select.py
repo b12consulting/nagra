@@ -1,11 +1,14 @@
 import re
 import dataclasses
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from nagra import Statement
 from nagra.sexpr import AST, AggToken
 
+if TYPE_CHECKING:
+    from nagra.table import Env
+    from nagra.transaction import Transaction
 
 RE_VALID_IDENTIFIER = re.compile(r"\W|^(?=\d)")
 
@@ -14,7 +17,7 @@ def clean_col(name):
 
 
 class Select:
-    def __init__(self, table, *columns, trn, env):
+    def __init__(self, table, *columns:str, trn:"Transaction", env:"Env"):
         self.table = table
         self.env = env #Env(table)
         self.where_asts = tuple()
@@ -34,7 +37,7 @@ class Select:
         self.columns_ast += tuple(AST.parse(c) for c in columns)
         self.query_columns += tuple(a.eval(self.env, self.trn.flavor) for a in self.columns_ast)
 
-    def clone(self, trn=None):
+    def clone(self, trn:Optional["Transaction"]=None):
         """
         Return a copy of select with updated parameters
         """
@@ -46,12 +49,12 @@ class Select:
         cln.order_directions  = self.order_directions
         return cln
 
-    def where(self, *conditions):
+    def where(self, *conditions: str):
         cln = self.clone()
         cln.where_asts += tuple(AST.parse(cond) for cond in conditions)
         return cln
 
-    def select(self, *columns):
+    def select(self, *columns: str):
         cln = self.clone()
         cln._add_columns(columns)
         return cln
@@ -66,12 +69,12 @@ class Select:
         cln._limit = value
         return cln
 
-    def groupby(self, *groups):
+    def groupby(self, *groups: str):
         cln = self.clone()
         cln.groupby_ast += tuple(AST.parse(g) for g in groups)
         return cln
 
-    def orderby(self, *orders):
+    def orderby(self, *orders:str|tuple[str, str]):
         expressions = []
         directions = []
         for o in orders:
@@ -92,7 +95,7 @@ class Select:
         cln.order_directions += tuple(directions)
         return cln
 
-    def to_dataclass(self, *aliases):
+    def to_dataclass(self, *aliases: str):
         return dataclasses.make_dataclass(
             self.table.name,
             fields=[
@@ -100,7 +103,7 @@ class Select:
                 for c, d in self.dtypes(*aliases)]
         )
 
-    def dtypes(self, *aliases, with_optional=True):
+    def dtypes(self, *aliases:str, with_optional:bool=True):
         fields = []
         if aliases:
             assert len(aliases) == len(self.columns)
