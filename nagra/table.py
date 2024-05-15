@@ -75,6 +75,7 @@ _TYPE_MAP = {
     },
 }
 
+
 class Table:
     def __init__(
         self,
@@ -126,7 +127,7 @@ class Table:
         trn = trn or Transaction.current or dummy_transaction
         delete = Delete(self, trn=trn, env=Env(self))
         if where:
-            delete.where(where)
+            return delete.where(where)
         return delete
 
     def upsert(

@@ -1,6 +1,6 @@
 from collections import defaultdict
 from itertools import islice
-from typing import Union, TYPE_CHECKING
+from typing import Union, Optional, TYPE_CHECKING
 from collections.abc import Iterable
 
 try:
@@ -9,7 +9,6 @@ except ImportError:
     DataFrame = None
 
 from nagra import Statement
-from nagra.sexpr import AST
 from nagra.exceptions import UnresolvedFK, ValidationError
 from nagra.utils import logger
 from nagra.transaction import ExecMany, Transaction
@@ -25,15 +24,44 @@ class Upsert:
         *columns: str,
         trn: Transaction,
         lenient: Union[bool, list[str], None] = None,
+        insert_only: bool = False,
+        where: Iterable[str] = [],
     ):
         self.table = table
         self.columns = list(columns)
-        self.columns_ast = [AST.parse(c) for c in columns]
         self.groups, self.resolve_stm = self.prepare()
-        self._insert_only = False
+        self._insert_only = insert_only
         self.lenient = lenient or []
-        self._where = None
+        self._where = list(where)
         self.trn = trn
+
+    def clone(
+        self,
+        trn: Optional["Transaction"] = None,
+        insert_only: Optional[bool] = None,
+        where: Iterable[str] = [],
+    ):
+        """
+        Return a copy of upsert with updated parameters
+        """
+        trn = trn or self.trn
+        insert_only = self._insert_only if insert_only is None else insert_only
+        where = self._where + list(where)
+        cln = Upsert(
+            self.table,
+            *self.columns,
+            trn=trn,
+            lenient=self.lenient,
+            insert_only=insert_only,
+            where=where,
+        )
+        return cln
+
+    def insert_only(self):
+        return self.clone(insert_only=True)
+
+    def where(self, *conditions: str):
+        return self.clone(where=conditions)
 
     def stm(self):
         conflict_key = ["id"] if "id" in self.groups else self.table.natural_key
@@ -48,11 +76,6 @@ class Upsert:
             do_update=do_update,
         )
         return stm()
-
-    def insert_only(self):
-        # TODO clone first
-        self._insert_only = True
-        return self
 
     def prepare(self):
         """
@@ -76,12 +99,6 @@ class Upsert:
             select = ftable.select("id").where(*cond)
             resolve_stm[col] = select.stm()
         return groups, resolve_stm
-
-    def where(self, *conditions: str):
-        if self._where is None:
-            self._where = []
-        self._where.extend(conditions)
-        return self
 
     def execute(self, *values):
         ids = self.executemany([values])

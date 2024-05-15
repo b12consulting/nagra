@@ -249,7 +249,17 @@ def test_from_pandas(transaction, kitchensink):
             UUID("F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"),
         )
     else:
-        assert row == ("ham", 1, 1.0, 1, "1970-01-01 00:00:00", 1, "1970-01-01", "{}", "F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C")
+        assert row == (
+            "ham",
+            1,
+            1.0,
+            1,
+            "1970-01-01 00:00:00",
+            1,
+            "1970-01-01",
+            "{}",
+            "F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C",
+        )
 
 
 def test_double_insert(transaction, person):
