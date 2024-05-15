@@ -99,11 +99,11 @@ class Table:
         # Detect malformed fk definitions
         if len(self.natural_key) == 1:
             (nk,) = self.natural_key
-        for fk, fk_table in self.foreign_keys.items():
-            if fk != nk or fk_table != name:
-                continue
-            msg = f"Table '{name}': Foreign key '{fk}' refers to table natural key"
-            raise IncorrectTable(msg)
+            for fk, fk_table in self.foreign_keys.items():
+                if fk != nk or fk_table != name:
+                    continue
+                msg = f"Table '{name}': Foreign key '{fk}' refers to table natural key"
+                raise IncorrectTable(msg)
 
         # Add table to schema
         self.schema.add(self.name, self)
