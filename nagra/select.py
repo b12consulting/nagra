@@ -12,14 +12,15 @@ if TYPE_CHECKING:
 
 RE_VALID_IDENTIFIER = re.compile(r"\W|^(?=\d)")
 
+
 def clean_col(name):
-    return RE_VALID_IDENTIFIER.sub('_', name)
+    return RE_VALID_IDENTIFIER.sub("_", name)
 
 
 class Select:
-    def __init__(self, table, *columns:str, trn:"Transaction", env:"Env"):
+    def __init__(self, table, *columns: str, trn: "Transaction", env: "Env"):
         self.table = table
-        self.env = env #Env(table)
+        self.env = env  # Env(table)
         self.where_asts = tuple()
         self._offset = None
         self._limit = None
@@ -35,9 +36,11 @@ class Select:
     def _add_columns(self, columns):
         self.columns += columns
         self.columns_ast += tuple(AST.parse(c) for c in columns)
-        self.query_columns += tuple(a.eval(self.env, self.trn.flavor) for a in self.columns_ast)
+        self.query_columns += tuple(
+            a.eval(self.env, self.trn.flavor) for a in self.columns_ast
+        )
 
-    def clone(self, trn:Optional["Transaction"]=None):
+    def clone(self, trn: Optional["Transaction"] = None):
         """
         Return a copy of select with updated parameters
         """
@@ -46,7 +49,7 @@ class Select:
         cln.where_asts = self.where_asts
         cln.groupby_ast = self.groupby_ast
         cln.order_ast = self.order_ast
-        cln.order_directions  = self.order_directions
+        cln.order_directions = self.order_directions
         return cln
 
     def where(self, *conditions: str):
@@ -74,7 +77,7 @@ class Select:
         cln.groupby_ast += tuple(AST.parse(g) for g in groups)
         return cln
 
-    def orderby(self, *orders:str|tuple[str, str]):
+    def orderby(self, *orders: str | tuple[str, str]):
         expressions = []
         directions = []
         for o in orders:
@@ -98,12 +101,10 @@ class Select:
     def to_dataclass(self, *aliases: str):
         return dataclasses.make_dataclass(
             self.table.name,
-            fields=[
-                (clean_col(c), d)
-                for c, d in self.dtypes(*aliases)]
+            fields=[(clean_col(c), d) for c, d in self.dtypes(*aliases)],
         )
 
-    def dtypes(self, *aliases:str, with_optional:bool=True):
+    def dtypes(self, *aliases: str, with_optional: bool = True):
         fields = []
         if aliases:
             assert len(aliases) == len(self.columns)
@@ -145,15 +146,20 @@ class Select:
 
     def stm(self):
         # Eval where conditions
-        where_conditions = [ast.eval(self.env, self.trn.flavor) for ast in self.where_asts]
+        where_conditions = [
+            ast.eval(self.env, self.trn.flavor) for ast in self.where_asts
+        ]
         # Eval Groupby
         groupby_ast = self.groupby_ast or self.infer_groupby()
         groupby = [a.eval(self.env, self.trn.flavor) for a in groupby_ast]
         # Eval Oder by
-        orderby = [a.eval(self.env, self.trn.flavor) + f" {d}" for a, d in zip(
-            self.order_ast,
-            self.order_directions,
-        )]
+        orderby = [
+            a.eval(self.env, self.trn.flavor) + f" {d}"
+            for a, d in zip(
+                self.order_ast,
+                self.order_directions,
+            )
+        ]
         # Create joins
         joins = self.table.join(self.env)
 
@@ -176,6 +182,7 @@ class Select:
         DataFrame
         """
         from pandas import DataFrame, Series, to_datetime
+
         names, dtypes = zip(*(self.dtypes(with_optional=False)))
         by_col = zip(*self.execute(*args))
         df = DataFrame()

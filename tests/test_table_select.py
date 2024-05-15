@@ -14,16 +14,17 @@ def test_select_with_join(person):
     stm = person.select("name", "parent.parent.name").stm()
     res = list(strip_lines(stm))
     assert res == [
-        'SELECT',
+        "SELECT",
         '"person"."name", "parent_1"."name"',
         'FROM "person"',
         'LEFT JOIN "person" as parent_0 ON (',
         'parent_0."id" = "person"."parent"',
-        ')',
+        ")",
         'LEFT JOIN "person" as parent_1 ON (',
         'parent_1."id" = "parent_0"."parent"',
-        ')',
-        ';']
+        ")",
+        ";",
+    ]
 
 
 def test_select_with_where(person):
@@ -56,15 +57,15 @@ def test_select_where_and_join(person):
     stm = select.stm()
     res = list(strip_lines(stm))
     assert res == [
-        'SELECT',
+        "SELECT",
         '"person"."name"',
         'FROM "person"',
         'LEFT JOIN "person" as parent_0 ON (',
         'parent_0."id" = "person"."parent"',
-        ')',
-        'WHERE',
+        ")",
+        "WHERE",
         '"parent_0"."name" = \'foo\'',
-        ';'
+        ";",
     ]
 
 
@@ -118,8 +119,10 @@ def test_orderby(person):
     # with join
     stm = person.select("name").orderby("parent.name").stm()
     res = " ".join(strip_lines(stm))
-    assert res == ('SELECT "person"."name" FROM "person" LEFT JOIN "person" as parent_0 ON ( '
-                   'parent_0."id" = "person"."parent" ) ORDER BY "parent_0"."name" asc ;')
+    assert res == (
+        'SELECT "person"."name" FROM "person" LEFT JOIN "person" as parent_0 ON ( '
+        'parent_0."id" = "person"."parent" ) ORDER BY "parent_0"."name" asc ;'
+    )
 
 
 def test_o2m_stm(person, org):
@@ -133,23 +136,21 @@ def test_o2m_stm(person, org):
     stm = select.stm()
     res = list(strip_lines(stm))
     expected = [
-        'SELECT',
-        '"person"."name", "orgs_0"."name", "parent_1"."name", '
-        '"parent_2"."name"',
+        "SELECT",
+        '"person"."name", "orgs_0"."name", "parent_1"."name", ' '"parent_2"."name"',
         'FROM "person"',
         'LEFT JOIN "org" as orgs_0 ON (',
         'orgs_0."person" = "person"."id"',
-        ')',
+        ")",
         'LEFT JOIN "person" as parent_1 ON (',
         'parent_1."id" = "person"."parent"',
-        ')',
+        ")",
         'LEFT JOIN "person" as parent_2 ON (',
         'parent_2."id" = "parent_1"."parent"',
-        ')',
-        ';'
+        ")",
+        ";",
     ]
     assert res == expected
-
 
     # Multiple one2many
     select = person.select(
@@ -160,19 +161,18 @@ def test_o2m_stm(person, org):
     stm = select.stm()
     res = list(strip_lines(stm))
     expected = [
-        'SELECT',
+        "SELECT",
         '"person"."name", "orgs_0"."country", "skills_1"."name"',
         'FROM "person"',
         'LEFT JOIN "org" as orgs_0 ON (',
         'orgs_0."person" = "person"."id"',
-        ')',
+        ")",
         'LEFT JOIN "skill" as skills_1 ON (',
         'skills_1."person" = "person"."id"',
-        ')',
-        ';'
+        ")",
+        ";",
     ]
     assert res == expected
-
 
     # Use a on2many after a many2one
     select = org.select(
@@ -183,37 +183,35 @@ def test_o2m_stm(person, org):
     stm = select.stm()
     res = list(strip_lines(stm))
     expected = [
-        'SELECT',
+        "SELECT",
         '"org"."name", "person_0"."name", "skills_1"."name"',
         'FROM "org"',
         'LEFT JOIN "person" as person_0 ON (',
         'person_0."id" = "org"."person"',
-        ')',
+        ")",
         'LEFT JOIN "skill" as skills_1 ON (',
         'skills_1."person" = "person_0"."id"',
-        ')',
-        ';']
+        ")",
+        ";",
+    ]
     assert res == expected
 
-
     # Use a on2many after a one2many
-    select = person.select(
-        "name",
-        "orgs.addresses.city"
-    )
+    select = person.select("name", "orgs.addresses.city")
     stm = select.stm()
     res = list(strip_lines(stm))
     expected = [
-        'SELECT',
+        "SELECT",
         '"person"."name", "addresses_1"."city"',
         'FROM "person"',
         'LEFT JOIN "org" as orgs_0 ON (',
         'orgs_0."person" = "person"."id"',
-        ')',
+        ")",
         'LEFT JOIN "address" as addresses_1 ON (',
         'addresses_1."org" = "orgs_0"."id"',
-        ')',
-        ';']
+        ")",
+        ";",
+    ]
     assert res == expected
 
 
@@ -222,26 +220,31 @@ def test_o2m_select(transaction, person, org, address):
     person.upsert("name").execute("Charly")
     org.upsert("name", "person.name").execute("Alpha", "Charly")
     org.upsert("name", "person.name").execute("Beta", "Charly")
-    address.upsert("city", "org.name").executemany([
-        ("Ankara", "Alpha"),
-        ("Athens", "Alpha"),
-        ("Beirut", "Beta"),
-    ])
-    rows = list(person.select(
-        "name",
-        "orgs.addresses.city"
-    ).orderby("orgs.addresses.city"))
-    assert rows == [('Charly', 'Ankara'), ('Charly', 'Athens'), ('Charly', 'Beirut')]
+    address.upsert("city", "org.name").executemany(
+        [
+            ("Ankara", "Alpha"),
+            ("Athens", "Alpha"),
+            ("Beirut", "Beta"),
+        ]
+    )
+    rows = list(
+        person.select("name", "orgs.addresses.city").orderby("orgs.addresses.city")
+    )
+    assert rows == [("Charly", "Ankara"), ("Charly", "Athens"), ("Charly", "Beirut")]
 
 
 def test_agg(transaction, temperature):
-    temperature.upsert("timestamp", "city", "value").executemany([
-        ("1970-01-01", "Berlin", 10),
-        ("1970-01-01", "London", 12),
-        ])
-    rows = list(temperature.select(
-        "city",
-    ))
+    temperature.upsert("timestamp", "city", "value").executemany(
+        [
+            ("1970-01-01", "Berlin", 10),
+            ("1970-01-01", "London", 12),
+        ]
+    )
+    rows = list(
+        temperature.select(
+            "city",
+        )
+    )
     assert len(rows) == 2
 
     # String concat
@@ -252,44 +255,47 @@ def test_agg(transaction, temperature):
         select = temperature.select("(group_concat city)")
     rows = list(select)
     assert len(rows) == 1
-    record, = rows
-    assert record[0] == 'Berlin,London'
+    (record,) = rows
+    assert record[0] == "Berlin,London"
 
     # Strings into array
     if is_pg:
-        record, = list(temperature.select("(array_agg city)"))
-        assert sorted(record[0]) == ['Berlin', 'London']
-
+        (record,) = list(temperature.select("(array_agg city)"))
+        assert sorted(record[0]) == ["Berlin", "London"]
 
     # sum, avg, min and max
     for op, expected in [("sum", 22), ("min", 10), ("max", 12), ("avg", 11)]:
         select = temperature.select(f"({op} value)")
-        record, = list(select)
+        (record,) = list(select)
         assert expected == record[0]
 
     # Add more rows
-    temperature.upsert("timestamp", "city", "value").executemany([
-        ("1970-01-02", "Berlin", 10),
-        ("1970-01-02", "London", 12),
-        ])
+    temperature.upsert("timestamp", "city", "value").executemany(
+        [
+            ("1970-01-02", "Berlin", 10),
+            ("1970-01-02", "London", 12),
+        ]
+    )
 
     records = dict(temperature.select("city", "(sum value)").groupby("city"))
-    assert records == {'Berlin': 20.0, 'London': 24.0}
+    assert records == {"Berlin": 20.0, "London": 24.0}
 
     # Json agg
     if is_pg:
         select = temperature.select("(json_object_agg city value)")
-        record, = list(select)
-        assert record[0] == {'Berlin': 10, 'London': 12}
+        (record,) = list(select)
+        assert record[0] == {"Berlin": 10, "London": 12}
 
 
 def test_date_op(transaction, temperature):
     is_pg = Transaction.current.flavor == "postgresql"
 
-    temperature.upsert("timestamp", "city", "value").executemany([
-        ("1970-01-02", "Berlin", 10),
-        ("1970-01-02", "London", 12),
-    ])
+    temperature.upsert("timestamp", "city", "value").executemany(
+        [
+            ("1970-01-02", "Berlin", 10),
+            ("1970-01-02", "London", 12),
+        ]
+    )
     if is_pg:
         select = temperature.select("(extract 'year' timestamp)")
         records = list(select)
@@ -303,17 +309,19 @@ def test_date_op(transaction, temperature):
 
 def test_to_pandas(transaction, temperature):
     # Upsert
-    temperature.upsert("timestamp", "city", "value").executemany([
-        ("1970-01-02", "Berlin", 10),
-        ("1970-01-02", "London", 12),
-    ])
+    temperature.upsert("timestamp", "city", "value").executemany(
+        [
+            ("1970-01-02", "Berlin", 10),
+            ("1970-01-02", "London", 12),
+        ]
+    )
     # Read data
     df = temperature.select().to_pandas()
-    assert list(df.columns) == ['timestamp', 'city', 'value']
-    assert sorted(df.city) == ['Berlin', 'London']
+    assert list(df.columns) == ["timestamp", "city", "value"]
+    assert sorted(df.city) == ["Berlin", "London"]
 
     # Read with custom arg
     cond = "(= value {})"
     df = temperature.select().where(cond).to_pandas(12)
-    assert list(df.columns) == ['timestamp', 'city', 'value']
-    assert sorted(df.city) == ['London']
+    assert list(df.columns) == ["timestamp", "city", "value"]
+    assert sorted(df.city) == ["London"]

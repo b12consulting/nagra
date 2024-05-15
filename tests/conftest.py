@@ -1,7 +1,8 @@
 import pytest
 
 from typeguard import install_import_hook
-install_import_hook('nagra')
+
+install_import_hook("nagra")
 
 from nagra import Table, Transaction, Schema
 
@@ -16,10 +17,10 @@ person_table = Table(
         "parent": "person",
     },
     natural_key=["name"],
-    one2many = {
+    one2many={
         "orgs": "org.person",
         "skills": "skill.person",
-    }
+    },
 )
 
 
@@ -34,12 +35,12 @@ org_table = Table(
         "person": "person",
     },
     natural_key=["name"],
-    one2many = {
+    one2many={
         "addresses": "address.org",
     },
-    default = {
+    default={
         "status": "'OK'",
-    }
+    },
 )
 
 
@@ -75,9 +76,8 @@ skill_table = Table(
     natural_key=["name"],
     foreign_keys={
         "person": "person",
- }
+    },
 )
-
 
 
 kitchensink_table = Table(
@@ -136,7 +136,7 @@ def temperature():
     return temperature_table
 
 
-DSN= [
+DSN = [
     "postgresql:///nagra",
     "sqlite://",
     # CRDB (command: cockroach start-single-node --insecure
@@ -144,6 +144,8 @@ DSN= [
     "postgresql://root@localhost:26257/defaultdb?sslmode=disable"
     # "duckdb://",
 ]
+
+
 @pytest.fixture(scope="function", params=DSN)
 def empty_transaction(request):
     dsn = request.param

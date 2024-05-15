@@ -13,6 +13,7 @@ class Transaction:
     def __init__(self, dsn, rollback=False):
         if dsn.startswith("postgresql://"):
             import psycopg
+
             # TODO use Connection Pool
             self.flavor = "postgresql"
             self.connection = psycopg.connect(dsn)
@@ -22,6 +23,7 @@ class Transaction:
             self.connection = sqlite3.connect(filename)
         elif dsn.startswith("duckdb://"):
             import duckdb
+
             self.flavor = "duckdb"
             filename = dsn[9:]
             self.connection = duckdb.connect(filename)
@@ -126,6 +128,7 @@ class DummyTransaction(Transaction):
     """
     Postgresql flavored transaction look-alike
     """
+
     flavor = "postgresql"
 
     def __init__(self):

@@ -67,6 +67,7 @@ def test_select_with_sexp(person):
         bool_like: Optional[bool]
         float_like: Optional[float]
         int_like: Optional[int]
+
     assert equivalent_classes(dclass, Expected)
 
 
@@ -84,6 +85,7 @@ def test_kitchensink(kitchensink):
         bool: Optional[bool]
         date: Optional[date]
         json: Optional[str]
+
     assert equivalent_classes(dclass, KitchenSink)
 
 
@@ -111,7 +113,7 @@ def test_aggregates(kitchensink):
 
     @dataclass
     class KitchenSink:
-        varchar: Optional[str] # FIXME should no be nullable
+        varchar: Optional[str]  # FIXME should no be nullable
         bigint: Optional[int]
         float: Optional[float]
         int: Optional[int]

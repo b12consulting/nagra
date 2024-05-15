@@ -25,7 +25,6 @@ D2_TPL = """
 """
 
 
-
 class Schema:
     _default = None
 
@@ -54,7 +53,7 @@ class Schema:
             case IOBase():
                 content = toml_src.read()
             case Path():
-                content =  toml_src.open().read()
+                content = toml_src.open().read()
             case _:
                 content = toml_src
         tables = toml.loads(content)
@@ -94,10 +93,7 @@ class Schema:
                 continue
             ctypes = table.ctypes(trn)
             stmt = Statement(
-                "create_table",
-                trn.flavor,
-                table=name,
-                id_type=ctypes.get("id")
+                "create_table", trn.flavor, table=name, id_type=ctypes.get("id")
             )
             yield stmt()
 

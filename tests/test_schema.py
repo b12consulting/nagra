@@ -1,4 +1,4 @@
-from  pathlib import Path
+from pathlib import Path
 
 import pytest
 
@@ -7,6 +7,8 @@ from nagra.exceptions import IncorrectTable
 
 
 HERE = Path(__file__).parent
+
+
 def test_toml_loader():
 
     # With a Path
@@ -27,7 +29,12 @@ def test_toml_loader():
 
     # Must fail when a duplicate table is added
     with pytest.raises(RuntimeError):
-        Table("user", columns={"name": "varchar"}, natural_key=["name"], schema=test_schema)
+        Table(
+            "user",
+            columns={"name": "varchar"},
+            natural_key=["name"],
+            schema=test_schema,
+        )
 
     # Test reset
     test_schema.reset()
@@ -35,7 +42,7 @@ def test_toml_loader():
 
 
 def test_setup():
-    pass # TODO test generated sql
+    pass  # TODO test generated sql
 
 
 def test_bogus_fk(empty_transaction):
@@ -63,7 +70,7 @@ def test_create_tables(empty_transaction):
 
     # Test person table is properly created
     assert "person" in post
-    assert sorted(post["person"]) ==  ["id", "name", "parent"]
+    assert sorted(post["person"]) == ["id", "name", "parent"]
 
     # Add a column to existing table
     person = Table.get("person")
@@ -71,7 +78,7 @@ def test_create_tables(empty_transaction):
     schema.create_tables(trn=empty_transaction)
     post = schema._db_columns(trn=empty_transaction)
     assert "person" in post
-    assert sorted(post["person"]) ==  ["email", "id", "name", "parent"]
+    assert sorted(post["person"]) == ["email", "id", "name", "parent"]
 
     # Needed to not polute other tests
     person.columns.pop("email")

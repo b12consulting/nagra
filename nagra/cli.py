@@ -59,8 +59,8 @@ def run():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
-    default_db = os.environ.get('NAGRA_DB')
-    default_schema = os.environ.get('NAGRA_SCHEMA')
+    default_db = os.environ.get("NAGRA_DB")
+    default_schema = os.environ.get("NAGRA_SCHEMA")
     parser.add_argument(
         "--db",
         "-d",
@@ -77,27 +77,32 @@ def run():
         "--pivot",
         "-p",
         action="store_true",
-        help='Pivot results (one key-value table per record)',
+        help="Pivot results (one key-value table per record)",
     )
     subparsers = parser.add_subparsers(dest="command")
 
     parser_select = subparsers.add_parser("select")
     parser_select.add_argument("table")
     parser_select.add_argument("columns", nargs="*")
-    parser_select.add_argument("--where", "-W", type=str, action='append', nargs="*")
+    parser_select.add_argument("--where", "-W", type=str, action="append", nargs="*")
     parser_select.add_argument("--limit", "-L", type=int)
-    parser_select.add_argument("--orderby", "-O", type=str,
-                               action='append', nargs="*", help="Order by given columns")
+    parser_select.add_argument(
+        "--orderby",
+        "-O",
+        type=str,
+        action="append",
+        nargs="*",
+        help="Order by given columns",
+    )
     parser_select.set_defaults(func=select)
 
     parser_delete = subparsers.add_parser("delete")
     parser_delete.add_argument("table")
-    parser_delete.add_argument("--where", "-W", type=str, action='append', nargs="*")
+    parser_delete.add_argument("--where", "-W", type=str, action="append", nargs="*")
     parser_delete.set_defaults(func=delete)
 
     parser_schema = subparsers.add_parser("schema")
-    parser_schema.add_argument("--d2", action="store_true",
-                               help="Generate d2 file")
+    parser_schema.add_argument("--d2", action="store_true", help="Generate d2 file")
     parser_schema.add_argument("tables", nargs="*")
     parser_schema.set_defaults(func=schema)
 

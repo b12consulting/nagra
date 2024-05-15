@@ -51,7 +51,6 @@ class KWargs:
         return f'<KWargs "{self.value}">'
 
 
-
 class Alias:
     """
     Simple wrapper that combine a value and an alias name
@@ -101,21 +100,20 @@ class AST:
         "true": lambda: "true",
         "false": lambda: "false",
         # Arithmetic
-        "+" :lambda *xs: (' + '.join("{}" for _ in xs)).format(*xs),
-        "-": lambda *xs: (' - '.join("{}" for _ in xs)).format(*xs),
-        "*": lambda *xs: (' * '.join("{}" for _ in xs)).format(*xs),
-        "/": lambda *xs: (' / '.join("{}" for _ in xs)).format(*xs),
+        "+": lambda *xs: (" + ".join("{}" for _ in xs)).format(*xs),
+        "-": lambda *xs: (" - ".join("{}" for _ in xs)).format(*xs),
+        "*": lambda *xs: (" * ".join("{}" for _ in xs)).format(*xs),
+        "/": lambda *xs: (" / ".join("{}" for _ in xs)).format(*xs),
         # dates and time
         "strftime": "strftime({}, {})".format,
         "extract": "EXTRACT({} FROM {})".format,
         # Strings
         "like": "{} LIKE {}".format,
         "ilike": "{} ILIKE {}".format,
-        "||": lambda *xs: (' || '.join("{}" for _ in xs)).format(*xs),
+        "||": lambda *xs: (" || ".join("{}" for _ in xs)).format(*xs),
         # Others
         "in": lambda x, *ys: f"{x} in (%s)" % ", ".join(map(str, ys)),
         "null": lambda: "NULL",
-
     }
 
     aggregates = {
@@ -126,7 +124,8 @@ class AST:
         "every": "every({})".format,
         "count": lambda x="*": f"count({x})",
         # Sqlite specific
-        "group_concat": lambda *xs: ("group_concat(%s)") % (", ".join("{}" for _ in xs)).format(*xs),
+        "group_concat": lambda *xs: ("group_concat(%s)")
+        % (", ".join("{}" for _ in xs)).format(*xs),
         # Pg specific
         "string_agg": "string_agg({}, {})".format,
         "array_agg": "array_agg({})".format,
@@ -138,10 +137,7 @@ class AST:
 
     def __init__(self, tokens):
         # Auto-wrap sublist into AST
-        self.tokens = [
-            tk if isinstance(tk, Token) else AST(tk)
-            for tk in tokens
-        ]
+        self.tokens = [tk if isinstance(tk, Token) else AST(tk) for tk in tokens]
 
     @classmethod
     def parse(cls, expr):
@@ -153,7 +149,7 @@ class AST:
 
     def chain(self):
         for tk in self.tokens:
-            if isinstance (tk, Token):
+            if isinstance(tk, Token):
                 yield tk
             else:
                 yield from tk.chain()
@@ -180,7 +176,6 @@ class AST:
 
     def eval_type(self, env):
         return self._eval_type(env)
-
 
     def get_args(self):
         """
@@ -212,7 +207,7 @@ class Token:
         if (value[0], value[-1]) == ("{", "}"):
             return ParamToken(value)
         try:
-            if '.' in value:
+            if "." in value:
                 value = float(value)
                 return FloatToken(value)
             else:
@@ -251,9 +246,9 @@ class LitToken(Token):
     def _eval_type(self, env):
         return self._type
 
-
     def _eval(self, env, flavor, *args):
         return self.value
+
 
 class FloatToken(LitToken):
     "Float Token"
@@ -337,8 +332,18 @@ class OpToken(Token):
 class BuiltinToken(OpToken):
     num_like = "+-*/"
     bool_like = (
-        "!=", "<", ">", ">=", "<=", "=",
-        "and", "or", "not", "is", "like", "ilike",
+        "!=",
+        "<",
+        ">",
+        ">=",
+        "<=",
+        "=",
+        "and",
+        "or",
+        "not",
+        "is",
+        "like",
+        "ilike",
     )
 
     def _eval_type(self, env, *operands):
@@ -351,6 +356,7 @@ class BuiltinToken(OpToken):
             return bool
         else:
             return str
+
 
 class AggToken(OpToken):
     ops = AST.aggregates

@@ -14,7 +14,6 @@ def test_dummy_transaction():
         dummy_transaction.executemany("SELECT 1")
 
 
-
 def test_concurrent_transaction(person):
     uri = "postgresql:///nagra"
 

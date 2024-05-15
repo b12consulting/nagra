@@ -18,10 +18,7 @@ def test_create_table():
 
     doc = stmt()
     lines = list(strip_lines(doc))
-    assert lines == [
-        'CREATE TABLE  "my_table" (',
-        'id BIGSERIAL PRIMARY KEY', ');'
-    ]
+    assert lines == ['CREATE TABLE  "my_table" (', "id BIGSERIAL PRIMARY KEY", ");"]
 
 
 def test_create_unique_index():

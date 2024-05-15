@@ -16,7 +16,7 @@ class Delete:
         self.where_conditions = []
         self.trn = trn
 
-    def where(self, *conditions:str):
+    def where(self, *conditions: str):
         # TODO clone first
         asts = [AST.parse(cond) for cond in conditions]
         self.where_asts += asts

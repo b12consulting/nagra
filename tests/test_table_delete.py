@@ -24,7 +24,7 @@ def test_delete(person):
         'SELECT "person".id from "person"',
         'LEFT JOIN "person" as parent_0 ON (',
         'parent_0."id" = "person"."parent"',
-        ')WHERE',
+        ")WHERE",
         '"parent_0"."name" = \'spam\'',
-        ')']
-
+        ")",
+    ]

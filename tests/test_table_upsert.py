@@ -257,12 +257,14 @@ def test_double_insert(transaction, person):
     upsert.execute("Tango")
 
     upsert = person.upsert("name", "parent.name")
-    upsert.executemany([
-        ("Charly", "Tango"),
-        ("Charly", None),
-    ])
+    upsert.executemany(
+        [
+            ("Charly", "Tango"),
+            ("Charly", None),
+        ]
+    )
     rows = list(person.select())
-    assert rows == [('Tango', None), ('Charly', None)]
+    assert rows == [("Tango", None), ("Charly", None)]
 
 
 def test_one2many_ref(transaction, person, org):
@@ -277,7 +279,7 @@ def test_one2many_ref(transaction, person, org):
 
     # Check results
     rows = list(person.select().where("(= name 'Juliet')"))
-    assert rows == [('Juliet', 'Charly')]
+    assert rows == [("Juliet", "Charly")]
 
 
 def test_where_cond(transaction, person):
@@ -287,7 +289,7 @@ def test_where_cond(transaction, person):
     upsert = person.upsert("name")
     upsert.execute("Tango")
 
-    cond = "(!= name parent.name)" # Forbid self-reference
+    cond = "(!= name parent.name)"  # Forbid self-reference
     upsert = person.upsert("name", "parent.name").where(cond)
     with pytest.raises(ValidationError):
         upsert.execute("Tango", "Tango")
@@ -300,6 +302,6 @@ def test_default_value(transaction, org):
     upsert = org.upsert("name")
     upsert.execute("Lima")
 
-    record, = org.select("name", "status")
+    (record,) = org.select("name", "status")
     name, status = record
     assert (name, status) == ("Lima", "OK")

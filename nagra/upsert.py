@@ -2,6 +2,7 @@ from collections import defaultdict
 from itertools import islice
 from typing import Union, TYPE_CHECKING
 from collections.abc import Iterable
+
 try:
     from pandas import DataFrame
 except ImportError:
@@ -18,7 +19,13 @@ if TYPE_CHECKING:
 
 
 class Upsert:
-    def __init__(self, table: "Table", *columns: str, trn: Transaction, lenient: Union[bool, list[str], None]=None):
+    def __init__(
+        self,
+        table: "Table",
+        *columns: str,
+        trn: Transaction,
+        lenient: Union[bool, list[str], None] = None,
+    ):
         self.table = table
         self.columns = list(columns)
         self.columns_ast = [AST.parse(c) for c in columns]
@@ -126,7 +133,7 @@ class Upsert:
                 return
             cond = self._where + ["(in id %s)" % (" {}" * len(chunk))]
             select = self.table.select("(count)").where(*cond)
-            count, = select.execute(*chunk).fetchone()
+            (count,) = select.execute(*chunk).fetchone()
             if count != len(chunk):
                 msg = f"Validation failed! Condition is: {self._where} )"
                 raise ValidationError(msg)
@@ -157,5 +164,5 @@ class Upsert:
         return self.executemany(records)
 
     def from_pandas(self, df: "DataFrame"):
-        rows =  df[self.columns].values
+        rows = df[self.columns].values
         self.executemany(rows)

@@ -54,7 +54,6 @@ _SQLITE_TYPE_MAP = {
 }
 
 
-
 class Table:
     def __init__(
         self,
@@ -78,7 +77,7 @@ class Table:
 
         # Detect malformed fk definitions
         if len(self.natural_key) == 1:
-            nk, = self.natural_key
+            (nk,) = self.natural_key
         for fk, fk_table in self.foreign_keys.items():
             if fk != nk or fk_table != name:
                 continue
@@ -126,14 +125,19 @@ class Table:
         trn = trn or Transaction.current or dummy_transaction
         return Upsert(self, *columns, trn=trn, lenient=lenient)
 
-    def insert(self, *columns, trn:Optional[Transaction]=None, lenien:Union[bool, list[str], None]=None):
+    def insert(
+        self,
+        *columns,
+        trn: Optional[Transaction] = None,
+        lenien: Union[bool, list[str], None] = None,
+    ):
         """
         Provide an insert-only statement (won't raise error if
         record already exists). See `Table.upsert` for `lenient` role.
         """
         return self.upsert(*columns, trn=trn, lenient=None).insert_only()
 
-    def default_columns(self, nk_only:bool=False):
+    def default_columns(self, nk_only: bool = False):
         """
         Return the list of default column for the current
         table. Used by `Table.select` and `Table.upsert` when no
@@ -148,7 +152,7 @@ class Table:
             ftable = self.schema.get(self.foreign_keys[column])
             yield from (f"{column}.{k}" for k in ftable.default_columns(nk_only=True))
 
-    def join(self, env:"Env"):
+    def join(self, env: "Env"):
         for prefix, alias in env.refs.items():
             # Find alias of previous join in the chain
             *head, tail = prefix
@@ -158,7 +162,7 @@ class Table:
             yield (ftable.name, alias, prev_table, alias_col, join_col)
 
     @lru_cache
-    def join_on(self, path:tuple[str, ...], env:"Env"):
+    def join_on(self, path: tuple[str, ...], env: "Env"):
         """
         `path` is a tuple containing names of column, each of
         which is a foreign key to another table.
@@ -177,20 +181,18 @@ class Table:
                 # given column
                 join_col = head
                 alias_col = "id"
-                fname= self.foreign_keys[join_col]
+                fname = self.foreign_keys[join_col]
                 ftable = self.schema.get(fname)
             return ftable, alias_col, join_col
 
         # Recurse to find the previous table in the chain
-        prev_table, *_  = self.join_on(path[:-1], env)
+        prev_table, *_ = self.join_on(path[:-1], env)
         # Resolve last step
         return prev_table.join_on(path[-1:], env)
 
     def ctypes(self, trn):
         if trn.flavor == "sqlite":
-            return {
-                c: _SQLITE_TYPE_MAP.get(d, d) for c, d in self.columns.items()
-            }
+            return {c: _SQLITE_TYPE_MAP.get(d, d) for c, d in self.columns.items()}
         return self.columns
 
     def __repr__(self):
@@ -198,7 +200,7 @@ class Table:
 
 
 class Env:
-    def __init__(self, table:"Table", refs:Optional[dict]=None):
+    def __init__(self, table: "Table", refs: Optional[dict] = None):
         self.table = table
         self.refs = refs or {}
 
