@@ -1,4 +1,5 @@
 from datetime import datetime, date
+from uuid import UUID
 
 import pytest
 from pandas import DataFrame
@@ -229,6 +230,7 @@ def test_from_pandas(transaction, kitchensink):
             "bool": [True],
             "date": ["1970-01-01"],
             "json": ["{}"],
+            "uuid": ["F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"],
         }
     )
     kitchensink.upsert().from_pandas(df)
@@ -244,9 +246,10 @@ def test_from_pandas(transaction, kitchensink):
             True,
             date(1970, 1, 1),
             {},
+            UUID("F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"),
         )
     else:
-        assert row == ("ham", 1, 1.0, 1, "1970-01-01 00:00:00", 1, "1970-01-01", "{}")
+        assert row == ("ham", 1, 1.0, 1, "1970-01-01 00:00:00", 1, "1970-01-01", "{}", "F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C")
 
 
 def test_double_insert(transaction, person):

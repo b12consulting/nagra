@@ -46,13 +46,34 @@ from nagra.transaction import Transaction, dummy_transaction
 from nagra.exceptions import IncorrectTable
 
 
-_SQLITE_TYPE_MAP = {
-    "varchar": "TEXT",
-    "int": "INTEGER",
-    "float": "FLOAT",
-    "timestamp": "DATETIME",
+_TYPE_MAP = {
+    "postgresql": {
+        "varchar": "VARCHAR",
+        "str": "VARCHAR",
+        "text": "VARCHAR",
+        "int": "INTEGER",
+        "bigint": "BIGINT",
+        "float": "FLOAT",
+        "timestamp": "TIMESTAMP",
+        "date": "DATE",
+        "bool": "BOOL",
+        "uuid": "UUID",
+        "json": "JSON",
+    },
+    "sqlite": {
+        "varchar": "TEXT",
+        "text": "TEXT",
+        "str": "TEXT",
+        "int": "INTEGER",
+        "bigint": "INTEGER",
+        "float": "FLOAT",
+        "timestamp": "DATETIME",
+        "date": "DATE",
+        "bool": "BOOL",
+        "uuid": "TEXT",
+        "json": "JSON",
+    },
 }
-
 
 class Table:
     def __init__(
@@ -196,9 +217,8 @@ class Table:
         return prev_table.join_on(path[-1:], env)
 
     def ctypes(self, trn):
-        if trn.flavor == "sqlite":
-            return {c: _SQLITE_TYPE_MAP.get(d, d) for c, d in self.columns.items()}
-        return self.columns
+        type_map = _TYPE_MAP[trn.flavor]
+        return {c: type_map[d] for c, d in self.columns.items()}
 
     def __repr__(self):
         return f"<Table {self.name}>"

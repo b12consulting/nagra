@@ -316,6 +316,8 @@ class VarToken(Token):
                 return str
             case "date":
                 return date
+            case "uuid":
+                return str
             case _:
                 msg = f"Columns of type {col_type} not supported (for {self.value})"
                 raise NotImplementedError(msg)

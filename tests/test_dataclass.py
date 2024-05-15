@@ -85,6 +85,7 @@ def test_kitchensink(kitchensink):
         bool: Optional[bool]
         date: Optional[date]
         json: Optional[str]
+        uuid: Optional[str]
 
     assert equivalent_classes(dclass, KitchenSink)
 
