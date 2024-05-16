@@ -330,6 +330,8 @@ class OpToken(Token):
         op = self.ops[self.value]
         return op(*args)
 
+    # FIXME shoud return different _eval_type based on op ?!
+
 
 class BuiltinToken(OpToken):
     num_like = "+-*/"

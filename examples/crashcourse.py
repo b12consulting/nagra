@@ -4,6 +4,7 @@ from nagra import Schema, Transaction
 schema_toml = """
 [city]
 natural_key = ["name"]
+not_null = ["name"]
 [city.columns]
 name = "varchar"
 lat = "varchar"
@@ -11,8 +12,10 @@ long = "varchar"
 [city.one2many]
 temperatures = "temperature.city"
 
+
 [temperature]
 natural_key = ["city", "timestamp"]
+not_null = ["city", "timestamp"]
 [temperature.columns]
 city = "bigint"
 timestamp = "timestamp"

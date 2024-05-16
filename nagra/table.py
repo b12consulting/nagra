@@ -221,6 +221,9 @@ class Table:
         type_map = _TYPE_MAP[trn.flavor]
         return {c: type_map[d] for c, d in self.columns.items()}
 
+    def __iter__(self):
+        return iter(self.select())
+
     def __repr__(self):
         return f"<Table {self.name}>"
 

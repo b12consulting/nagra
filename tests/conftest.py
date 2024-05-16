@@ -74,6 +74,7 @@ skill_table = Table(
         "person": "int",
     },
     natural_key=["name"],
+    not_null=["person"],
     foreign_keys={
         "person": "person",
     },
@@ -109,31 +110,31 @@ temperature_table = Table(
 
 @pytest.fixture(scope="session")
 def person():
-    # person_table.delete()
     return person_table
 
 
 @pytest.fixture(scope="session")
 def org():
-    # org_table.delete()
     return org_table
 
 
 @pytest.fixture(scope="session")
+def skill():
+    return skill_table
+
+
+@pytest.fixture(scope="session")
 def address():
-    # address_table.delete()
     return address_table
 
 
 @pytest.fixture(scope="session")
 def kitchensink():
-    # kitchensink_table.delete()
     return kitchensink_table
 
 
 @pytest.fixture(scope="session")
 def temperature():
-    # temperature_table.delete()
     return temperature_table
 
 
