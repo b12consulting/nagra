@@ -1,6 +1,33 @@
 
 # Changelog
 
+### 0.0.4 (released: 2024-05-21)
+
+**Breaking change** `Select.to_dict` now returns an iterable
+
+**New feature** `Select.to_pandas` supports a `chunked` parameter: if
+set to a non-zero value the method will return an iterable yielding
+dataframes instead returning of a unique (possibly large) dataframe
+
+**New feature** Add `table.drop()`
+
+**New feature** Check for inconsistencies on hill-defined tables
+
+**Breaking change** Foreign keys are know defined with an `ON DELETE
+CASCADE` pragma if the supporting column is required
+
+**New feature** Add support for UUID type
+
+**New feature** Support for concat `||` operator
+
+**New feature** Add support for default values on table columns
+
+**New feature**
+
+
+**New feature**
+
+
 ### 0.0.4 (released: 2024-04-03)
 
 **Breaking change:** `load_schema()` has been replaced by Schema.load
@@ -23,7 +50,6 @@ an upsert
 
 **New feature:** Upsert now returns the id of the rows created or
 updated
-
 
 
 ## 0.0.3 (released: 2024-02-29)
