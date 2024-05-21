@@ -1,7 +1,9 @@
 import re
+from collections.abc import Iterable
 import dataclasses
 from datetime import datetime, date
-from typing import Optional, TYPE_CHECKING
+from itertools import islice, repeat, takewhile
+from typing import Optional, Union, TYPE_CHECKING
 
 from nagra import Statement
 from nagra.sexpr import AST, AggToken
@@ -9,6 +11,7 @@ from nagra.sexpr import AST, AggToken
 if TYPE_CHECKING:
     from nagra.table import Env
     from nagra.transaction import Transaction
+    from pandas import DataFrame
 
 RE_VALID_IDENTIFIER = re.compile(r"\W|^(?=\d)")
 
@@ -176,16 +179,35 @@ class Select:
         )
         return stm()
 
-    def to_pandas(self, *args):
+    def to_pandas(self, *args, chunked:int=0) -> Union["DataFrame", Iterable["DataFrame"]]:
         """
         Execute the query with given args and return a pandas
-        DataFrame
+        DataFrame. If chunked is bigger than 0, return an iterable
+        yielding dataframes.
+        """
+        names, dtypes = zip(*(self.dtypes(with_optional=False)))
+        cursor = self.execute(*args)
+        if chunked <= 0:
+            return self.create_df(cursor, names, dtypes)
+
+        # Create generator
+        chunkify = (list(islice(cursor, chunked)) for _ in repeat(None))
+        # Return df as long as the generator yield non-empty list
+        return (
+            self.create_df(chunk, names, dtypes)
+            for chunk in takewhile(bool, chunkify)
+        )
+
+    @classmethod
+    def create_df(cls, cursor: Iterable[tuple], names: tuple[str, ...], dtypes: tuple):
+        """
+        Create a Dataframe, whose columns name are `names` and
+        types `dtypes`.
         """
         from pandas import DataFrame, Series, to_datetime
 
-        names, dtypes = zip(*(self.dtypes(with_optional=False)))
-        by_col = zip(*self.execute(*args))
         df = DataFrame()
+        by_col = zip(*cursor)
         for name, dt, col in zip(names, dtypes, by_col):
             # FIXME Series(col, dtype=dt) fail on json cols!
             srs = Series(col)
@@ -199,9 +221,10 @@ class Select:
             df[name] = srs
         return df
 
-    def to_dict(self):
+    def to_dict(self) -> Iterable[dict]:
         columns = [f.name for f in dataclasses.fields(self.to_dataclass())]
-        return [dict(zip(columns, record)) for record in self]
+        for record in self:
+            yield dict(zip(columns, record))
 
     def execute(self, *args):
         return self.trn.execute(self.stm(), args)

@@ -137,9 +137,8 @@ class Schema:
 
     def drop(self, trn=None):
         trn = trn or Transaction.current
-        for name in self.tables:
-            stmt = Statement("drop_table", trn.flavor, name=name)
-            trn.execute(stmt())
+        for table in self.tables.values():
+            table.drop(trn)
 
     def generate_d2(self):
         tpl = Template(D2_TPL)

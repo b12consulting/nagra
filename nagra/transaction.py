@@ -85,8 +85,7 @@ class Transaction:
         try:
             return cls._local.stack[-1]
         except IndexError:
-            return None
-            # raise NoActiveTransaction()
+            return dummy_transaction
 
 
 def yield_from_cursor(cursor):

@@ -1,5 +1,7 @@
 import pytest
 
+from pandas import concat
+
 from nagra import Transaction
 from nagra.utils import strip_lines
 
@@ -317,6 +319,12 @@ def test_to_pandas(transaction, temperature):
     )
     # Read data
     df = temperature.select().to_pandas()
+    assert list(df.columns) == ["timestamp", "city", "value"]
+    assert sorted(df.city) == ["Berlin", "London"]
+
+    # Read data - with chunks
+    dfs = temperature.select().to_pandas(chunked=1)
+    df = concat(list(dfs))
     assert list(df.columns) == ["timestamp", "city", "value"]
     assert sorted(df.city) == ["Berlin", "London"]
 
