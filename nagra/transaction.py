@@ -21,6 +21,7 @@ class Transaction:
             self.flavor = "sqlite"
             filename = dsn[9:]
             self.connection = sqlite3.connect(filename)
+            self.connection.execute("PRAGMA foreign_keys = 1")
         elif dsn.startswith("duckdb://"):
             import duckdb
 

@@ -213,10 +213,11 @@ def test_return_ids(transaction, person):
 
     # Create an "on conflict do nothing" upsert
     upsert = person.upsert("name")
-    records = [("Big Alice",), ("Big Bob",)]
+    records = [("Papa",), ("Quebec",)]
     insert_ids = upsert.executemany(records)
+    assert insert_ids != [None, None]
     update_ids = upsert.executemany(records)
-    assert insert_ids == update_ids == [None, None]
+    assert update_ids == [None, None]
 
 
 def test_from_pandas(transaction, kitchensink):

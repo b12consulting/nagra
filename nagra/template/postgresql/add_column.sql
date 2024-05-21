@@ -4,5 +4,5 @@ ALTER TABLE {{table}}
  DEFAULT {{default}}
 {%- endif %}
 {%- if fk_table %}
- CONSTRAINT fk_{{column}} REFERENCES "{{fk_table}}"(id);
+ CONSTRAINT fk_{{column}} REFERENCES "{{fk_table}}"(id) {{- " ON DELETE CASCADE" if not_null else "" }};
 {%- endif %}
