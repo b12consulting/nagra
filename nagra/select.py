@@ -1,4 +1,5 @@
 import re
+from collections.abc import Iterable
 import dataclasses
 from datetime import datetime, date
 from typing import Optional, TYPE_CHECKING
@@ -199,9 +200,10 @@ class Select:
             df[name] = srs
         return df
 
-    def to_dict(self):
+    def to_dict(self) -> Iterable[dict]:
         columns = [f.name for f in dataclasses.fields(self.to_dataclass())]
-        return [dict(zip(columns, record)) for record in self]
+        for record in self:
+            yield dict(zip(columns, record))
 
     def execute(self, *args):
         return self.trn.execute(self.stm(), args)

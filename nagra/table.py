@@ -42,7 +42,8 @@ from nagra.schema import Schema
 from nagra.delete import Delete
 from nagra.select import Select
 from nagra.upsert import Upsert
-from nagra.transaction import Transaction, dummy_transaction
+from nagra.statement import Statement
+from nagra.transaction import Transaction
 from nagra.exceptions import IncorrectTable
 
 
@@ -117,14 +118,14 @@ class Table:
         return schema.get(name)
 
     def select(self, *columns, trn=None):
-        trn = trn or Transaction.current or dummy_transaction
+        trn = trn or Transaction.current
         if not columns:
             columns = self.default_columns()
         slct = Select(self, *columns, trn=trn, env=Env(self))
         return slct
 
     def delete(self, where=None, trn=None):
-        trn = trn or Transaction.current or dummy_transaction
+        trn = trn or Transaction.current
         delete = Delete(self, trn=trn, env=Env(self))
         if where:
             return delete.where(where)
@@ -149,7 +150,7 @@ class Table:
         """
         if not columns:
             columns = self.default_columns()
-        trn = trn or Transaction.current or dummy_transaction
+        trn = trn or Transaction.current
         return Upsert(self, *columns, trn=trn, lenient=lenient)
 
     def insert(
@@ -162,7 +163,15 @@ class Table:
         Provide an insert-only statement (won't raise error if
         record already exists). See `Table.upsert` for `lenient` role.
         """
+        trn = trn or Transaction.current
         return self.upsert(*columns, trn=trn, lenient=lenient).insert_only()
+
+
+    def drop(self, trn: Optional[Transaction] = None):
+        trn = trn or Transaction.current
+        stmt = Statement("drop_table", trn.flavor, name=self.name)
+        trn.execute(stmt())
+
 
     def default_columns(self, nk_only: bool = False):
         """
