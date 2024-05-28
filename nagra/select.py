@@ -53,6 +53,8 @@ class Select:
         cln.groupby_ast = self.groupby_ast
         cln.order_ast = self.order_ast
         cln.order_directions = self.order_directions
+        cln._limit = self._limit
+        cln._offset = self._offset
         return cln
 
     def where(self, *conditions: str):
