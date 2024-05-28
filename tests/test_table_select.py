@@ -28,6 +28,18 @@ def test_select_with_join(person):
         ";",
     ]
 
+def test_select_clone(person):
+    queries = [
+        person.select("name").limit(1).offset(1).where("(= name 'spam')").groupby("name"),
+        person.select("name").offset(1).where("(= name 'spam')").groupby("name").limit(1),
+        person.select("name").where("(= name 'spam')").groupby("name").limit(1).offset(1),
+        person.select("name").groupby("name").limit(1).offset(1).where("(= name 'spam')"),
+    ]
+
+    expected = queries[0].stm()
+    for q in queries[1:]:
+        assert q.stm() == expected
+
 
 def test_select_with_where(person):
     select = person.select("name").where("(= id {})")
