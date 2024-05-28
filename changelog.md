@@ -1,6 +1,14 @@
 
 # Changelog
 
+### Ongoing
+
+**New feature** Create new cursor for each execute, it allows for
+example to iterate on select and update the db record by record
+
+**Fix** `limit` and `offset` values where lost on Select.clone
+
+
 ### 0.1.0 (released: 2024-05-21)
 
 **Breaking change:** `Select.to_dict` now returns an iterable
