@@ -319,3 +319,25 @@ def test_default_value(transaction, org):
     (record,) = org.select("name", "status")
     name, status = record
     assert (name, status) == ("Lima", "OK")
+
+
+def test_mixed_cursor(transaction, person):
+    # First upsert
+    upsert = person.upsert("name")
+    records = [("Romeo",), ("Sierra",), ("Tango",)]
+    upsert.executemany(records)
+
+    # add Tango as parent to other record, execute one stm for each
+    select = person.select("name").where("(!= name 'Tango')")
+    upsert = person.upsert("name", "parent.name")
+    for name, in select:
+        # In this loop we have two "live" cursor, the one consumed by
+        # the select and the one executed by the upsert
+        upsert.execute(name, "Tango")
+
+
+    # assert results
+    select = person.select("name", "parent.name").where("(!= name 'Tango')")
+    for name, parent in select:
+        assert name in ["Romeo", "Sierra"]
+        assert parent == "Tango"
