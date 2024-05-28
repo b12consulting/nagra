@@ -31,12 +31,11 @@ class Transaction:
             self.connection.begin()
         else:
             raise ValueError(f"Invalid dsn string: {dsn}")
-        self.cursor = self.connection.cursor()
         self.auto_rollback = rollback
 
     def execute(self, stmt, args=tuple()):
         logger.debug(stmt)
-        cursor = self.cursor
+        cursor = self.connection.cursor()
         cursor.execute(stmt, args)
         if self.flavor == "duckdb":
             return yield_from_cursor(cursor)
@@ -45,7 +44,7 @@ class Transaction:
 
     def executemany(self, stmt, args=None):
         logger.debug(stmt)
-        cursor = self.cursor
+        cursor = self.connection.cursor()
         cursor.executemany(stmt, args, returning=True)
         if self.flavor == "duckdb":
             return yield_from_cursor(cursor)
@@ -56,7 +55,7 @@ class Transaction:
         self.connection.rollback()
 
     def commit(self):
-        self.cursor.connection.commit()
+        self.connection.commit()
 
     def __enter__(self):
         Transaction.push(self)
