@@ -2,7 +2,7 @@ from collections import defaultdict
 from jinja2 import Template
 from pathlib import Path
 from io import IOBase
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 import toml
 from nagra.statement import Statement
@@ -75,12 +75,22 @@ class Schema:
         """
         return self.tables[name]
 
-    def _db_columns(self, trn=None, pg_schema="public"):
+    @classmethod
+    def _db_columns(cls, trn=None, pg_schema="public"):
         trn = trn or Transaction.current
-        res = defaultdict(list)
+        res = defaultdict(dict)
         stmt = Statement("find_columns", trn.flavor, pg_schema=pg_schema)
-        for tbl, col in trn.execute(stmt()):
-            res[tbl].append(col)
+        for tbl, col_name, col_type in trn.execute(stmt()):
+            res[tbl][col_name] = col_type
+        return res
+
+    @classmethod
+    def _db_fk(cls, trn=None, pg_schema="public"):
+        trn = trn or Transaction.current
+        res = defaultdict(dict)
+        stmt = Statement("find_foreign_keys", trn.flavor, pg_schema=pg_schema)
+        for tbl, col, ftable in trn.execute(stmt()):
+            res[tbl][col] = ftable
         return res
 
     def setup_statements(self, db_columns, flavor):
@@ -88,7 +98,7 @@ class Schema:
         for name, table in self.tables.items():
             if name in db_columns:
                 continue
-            ctypes = table.ctypes(flavor)
+            ctypes = Table.ctypes(flavor, table.columns)
             stmt = Statement(
                 "create_table", flavor, table=table, pk_type=ctypes.get(table.primary_key)
             )
@@ -96,7 +106,7 @@ class Schema:
 
         # Add columns
         for table in self.tables.values():
-            ctypes = table.ctypes(flavor)
+            ctypes = Table.ctypes(flavor, table.columns)
             for column in table.columns:
                 if column == table.primary_key:
                     continue
@@ -134,6 +144,29 @@ class Schema:
         # Loop on setup statements and execute them
         for stm in self.setup_statements(db_columns, trn.flavor):
             trn.execute(stm)
+
+    @classmethod
+    def from_db(cls, trn:Optional[Transaction]=None) -> "Schema":
+        """"
+        Instanciate a nagra Schema (and Tables) based on database
+        schema
+        """
+        from nagra.table import Table
+
+        trn = trn or Transaction.current
+        schema = Schema()
+        db_fk = cls._db_fk(trn)
+        db_columns = cls._db_columns(trn=trn)
+        for table_name, cols in db_columns.items():
+            # Transform types name to canonical ones
+            cols = Table.ctypes(trn.flavor, cols)
+            # Instanciate table
+            Table(
+                table_name,
+                columns=cols,
+                foreign_keys=db_fk[table_name],
+                schema=schema)
+        return schema
 
     def drop(self, trn=None):
         trn = trn or Transaction.current

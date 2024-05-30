@@ -49,30 +49,35 @@ from nagra.exceptions import IncorrectTable
 
 _TYPE_MAP = {
     "postgresql": {
-        "varchar": "VARCHAR",
-        "str": "VARCHAR",
-        "text": "VARCHAR",
-        "int": "INTEGER",
-        "bigint": "BIGINT",
-        "float": "FLOAT",
-        "timestamp": "TIMESTAMP",
-        "date": "DATE",
-        "bool": "BOOL",
-        "uuid": "UUID",
-        "json": "JSON",
+        "varchar": "varchar",
+        "character varying": "varchar",
+        "str": "varchar",
+        "text": "varchar",
+        "int": "int",
+        "integer": "int",
+        "bigint": "bigint",
+        "float": "float",
+        "double precision":"float",
+        "timestamp without time zone": "timestamp",
+        "timestamp": "timestamp",
+        "date": "date",
+        "bool": "bool",
+        "boolean": "bool",
+        "uuid": "uuid",
+        "json": "json",
     },
     "sqlite": {
-        "varchar": "TEXT",
-        "text": "TEXT",
-        "str": "TEXT",
-        "int": "INTEGER",
-        "bigint": "INTEGER",
-        "float": "FLOAT",
-        "timestamp": "DATETIME",
-        "date": "DATE",
-        "bool": "BOOL",
-        "uuid": "TEXT",
-        "json": "JSON",
+        "varchar": "text",
+        "text": "text",
+        "str": "text",
+        "int": "integer",
+        "bigint": "integer",
+        "float": "float",
+        "timestamp": "datetime",
+        "date": "date",
+        "bool": "bool",
+        "uuid": "text",
+        "json": "json",
     },
 }
 
@@ -228,9 +233,10 @@ class Table:
         # Resolve last step
         return prev_table.join_on(path[-1:], env)
 
-    def ctypes(self, flavor):
+    @classmethod
+    def ctypes(cls, flavor, columns):
         type_map = _TYPE_MAP[flavor]
-        return {c: type_map[d] for c, d in self.columns.items()}
+        return {c: type_map[d] for c, d in columns.items()}
 
     def __iter__(self):
         return iter(self.select())
