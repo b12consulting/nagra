@@ -93,6 +93,32 @@ class Schema:
             res[tbl][col] = ftable
         return res
 
+    @classmethod
+    def _db_pk(cls, trn=None, pg_schema="public"):
+        trn = trn or Transaction.current
+        res = {}
+        stmt = Statement("find_primary_keys", trn.flavor, pg_schema=pg_schema)
+        for tbl, pk_col in trn.execute(stmt()):
+            res[tbl] = pk_col
+        return res
+
+    @classmethod
+    def _db_unique(cls, trn=None, pg_schema="public"):
+        trn = trn or Transaction.current
+        by_constraint = defaultdict(lambda: defaultdict(list))
+        stmt = Statement("find_unique_constraint", trn.flavor, pg_schema=pg_schema)
+        for tbl, constraint, col in trn.execute(stmt()):
+            by_constraint[tbl][constraint].append(col)
+
+        # Keep the unique constraint with the lowest number of columns for
+        # each table
+        res = {}
+        for table, constraints in by_constraint.items():
+            key_fn = lambda name: len(constraints[name])
+            first, *_ = sorted(constraints, key=key_fn)
+            res[table] = constraints[first]
+        return res
+
     def setup_statements(self, db_columns, flavor):
         # Create tables
         for name, table in self.tables.items():
@@ -156,6 +182,8 @@ class Schema:
         trn = trn or Transaction.current
         schema = Schema()
         db_fk = cls._db_fk(trn)
+        db_pk = cls._db_pk(trn)
+        db_unique = cls._db_unique(trn)
         db_columns = cls._db_columns(trn=trn)
         for table_name, cols in db_columns.items():
             # Transform types name to canonical ones
@@ -164,7 +192,9 @@ class Schema:
             Table(
                 table_name,
                 columns=cols,
+                natural_key=db_unique.get(table_name),
                 foreign_keys=db_fk[table_name],
+                primary_key=db_pk.get(table_name, None),
                 schema=schema)
         return schema
 

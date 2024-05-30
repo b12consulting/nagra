@@ -313,7 +313,7 @@ class VarToken(Token):
                 return str
             case "float":
                 return float
-            case "timestamp":
+            case "timestamp" | "timestamptz":
                 return datetime
             case "bool":
                 return bool

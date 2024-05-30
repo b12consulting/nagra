@@ -60,6 +60,8 @@ _TYPE_MAP = {
         "double precision":"float",
         "timestamp without time zone": "timestamp",
         "timestamp": "timestamp",
+        "timestamp with time zone": "timestamptz",
+        "timestamptz": "timestamptz",
         "date": "date",
         "bool": "bool",
         "boolean": "bool",
@@ -188,7 +190,7 @@ class Table:
         """
         columns = self.natural_key if nk_only else self.columns
         for column in columns:
-            if column not in self.foreign_keys:
+            if column not in self.foreign_keys or nk_only:
                 yield column
                 continue
 
@@ -236,7 +238,7 @@ class Table:
     @classmethod
     def ctypes(cls, flavor, columns):
         type_map = _TYPE_MAP[flavor]
-        return {c: type_map[d] for c, d in columns.items()}
+        return {c: type_map[d] for c, d in columns.items() if d in type_map}
 
     def __iter__(self):
         return iter(self.select())
