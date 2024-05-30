@@ -64,7 +64,8 @@ class Upsert:
         return self.clone(where=conditions)
 
     def stm(self):
-        conflict_key = ["id"] if "id" in self.groups else self.table.natural_key
+        pk = self.table.primary_key
+        conflict_key = [pk] if pk in self.groups else self.table.natural_key
         columns = self.groups
         do_update = False if self._insert_only else len(columns) > len(conflict_key)
         stm = Statement(
@@ -96,7 +97,7 @@ class Upsert:
                 continue
             cond = ["(= %s {})" % c for c in to_select]
             ftable = self.table.schema.get(self.table.foreign_keys[col])
-            select = ftable.select("id").where(*cond)
+            select = ftable.select(ftable.primary_key).where(*cond)
             resolve_stm[col] = select.stm()
         return groups, resolve_stm
 
