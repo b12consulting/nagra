@@ -39,10 +39,12 @@ def template(name, ext="sql"):
 
 
 def strip_lines(stmt):
+    res = []
     for r in stmt.splitlines():
         line = r.strip()
         if line:
-            yield line
+            res.append(line)
+    return res
 
 
 def pretty_nb(number):

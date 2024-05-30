@@ -83,31 +83,28 @@ class Schema:
             res[tbl].append(col)
         return res
 
-    def setup_statements(self, trn):
-        # Find existing tables and columns
-        db_columns = self._db_columns(trn)
-
+    def setup_statements(self, db_columns, flavor):
         # Create tables
         for name, table in self.tables.items():
             if name in db_columns:
                 continue
-            ctypes = table.ctypes(trn)
+            ctypes = table.ctypes(flavor)
             stmt = Statement(
-                "create_table", trn.flavor, table=name, id_type=ctypes.get("id")
+                "create_table", flavor, table=table, pk_type=ctypes.get(table.primary_key)
             )
             yield stmt()
 
         # Add columns
         for table in self.tables.values():
-            ctypes = table.ctypes(trn)
+            ctypes = table.ctypes(flavor)
             for column in table.columns:
-                if column == "id":
+                if column == table.primary_key:
                     continue
-                if column in db_columns[table.name]:
+                if column in db_columns.get(table.name, []):
                     continue
                 stmt = Statement(
                     "add_column",
-                    flavor=trn.flavor,
+                    flavor=flavor,
                     table=table.name,
                     column=column,
                     col_def=ctypes[column],
@@ -121,7 +118,7 @@ class Schema:
         for name, table in self.tables.items():
             stmt = Statement(
                 "create_unique_index",
-                trn.flavor,
+                flavor,
                 table=name,
                 natural_key=table.natural_key,
             )
@@ -132,7 +129,10 @@ class Schema:
         Create tables, indexes and foreign keys
         """
         trn = trn or Transaction.current
-        for stm in self.setup_statements(trn):
+        # Find existing tables and columns
+        db_columns = self._db_columns(trn)
+        # Loop on setup statements and execute them
+        for stm in self.setup_statements(db_columns, trn.flavor):
             trn.execute(stm)
 
     def drop(self, trn=None):
