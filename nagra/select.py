@@ -125,8 +125,8 @@ class Select:
             # Eval nullable
             not_natural_key = col_name not in self.table.natural_key
             is_nullable = col_name not in self.table.not_null
-            not_id = col_name != "id"
-            if with_optional and not_id and not_natural_key and is_nullable:
+            not_pk = col_name != self.table.primary_key
+            if with_optional and not_pk and not_natural_key and is_nullable:
                 # Fixme Optional may depend on ast content
                 col_type = Optional[col_type]
             fields.append((alias, col_type))

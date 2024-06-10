@@ -12,7 +12,7 @@ from nagra.exceptions import UnresolvedFK, ValidationError
 def test_simple_upsert_stm(person):
     upsert = person.upsert("name", "parent.name")
     assert list(upsert.resolve_stm) == ["parent"]
-    res = list(strip_lines(upsert.resolve_stm["parent"]))
+    res = strip_lines(upsert.resolve_stm["parent"])
     assert res == [
         "SELECT",
         '"person"."id"',
@@ -21,7 +21,7 @@ def test_simple_upsert_stm(person):
         '"person"."name" = %s',
         ";",
     ]
-    res = list(strip_lines(upsert.stm()))
+    res = strip_lines(upsert.stm())
     assert res == [
         'INSERT INTO "person" (name, parent)',
         "VALUES (",

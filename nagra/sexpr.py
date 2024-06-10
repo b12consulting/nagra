@@ -31,6 +31,9 @@ ValueError: Unexpected token: "x"
 import shlex
 from datetime import datetime, date
 
+from nagra.exceptions import EvalTypeError
+
+
 DEFAULT_FLAVOR = "postgresql"
 __all__ = ["AST"]
 
@@ -289,16 +292,18 @@ class VarToken(Token):
         return '"{}"."{}"'.format(env.table.name, self.value)
 
     def _eval_type(self, env):
-        if self.value == "id":
-            # id is implicit on Table
-            return int
         # TODO handle paramtoken here?
         if self.is_relation():
             *head, tail = self.value.split(".")
             ftable, _, _ = env.table.join_on(tuple(head), env=env)
             col_type = ftable.columns[tail]
+        elif col_type := env.table.columns.get(self.value):
+            pass
+        elif self.value == env.table.primary_key:
+            # implicit type for pk is integer
+            return int
         else:
-            col_type = env.table.columns[self.value]
+            raise EvalTypeError(f"Unable to eval type of '{self.value}'")
 
         match col_type:
             # TODO validate type names int Table.__init__
@@ -308,7 +313,7 @@ class VarToken(Token):
                 return str
             case "float":
                 return float
-            case "timestamp":
+            case "timestamp" | "timestamptz":
                 return datetime
             case "bool":
                 return bool

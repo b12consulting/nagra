@@ -3,12 +3,12 @@ from itertools import chain
 import argparse
 import os
 
-from nagra import Transaction, Schema, Table
+from nagra import Transaction, Schema
 from nagra.utils import print_table
 
 
-def select(args):
-    select = Table.get(args.table).select(*args.columns)
+def select(args, schema):
+    select = schema.get(args.table).select(*args.columns)
     if args.where:
         where = chain.from_iterable(args.where)
         select = select.where(*where)
@@ -22,17 +22,16 @@ def select(args):
     print_table(rows, headers, args.pivot)
 
 
-def delete(args):
-    delete = Table.get(args.table).delete()
+def delete(args, schema):
+    delete = schema.get(args.table).delete()
     where = chain.from_iterable(args.where)
     delete.where(*where)
     delete.execute()
 
 
-def schema(args):
-    sch = Schema.default
+def print_schema(args, schema):
     if args.d2:
-        print(sch.generate_d2())
+        print(schema.generate_d2())
         return
 
     # If tables name are given, print details
@@ -40,14 +39,14 @@ def schema(args):
         rows = []
         headers = ["table", "column", "type"]
         for table_name in args.tables:
-            for col, dtype in sch.get(table_name).columns.items():
+            for col, dtype in schema.get(table_name).columns.items():
                 rows.append([table_name, col, dtype])
         print_table(rows, headers, args.pivot)
         return
 
     # List all tables
     rows = []
-    for name in sorted(sch.tables.keys()):
+    for name in sorted(schema.tables.keys()):
         rows.append([name])
     headers = ["table"]
     print_table(rows, headers, args.pivot)
@@ -105,7 +104,7 @@ def run():
     parser_schema = subparsers.add_parser("schema")
     parser_schema.add_argument("--d2", action="store_true", help="Generate d2 file")
     parser_schema.add_argument("tables", nargs="*")
-    parser_schema.set_defaults(func=schema)
+    parser_schema.set_defaults(func=print_schema)
 
     # Parse args
     args = parser.parse_args()
@@ -115,7 +114,10 @@ def run():
 
     try:
         with Transaction(args.db):
-            Schema.default.load(open(args.schema))
-            args.func(args)
+            if args.schema:
+                schema = Schema.from_toml(open(args.schema))
+            else:
+                schema = Schema.from_db()
+            args.func(args, schema=schema)
     except (BrokenPipeError, KeyboardInterrupt):
         pass

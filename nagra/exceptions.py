@@ -17,3 +17,7 @@ class ValidationError(BaseException):
 
 class IncorrectTable(BaseException):
     pass
+
+
+class EvalTypeError(BaseException):
+    pass
