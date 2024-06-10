@@ -114,7 +114,7 @@ def run():
     try:
         with Transaction(args.db):
             if args.schema:
-                schema = Schema.from_toml(args.schema)
+                schema = Schema.from_toml(open(args.schema))
             else:
                 schema = Schema.from_db()
             args.func(args, schema=schema)
