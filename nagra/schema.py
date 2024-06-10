@@ -124,7 +124,7 @@ class Schema:
         for name, table in self.tables.items():
             if name in db_columns:
                 continue
-            ctypes = Table.ctypes(flavor, table.columns)
+            ctypes = table.ctypes(flavor, table.columns)
             stmt = Statement(
                 "create_table", flavor, table=table, pk_type=ctypes.get(table.primary_key)
             )
@@ -132,7 +132,7 @@ class Schema:
 
         # Add columns
         for table in self.tables.values():
-            ctypes = Table.ctypes(flavor, table.columns)
+            ctypes = table.ctypes(flavor, table.columns)
             for column in table.columns:
                 if column == table.primary_key:
                     continue
