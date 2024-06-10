@@ -14,7 +14,7 @@ def test_simple_select(person):
 
 def test_select_with_join(person):
     stm = person.select("name", "parent.parent.name").stm()
-    res = list(strip_lines(stm))
+    res = strip_lines(stm)
     assert res == [
         "SELECT",
         '"person"."name", "parent_1"."name"',
@@ -44,7 +44,7 @@ def test_select_clone(person):
 def test_select_with_where(person):
     select = person.select("name").where("(= id {})")
     stm = select.stm()
-    res = list(strip_lines(stm))
+    res = strip_lines(stm)
     assert res == [
         "SELECT",
         '"person"."name"',
@@ -55,7 +55,7 @@ def test_select_with_where(person):
     ]
 
     stm = select.where("(= name 'spam')").stm()
-    res = list(strip_lines(stm))
+    res = strip_lines(stm)
     assert res == [
         "SELECT",
         '"person"."name"',
@@ -69,7 +69,7 @@ def test_select_with_where(person):
 def test_select_where_and_join(person):
     select = person.select("name").where("(= parent.name 'foo')")
     stm = select.stm()
-    res = list(strip_lines(stm))
+    res = strip_lines(stm)
     assert res == [
         "SELECT",
         '"person"."name"',
@@ -148,7 +148,7 @@ def test_o2m_stm(person, org):
         "parent.parent.name",
     )
     stm = select.stm()
-    res = list(strip_lines(stm))
+    res = strip_lines(stm)
     expected = [
         "SELECT",
         '"person"."name", "orgs_0"."name", "parent_1"."name", ' '"parent_2"."name"',
@@ -173,7 +173,7 @@ def test_o2m_stm(person, org):
         "skills.name",
     )
     stm = select.stm()
-    res = list(strip_lines(stm))
+    res = strip_lines(stm)
     expected = [
         "SELECT",
         '"person"."name", "orgs_0"."country", "skills_1"."name"',
@@ -195,7 +195,7 @@ def test_o2m_stm(person, org):
         "person.skills.name",
     )
     stm = select.stm()
-    res = list(strip_lines(stm))
+    res = strip_lines(stm)
     expected = [
         "SELECT",
         '"org"."name", "person_0"."name", "skills_1"."name"',
@@ -213,7 +213,7 @@ def test_o2m_stm(person, org):
     # Use a on2many after a one2many
     select = person.select("name", "orgs.addresses.city")
     stm = select.stm()
-    res = list(strip_lines(stm))
+    res = strip_lines(stm)
     expected = [
         "SELECT",
         '"person"."name", "addresses_1"."city"',

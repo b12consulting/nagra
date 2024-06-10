@@ -50,14 +50,21 @@ from nagra.exceptions import IncorrectTable
 _TYPE_MAP = {
     "postgresql": {
         "varchar": "VARCHAR",
+        "character varying": "VARCHAR",
         "str": "VARCHAR",
         "text": "VARCHAR",
         "int": "INTEGER",
+        "integer": "INTEGER",
         "bigint": "BIGINT",
         "float": "FLOAT",
+        "double precision":"FLOAT",
+        "timestamp without time zone": "TIMESTAMP",
         "timestamp": "TIMESTAMP",
+        "timestamp with time zone": "TIMESTAMPTZ",
+        "timestamptz": "TIMESTAMPTZ",
         "date": "DATE",
         "bool": "BOOL",
+        "boolean": "BOOL",
         "uuid": "UUID",
         "json": "JSON",
     },
@@ -82,11 +89,12 @@ class Table:
         self,
         name: str,
         columns: dict,
-        natural_key: Optional[list] = None,
+        natural_key: Optional[list[str]] = None,
         foreign_keys: Optional[dict] = None,
-        not_null: Optional[list] = None,
+        not_null: Optional[list[str]] = None,
         one2many: Optional[dict] = None,
         default: Optional[dict] = None,
+        primary_key:  Optional[str] = None,
         schema: Schema = Schema.default,
     ):
         self.name = name
@@ -96,6 +104,7 @@ class Table:
         self.not_null = set(self.natural_key) | set(not_null or [])
         self.one2many = one2many or {}
         self.default = default or {}
+        self.primary_key = primary_key or "id"
         self.schema = schema
 
         # Detect malformed fk definitions
@@ -181,7 +190,7 @@ class Table:
         """
         columns = self.natural_key if nk_only else self.columns
         for column in columns:
-            if column not in self.foreign_keys:
+            if column not in self.foreign_keys or nk_only:
                 yield column
                 continue
 
@@ -210,15 +219,15 @@ class Table:
             if alias := self.one2many.get(head):
                 # An alias is a string containing "table_name.fk_name"
                 table_name, alias_col = alias.split(".")
-                join_col = "id"
                 ftable = self.schema.get(table_name)
+                join_col = ftable.primary_key
             else:
                 # not an alias we implictly join on self, based on the
                 # given column
                 join_col = head
-                alias_col = "id"
                 fname = self.foreign_keys[join_col]
                 ftable = self.schema.get(fname)
+                alias_col = ftable.primary_key
             return ftable, alias_col, join_col
 
         # Recurse to find the previous table in the chain
@@ -226,9 +235,10 @@ class Table:
         # Resolve last step
         return prev_table.join_on(path[-1:], env)
 
-    def ctypes(self, trn):
-        type_map = _TYPE_MAP[trn.flavor]
-        return {c: type_map[d] for c, d in self.columns.items()}
+    @classmethod
+    def ctypes(cls, flavor, columns):
+        type_map = _TYPE_MAP[flavor]
+        return {c: type_map[d] for c, d in columns.items() if d in type_map}
 
     def __iter__(self):
         return iter(self.select())
