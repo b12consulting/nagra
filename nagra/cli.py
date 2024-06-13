@@ -24,7 +24,7 @@ def select(args, schema):
 def delete(args, schema):
     delete = schema.get(args.table).delete()
     where = chain.from_iterable(args.where)
-    delete.where(*where)
+    delete = delete.where(*where)
     delete.execute()
 
 

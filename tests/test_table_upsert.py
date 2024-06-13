@@ -2,7 +2,7 @@ from datetime import datetime, date
 from uuid import UUID
 
 import pytest
-from pandas import DataFrame
+from pandas import DataFrame, to_datetime
 
 from nagra import Transaction
 from nagra.utils import strip_lines
@@ -63,21 +63,48 @@ def test_insert(transaction, person):
     assert rows == [("Big Bob", None), ("Bob", None)]
 
 
-def test_upsert_stmt_with_id(person):
-    upsert = person.upsert("id", "name", "parent.name")
-    res = strip_lines(upsert.stm())
-    assert res == [
-        'INSERT INTO "person" (id, name, parent)',
-        "VALUES (",
-        "%s,%s,%s",
-        ")",
-        "ON CONFLICT (",
-        '"id"',
-        ")",
-        "DO UPDATE SET",
-        '"name" = EXCLUDED."name" , "parent" = EXCLUDED."parent"',
-        "RETURNING id",
-    ]
+def test_upsert_stmt_with_id(transaction, person):
+    if transaction.flavor == "postgresql":
+        # Test stmt with all columns
+        upsert = person.upsert("id", "name", "parent.name")
+        res = list(strip_lines(upsert.stm()))
+        assert res == [
+            'INSERT INTO "person" (id, name, parent)',
+            "VALUES (",
+            "%s,%s,%s",
+            ")",
+            "ON CONFLICT (",
+            '"id"',
+            ")",
+            "DO UPDATE SET",
+            '"name" = EXCLUDED."name" , "parent" = EXCLUDED."parent"',
+            "RETURNING id",
+        ]
+
+        # Test stmt with one columns
+        upsert = person.upsert("id", "name")
+        res = list(strip_lines(upsert.stm()))
+        assert res == [
+            'INSERT INTO "person" (id, name)',
+            "VALUES (",
+            "%s,%s",
+            ")",
+            "ON CONFLICT (",
+            '"id"',
+            ")",
+            "DO UPDATE SET",
+            '"name" = EXCLUDED."name"',
+            "RETURNING id",
+        ]
+
+    # Insert & update on db
+    upsert = person.upsert("name")
+    new_id = upsert.execute("Lima")
+
+    upsert = person.upsert("id", "name")
+    upsert.execute(new_id, "Lima2")
+    record, = person.select("id", "name").where('(= id {})').execute(new_id)
+    assert record == (new_id, "Lima2")
 
 
 def test_upsert_exec_with_id(transaction, person):
@@ -227,10 +254,10 @@ def test_from_pandas(transaction, kitchensink):
             "bigint": [1],
             "float": [1.0],
             "int": [1],
-            "timestamp": ["1970-01-01 00:00:00"],
+            "timestamp": to_datetime(["1970-01-01 00:00:00"]),
             "bool": [True],
             "date": ["1970-01-01"],
-            "json": ["{}"],
+            "json": [{}],
             "uuid": ["F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"],
         }
     )
@@ -255,7 +282,7 @@ def test_from_pandas(transaction, kitchensink):
             1,
             1.0,
             1,
-            "1970-01-01 00:00:00",
+            "1970-01-01",
             1,
             "1970-01-01",
             "{}",

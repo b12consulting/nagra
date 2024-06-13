@@ -45,7 +45,11 @@ class Transaction:
     def executemany(self, stmt, args=None):
         logger.debug(stmt)
         cursor = self.connection.cursor()
-        cursor.executemany(stmt, args, returning=True)
+        if self.flavor == "sqlite":
+            cursor.executemany(stmt, args)
+        else:
+            cursor.executemany(stmt, args, returning=True)
+
         if self.flavor == "duckdb":
             return yield_from_cursor(cursor)
         else:
