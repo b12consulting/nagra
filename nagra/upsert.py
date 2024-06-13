@@ -182,5 +182,15 @@ class Upsert:
         return self.executemany(records)
 
     def from_pandas(self, df: "DataFrame"):
+        # Convert non-basic types to string
+        is_copy = False
+        for col in self.columns:
+            if df[col].dtype in ("int", "float", "bool", "str"):
+                continue
+            if not is_copy:
+                df = df.copy()
+                is_copy = True
+            df[col] = df[col].astype(str)
+
         rows = df[self.columns].values
         self.executemany(rows)

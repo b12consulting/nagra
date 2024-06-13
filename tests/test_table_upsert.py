@@ -2,7 +2,7 @@ from datetime import datetime, date
 from uuid import UUID
 
 import pytest
-from pandas import DataFrame
+from pandas import DataFrame, to_datetime
 
 from nagra import Transaction
 from nagra.utils import strip_lines
@@ -254,10 +254,10 @@ def test_from_pandas(transaction, kitchensink):
             "bigint": [1],
             "float": [1.0],
             "int": [1],
-            "timestamp": ["1970-01-01 00:00:00"],
+            "timestamp": to_datetime(["1970-01-01 00:00:00"]),
             "bool": [True],
             "date": ["1970-01-01"],
-            "json": ["{}"],
+            "json": [{}],
             "uuid": ["F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"],
         }
     )
@@ -282,7 +282,7 @@ def test_from_pandas(transaction, kitchensink):
             1,
             1.0,
             1,
-            "1970-01-01 00:00:00",
+            "1970-01-01",
             1,
             "1970-01-01",
             "{}",
