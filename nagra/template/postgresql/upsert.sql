@@ -16,4 +16,4 @@ DO UPDATE SET
 {% else %}
 DO NOTHING
 {% endif %}
-RETURNING id
+RETURNING {{pk}}

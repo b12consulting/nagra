@@ -75,6 +75,7 @@ class Upsert:
             columns=columns,
             conflict_key=conflict_key,
             do_update=do_update,
+            pk=pk,
         )
         return stm()
 
@@ -145,11 +146,12 @@ class Upsert:
 
     def validate(self, ids: list[int]):
         iter_ids = iter(ids)
+        pk = self.table.primary_key
         while True:
             chunk = list(islice(iter_ids, 1000))
             if not chunk:
                 return
-            cond = self._where + ["(in id %s)" % (" {}" * len(chunk))]
+            cond = self._where + [f"(in {pk} %s)" % (" {}" * len(chunk))]
             select = self.table.select("(count)").where(*cond)
             (count,) = select.execute(*chunk).fetchone()
             if count != len(chunk):
