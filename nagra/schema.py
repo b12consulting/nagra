@@ -28,7 +28,7 @@ D2_TPL = """
 class Schema:
     _default = None
 
-    def __init__(self, trn=None, tables=None):
+    def __init__(self, tables=None):
         self.tables = tables or {}
 
     @classmethod

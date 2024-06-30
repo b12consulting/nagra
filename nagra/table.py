@@ -42,6 +42,7 @@ from nagra.schema import Schema
 from nagra.delete import Delete
 from nagra.select import Select
 from nagra.upsert import Upsert
+from nagra.update import Update
 from nagra.statement import Statement
 from nagra.transaction import Transaction
 from nagra.exceptions import IncorrectTable
@@ -161,6 +162,17 @@ class Table:
             columns = self.default_columns()
         trn = trn or Transaction.current
         return Upsert(self, *columns, trn=trn, lenient=lenient)
+
+    def update(
+        self,
+        *columns,
+        trn: Optional[Transaction] = None,
+        lenient: Union[bool, list[str]] = False,
+    ):
+        if not columns:
+            columns = self.default_columns()
+        trn = trn or Transaction.current
+        return Update(self, *columns, trn=trn, lenient=lenient)
 
     def insert(
         self,

@@ -155,7 +155,7 @@ def empty_transaction(request):
         yield tr
 
 
-@pytest.fixture(scope="function", params=DSN)
+@pytest.fixture(scope="function")
 def transaction(request, empty_transaction):
     # Start from empty_transaction and load tables
     Schema.default.create_tables(empty_transaction)
