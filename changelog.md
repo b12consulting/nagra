@@ -3,10 +3,28 @@
 
 ### Ongoing
 
+
+###  0.1.2 (released: 2024-06-30)
+
 **New feature** Create new cursor for each execute, it allows for
 example to iterate on select and update the db record by record
 
+**New feature:** Add `Update` class and basic tests, this is mainly
+useful when updating by id when the full natural key is not known (or
+too long)
+
 **Fix** `limit` and `offset` values where lost on Select.clone
+
+**Fix:** Auto-convert pandas columns to string for non-basic dtypes
+
+**Fix:** Ensure schema loading is correct
+
+**New feature:** Add support for custom primary key
+
+**New:** Add db introspection:
+- Discovery of columns and types
+- Discovery of primary keys and unique indexes
+
 
 
 ### 0.1.0 (released: 2024-05-21)
