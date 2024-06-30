@@ -137,4 +137,4 @@ class WriterMixin:
             df[col] = df[col].astype(str)
 
         rows = df[self.columns].values
-        self.executemany(rows)
+        return self.executemany(rows)

@@ -1,5 +1,4 @@
 from collections.abc import Iterable
-from itertools import islice
 from typing import Union, Optional, TYPE_CHECKING
 
 
