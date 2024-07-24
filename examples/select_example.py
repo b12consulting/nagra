@@ -1,6 +1,6 @@
 """
 The Select class is also able to return dataclass definition and
-pandas dataframes. This example also show how dataclass can be
+pandas dataframes. This example also shows how dataclass can be
 combined with pydantic
 """
 
