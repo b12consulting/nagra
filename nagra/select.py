@@ -223,9 +223,9 @@ class Select:
             df[name] = srs
         return df
 
-    def to_dict(self) -> Iterable[dict]:
+    def to_dict(self, *args) -> Iterable[dict]:
         columns = [f.name for f in dataclasses.fields(self.to_dataclass())]
-        for record in self:
+        for record in self.execute(*args):
             yield dict(zip(columns, record))
 
     def execute(self, *args):
@@ -236,3 +236,5 @@ class Select:
 
     def __iter__(self):
         return iter(self.execute())
+
+

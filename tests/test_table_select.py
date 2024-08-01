@@ -1,3 +1,4 @@
+import datetime
 import pytest
 
 from pandas import concat
@@ -28,12 +29,29 @@ def test_select_with_join(person):
         ";",
     ]
 
+
 def test_select_clone(person):
     queries = [
-        person.select("name").limit(1).offset(1).where("(= name 'spam')").groupby("name"),
-        person.select("name").offset(1).where("(= name 'spam')").groupby("name").limit(1),
-        person.select("name").where("(= name 'spam')").groupby("name").limit(1).offset(1),
-        person.select("name").groupby("name").limit(1).offset(1).where("(= name 'spam')"),
+        person.select("name")
+        .limit(1)
+        .offset(1)
+        .where("(= name 'spam')")
+        .groupby("name"),
+        person.select("name")
+        .offset(1)
+        .where("(= name 'spam')")
+        .groupby("name")
+        .limit(1),
+        person.select("name")
+        .where("(= name 'spam')")
+        .groupby("name")
+        .limit(1)
+        .offset(1),
+        person.select("name")
+        .groupby("name")
+        .limit(1)
+        .offset(1)
+        .where("(= name 'spam')"),
     ]
 
     expected = queries[0].stm()
@@ -345,3 +363,29 @@ def test_to_pandas(transaction, temperature):
     df = temperature.select().where(cond).to_pandas(12)
     assert list(df.columns) == ["timestamp", "city", "value"]
     assert sorted(df.city) == ["London"]
+
+
+def test_to_dict(transaction, temperature):
+    # Upsert
+    temperature.upsert("timestamp", "city", "value").executemany(
+        [
+            ("1970-01-02", "Berlin", 10),
+            ("1970-01-02", "London", 12),
+        ]
+    )
+    # Read data
+    records = list(temperature.select().to_dict())
+    assert len(records) == 2
+    assert records[0] == {
+        "timestamp": datetime.datetime(1970, 1, 2, 0, 0),
+        "city": "Berlin",
+        "value": 10.0,
+    }
+    # Read with custom arg
+    cond = "(= value {})"
+    (record,) = temperature.select().where(cond).to_dict(12)
+    assert record == {
+        "timestamp": datetime.datetime(1970, 1, 2, 0, 0),
+        "city": "London",
+        "value": 12.0,
+    }
