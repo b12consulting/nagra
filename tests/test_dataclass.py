@@ -22,11 +22,24 @@ def test_base_select(person):
     dclass = select.to_dataclass()
 
     @dataclass
-    class person:
+    class Person:
         id: int
         name: str
 
-    assert equivalent_classes(dclass, person)
+    assert equivalent_classes(dclass, Person)
+
+
+def test_base_select_array(parameter):
+    select = parameter.select("name", "timestamps", "values")
+    dclass = select.to_dataclass()
+
+    @dataclass
+    class Parameter:
+        name: str
+        timestamps: list[datetime] | None
+        values: list[float] | None
+
+    assert equivalent_classes(dclass, Parameter)
 
 
 def test_select_with_fk(person):
@@ -84,7 +97,7 @@ def test_kitchensink(kitchensink):
         timestamp: Optional[datetime]
         bool: Optional[bool]
         date: Optional[date]
-        json: Optional[str]
+        json: Optional[dict | list]
         uuid: Optional[str]
 
     assert equivalent_classes(dclass, KitchenSink)

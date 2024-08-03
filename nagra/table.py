@@ -35,8 +35,10 @@ temperature = Table(
 
 
 """
+
+from datetime import datetime, date
 from functools import lru_cache
-from typing import Optional, Union
+from typing import Optional, Union, Iterable
 
 from nagra.schema import Schema
 from nagra.delete import Delete
@@ -48,30 +50,45 @@ from nagra.transaction import Transaction
 from nagra.exceptions import IncorrectTable
 
 
-_TYPE_MAP = {
+_TYPE_ALIAS = {
+    "str": "str",
+    "varchar": "str",
+    "character varying": "str",
+    "text": "str",
+    "int": "int",
+    "integer": "int",
+    "bigint": "bigint",
+    "float": "float",
+    "double precision": "float",
+    "timestamp": "timestamp",
+    "timestamp without time zone": "timestamp",
+    "timestamptz": "timestamptz",
+    "timestamp with time zone": "timestamptz",
+    "date": "date",
+    "bool": "bool",
+    "boolean": "bool",
+    "uuid": "uuid",
+    "json": "json",
+    "blob": "blob",  # TODO ADD TEST
+    "bytea": "blob",
+}
+
+_DB_TYPE = {
     "postgresql": {
-        "varchar": "VARCHAR",
-        "character varying": "VARCHAR",
         "str": "VARCHAR",
-        "text": "VARCHAR",
         "int": "INTEGER",
-        "integer": "INTEGER",
         "bigint": "BIGINT",
         "float": "FLOAT",
-        "double precision":"FLOAT",
-        "timestamp without time zone": "TIMESTAMP",
         "timestamp": "TIMESTAMP",
-        "timestamp with time zone": "TIMESTAMPTZ",
         "timestamptz": "TIMESTAMPTZ",
         "date": "DATE",
         "bool": "BOOL",
         "boolean": "BOOL",
         "uuid": "UUID",
         "json": "JSON",
+        "blob": "BYTEA",
     },
     "sqlite": {
-        "varchar": "TEXT",
-        "text": "TEXT",
         "str": "TEXT",
         "int": "INTEGER",
         "bigint": "INTEGER",
@@ -81,8 +98,55 @@ _TYPE_MAP = {
         "bool": "BOOL",
         "uuid": "TEXT",
         "json": "JSON",
+        "blob": "BLOB",
     },
 }
+
+
+class Column:
+    __slots__ = ["name", "dtype", "dims"]
+
+    def __init__(self, name: str, dtype: str):
+        self.name = name.strip()
+        if "[" in dtype:
+            dtype, dims = dtype.split("[", 1)
+            self.dtype = dtype.strip()
+            self.dims = "[" + dims.strip()
+        else:
+            self.dtype = dtype.strip()
+            self.dims = ""
+        try:
+            self.dtype = _TYPE_ALIAS[dtype.strip()]
+        except KeyError:
+            raise ValueError(f"Type '{dtype}' not supported (for column '{name}')")
+
+    def python_type(self):
+        res = None
+        match self.dtype:
+            case "int" | "bigint":
+                res = int
+            case "str":
+                res = str
+            case "float":
+                res = float
+            case "timestamp" | "timestamptz":
+                res = datetime
+            case "bool":
+                res = bool
+            case "json":
+                res = list | dict
+            case "date":
+                res = date
+            case "uuid":
+                res = str
+            case _:
+                raise RuntimeError("Unexpected error")
+
+        for c in self.dims:
+            if c == "[":
+                res = list[res]
+
+        return res
 
 
 class Table:
@@ -95,11 +159,11 @@ class Table:
         not_null: Optional[list[str]] = None,
         one2many: Optional[dict] = None,
         default: Optional[dict] = None,
-        primary_key:  Optional[str] = None,
+        primary_key: Optional[str] = None,
         schema: Schema = Schema.default,
     ):
         self.name = name
-        self.columns = columns
+        self.columns = {name: Column(name, dtype) for name, dtype in columns.items()}
         self.natural_key = natural_key or list(columns)
         self.foreign_keys = foreign_keys or {}
         self.not_null = set(self.natural_key) | set(not_null or [])
@@ -187,12 +251,10 @@ class Table:
         trn = trn or Transaction.current
         return self.upsert(*columns, trn=trn, lenient=lenient).insert_only()
 
-
     def drop(self, trn: Optional[Transaction] = None):
         trn = trn or Transaction.current
         stmt = Statement("drop_table", trn.flavor, name=self.name)
         trn.execute(stmt())
-
 
     def default_columns(self, nk_only: bool = False):
         """
@@ -247,10 +309,18 @@ class Table:
         # Resolve last step
         return prev_table.join_on(path[-1:], env)
 
-    @classmethod
-    def ctypes(cls, flavor, columns):
-        type_map = _TYPE_MAP[flavor]
-        return {c: type_map[d] for c, d in columns.items() if d in type_map}
+    def ctypes(self, flavor: str, column_names: Iterable[str]):
+        # detect arrays
+        db_type = _DB_TYPE[flavor]
+        res = {}
+        for name in column_names:
+            col = self.columns[name]
+            if flavor == "sqlite" and col.dims:
+                # sqlite does not support arrays
+                res[name] = "json"
+            else:
+                res[name] = db_type[col.dtype] + col.dims
+        return res
 
     def __iter__(self):
         return iter(self.select())

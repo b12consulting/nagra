@@ -107,6 +107,16 @@ temperature_table = Table(
     natural_key=["timestamp", "city"],
 )
 
+parameter_table = Table(
+    "parameter",
+    columns={
+        "name": "str",
+        "timestamps": "timestamp []",
+        "values": "float []",
+    },
+    natural_key=["name"],
+)
+
 
 @pytest.fixture(scope="session")
 def person():
@@ -136,6 +146,10 @@ def kitchensink():
 @pytest.fixture(scope="session")
 def temperature():
     return temperature_table
+
+@pytest.fixture(scope="session")
+def parameter():
+    return parameter_table
 
 
 DSN = [

@@ -33,7 +33,7 @@ def test_create_table(empty_transaction):
         ]
         assert add_name == [
             'ALTER TABLE my_table',
-            'ADD COLUMN name VARCHAR NOT NULL'
+            'ADD COLUMN "name" VARCHAR NOT NULL'
         ]
     else:
         assert create_table == [
@@ -43,12 +43,12 @@ def test_create_table(empty_transaction):
         ]
         assert add_name == [
             'ALTER TABLE my_table',
-            'ADD COLUMN name TEXT NOT NULL'
+            'ADD COLUMN "name" TEXT NOT NULL'
         ]
 
     assert add_score == [
         'ALTER TABLE my_table',
-        'ADD COLUMN score INTEGER NOT NULL',
+        'ADD COLUMN "score" INTEGER NOT NULL',
         'DEFAULT 0'
     ]
     assert create_idx == [

@@ -374,10 +374,14 @@ def test_to_dict(transaction, temperature):
         ]
     )
     # Read data
+    expected_date =  datetime.datetime(1970, 1, 2, 0, 0)
+    if transaction.flavor == "sqlite":
+        expected_date = str(expected_date.date())
+
     records = list(temperature.select().to_dict())
     assert len(records) == 2
     assert records[0] == {
-        "timestamp": datetime.datetime(1970, 1, 2, 0, 0),
+        "timestamp": expected_date,
         "city": "Berlin",
         "value": 10.0,
     }
@@ -385,7 +389,7 @@ def test_to_dict(transaction, temperature):
     cond = "(= value {})"
     (record,) = temperature.select().where(cond).to_dict(12)
     assert record == {
-        "timestamp": datetime.datetime(1970, 1, 2, 0, 0),
+        "timestamp": expected_date,
         "city": "London",
         "value": 12.0,
     }

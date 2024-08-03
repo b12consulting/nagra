@@ -296,36 +296,15 @@ class VarToken(Token):
         if self.is_relation():
             *head, tail = self.value.split(".")
             ftable, _, _ = env.table.join_on(tuple(head), env=env)
-            col_type = ftable.columns[tail]
-        elif col_type := env.table.columns.get(self.value):
-            pass
+            col = ftable.columns[tail]
+            return col.python_type()
+        elif col := env.table.columns.get(self.value):
+            return col.python_type()
         elif self.value == env.table.primary_key:
             # implicit type for pk is integer
             return int
         else:
             raise EvalTypeError(f"Unable to eval type of '{self.value}'")
-
-        match col_type:
-            # TODO validate type names int Table.__init__
-            case "int" | "bigint":
-                return int
-            case "varchar":
-                return str
-            case "float":
-                return float
-            case "timestamp" | "timestamptz":
-                return datetime
-            case "bool":
-                return bool
-            case "json":
-                return str
-            case "date":
-                return date
-            case "uuid":
-                return str
-            case _:
-                msg = f"Columns of type {col_type} not supported (for {self.value})"
-                raise NotImplementedError(msg)
 
 
 class OpToken(Token):

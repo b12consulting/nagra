@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 D2_TPL = """
 {{table.name}}_: "{{table.name}}" {
   shape: sql_table
-  {%- for col, dt in table.columns.items() %}
-  {{col}}: {{dt}}
+  {%- for name, col in table.columns.items() %}
+  {{name}}: {{col.python_type()}}
   {%- endfor %}
 }
 {%- for col, f_table in table.foreign_keys.items() %}
@@ -125,6 +125,8 @@ class Schema:
             if name in db_columns:
                 continue
             ctypes = table.ctypes(flavor, table.columns)
+            # TODO use KEY GENERATED ALWAYS AS IDENTITY) instead of
+            # serials (see https://stackoverflow.com/a/55300741) ?
             stmt = Statement(
                 "create_table", flavor, table=table, pk_type=ctypes.get(table.primary_key)
             )

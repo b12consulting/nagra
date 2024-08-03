@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from nagra import Table, Schema
+from nagra.table import Column
 from nagra.exceptions import IncorrectTable
 
 
@@ -74,7 +75,7 @@ def test_create_tables(empty_transaction):
 
     # Add a column to existing table
     person = Table.get("person")
-    person.columns["email"] = "varchar"
+    person.columns["email"] = Column("email", "varchar")
     schema.create_tables(trn=empty_transaction)
     post = schema._db_columns(trn=empty_transaction)
     assert "person" in post

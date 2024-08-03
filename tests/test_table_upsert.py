@@ -103,7 +103,7 @@ def test_upsert_stmt_with_id(transaction, person):
 
     upsert = person.upsert("id", "name")
     upsert.execute(new_id, "Lima2")
-    record, = person.select("id", "name").where('(= id {})').execute(new_id)
+    (record,) = person.select("id", "name").where("(= id {})").execute(new_id)
     assert record == (new_id, "Lima2")
 
 
@@ -357,14 +357,53 @@ def test_mixed_cursor(transaction, person):
     # add Tango as parent to other record, execute one stm for each
     select = person.select("name").where("(!= name 'Tango')")
     upsert = person.upsert("name", "parent.name")
-    for name, in select:
+    for (name,) in select:
         # In this loop we have two "live" cursor, the one consumed by
         # the select and the one executed by the upsert
         upsert.execute(name, "Tango")
-
 
     # assert results
     select = person.select("name", "parent.name").where("(!= name 'Tango')")
     for name, parent in select:
         assert name in ["Romeo", "Sierra"]
         assert parent == "Tango"
+
+
+def test_arrays(transaction, parameter):
+    # First upsert
+    upsert = parameter.upsert()
+    records = [
+        ("one", ["2024-08-03T10:42", "2024-08-03T10:43"], [2, 3]),
+        ("two", ["2024-08-03T10:44", "2024-08-03T10:45"], [4, 5]),
+        ("three", ["2024-08-03T10:46", "2024-08-03T10:47"], [6, 7]),
+    ]
+    if transaction.flavor == "sqlite":
+        records = [[str(v) for v in r] for r in records]
+    upsert.executemany(records)
+
+    records = list(parameter.select())
+
+    if transaction.flavor == "sqlite":
+        assert records == [
+            ("one", "['2024-08-03T10:42', '2024-08-03T10:43']", "[2, 3]"),
+            ("two", "['2024-08-03T10:44', '2024-08-03T10:45']", "[4, 5]"),
+            ("three", "['2024-08-03T10:46', '2024-08-03T10:47']", "[6, 7]"),
+        ]
+    else:
+        assert records == [
+            (
+                "one",
+                [datetime(2024, 8, 3, 10, 42), datetime(2024, 8, 3, 10, 43)],
+                [2.0, 3.0],
+            ),
+            (
+                "two",
+                [datetime(2024, 8, 3, 10, 44), datetime(2024, 8, 3, 10, 45)],
+                [4.0, 5.0],
+            ),
+            (
+                "three",
+                [datetime(2024, 8, 3, 10, 46), datetime(2024, 8, 3, 10, 47)],
+                [6.0, 7.0],
+            ),
+        ]
