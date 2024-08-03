@@ -2,7 +2,7 @@ from itertools import chain
 import argparse
 import os
 
-from nagra import Transaction, Schema
+from nagra import Transaction, Schema, __version__
 from nagra.utils import print_table
 
 
@@ -23,8 +23,9 @@ def select(args, schema):
 
 def delete(args, schema):
     delete = schema.get(args.table).delete()
-    where = chain.from_iterable(args.where)
-    delete = delete.where(*where)
+    if args.where:
+        where = chain.from_iterable(args.where)
+        delete = delete.where(*where)
     delete.execute()
 
 
@@ -49,6 +50,10 @@ def print_schema(args, schema):
         rows.append([name])
     headers = ["table"]
     print_table(rows, headers, args.pivot)
+
+
+def show_version():
+    print(__version__)
 
 
 def run():
@@ -77,6 +82,12 @@ def run():
         "-p",
         action="store_true",
         help="Pivot results (one key-value table per record)",
+    )
+    parser.add_argument(
+        "--version",
+        "-V",
+        action="store_true",
+        help="Show version",
     )
     subparsers = parser.add_subparsers(dest="command")
 
@@ -107,6 +118,9 @@ def run():
 
     # Parse args
     args = parser.parse_args()
+    if args.version:
+        show_version()
+        return
     if not args.command:
         parser.print_help()
         return
