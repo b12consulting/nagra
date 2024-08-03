@@ -4,8 +4,9 @@ from nagra import Schema, Transaction
 schema_toml = """
 [city]
 natural_key = ["name"]
-not_null = ["name"]
+not_null = ["lat", "long"]
 [city.columns]
+country = "varchar"
 name = "varchar"
 lat = "varchar"
 long = "varchar"
@@ -15,7 +16,6 @@ temperatures = "temperature.city"
 
 [temperature]
 natural_key = ["city", "timestamp"]
-not_null = ["city", "timestamp"]
 [temperature.columns]
 city = "bigint"
 timestamp = "timestamp"
@@ -40,6 +40,7 @@ with Transaction("sqlite://"):
     # Add temperatures
     temperature = schema.get("temperature")
     upsert = temperature.upsert("city.name", "timestamp", "value")
+
     upsert.execute("Louvain-la-Neuve", "2023-11-27 16:00:00", 6)
     upsert.executemany([
         ("Brussels", "2023-11-27 17:00:00", 7),
@@ -66,7 +67,6 @@ with Transaction("sqlite://"):
 
     # Update df and save it
     df["value"] += 10
-    df["timestamp"] = df["timestamp"].astype(str)
 
     temperature.upsert().from_pandas(df)
     row, = temperature.select("value").where("(= timestamp '2023-11-28 02:00:00')")

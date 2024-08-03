@@ -10,10 +10,12 @@ def get_version():
             return line.split("=")[1].strip("' \"\n")
     raise ValueError(f"__version__ line not found in {ini_path}")
 
+
 long_description = """Nagra is a Python ORM that tries to emphasise
 the declarative nature of relational databases. It also comes with
 builtin features usually not available in traditonal ORM like
 declarative row-level permissions or a command-line interface"""
+
 
 setup(
     name="Nagra",
@@ -30,7 +32,10 @@ setup(
         "nagra",
     ],
     extras_require={
-        "test": ["pytest", "pandas", "typeguard"],
+        "dev": ["pytest", "pandas", "typeguard"],
+    },
+    extras_require={
+        "pg": ["psycopg"],
     },
     package_data={"nagra": ["template/*/*sql"]},
     entry_points={

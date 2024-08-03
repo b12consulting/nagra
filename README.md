@@ -5,7 +5,7 @@
 
 Optionally, to work with Postgresql:
 
-    pip install psycopg
+    pip install "nagra[pg]"
 
 
 # Crash course
