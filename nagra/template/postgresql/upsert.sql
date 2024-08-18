@@ -1,4 +1,4 @@
-INSERT INTO "{{table}}" ({{columns | join(', ') }})
+INSERT INTO "{{table}}" ({{columns | map('autoquote') | join(', ') }})
 VALUES (
   {% for col in columns -%}
   {{ "%s," if not loop.last else "%s" }}
