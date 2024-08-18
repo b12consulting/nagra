@@ -33,8 +33,6 @@ setup(
     ],
     extras_require={
         "dev": ["pytest", "pandas", "typeguard"],
-    },
-    extras_require={
         "pg": ["psycopg"],
     },
     package_data={"nagra": ["template/*/*sql"]},
