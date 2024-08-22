@@ -23,7 +23,7 @@ def test_simple_upsert_stm(person):
     ]
     res = strip_lines(upsert.stm())
     assert res == [
-        'INSERT INTO "person" (name, parent)',
+        'INSERT INTO "person" ("name", "parent")',
         "VALUES (",
         "%s,%s",
         ")",
@@ -46,7 +46,7 @@ def test_simple_upsert(transaction, person):
     # Second one
     upsert = person.upsert("name", "parent.name")
     upsert.execute("Bob", "Big Bob")
-    rows = list(person.select("name", "parent.name").execute())
+    rows = list(person.select("name", "parent.name").orderby("name").execute())
     assert rows == [("Big Bob", None), ("Bob", "Big Bob")]
 
 
@@ -59,7 +59,7 @@ def test_insert(transaction, person):
     # Second one (with insert instead of upsert)
     upsert = person.insert("name", "parent.name")
     upsert.execute("Bob", "Big Bob")
-    rows = list(person.select("name", "parent.name").execute())
+    rows = list(person.select("name", "parent.name").orderby("name").execute())
     assert rows == [("Big Bob", None), ("Bob", None)]
 
 
@@ -69,7 +69,7 @@ def test_upsert_stmt_with_id(transaction, person):
         upsert = person.upsert("id", "name", "parent.name")
         res = list(strip_lines(upsert.stm()))
         assert res == [
-            'INSERT INTO "person" (id, name, parent)',
+            'INSERT INTO "person" ("id", "name", "parent")',
             "VALUES (",
             "%s,%s,%s",
             ")",
@@ -85,7 +85,7 @@ def test_upsert_stmt_with_id(transaction, person):
         upsert = person.upsert("id", "name")
         res = list(strip_lines(upsert.stm()))
         assert res == [
-            'INSERT INTO "person" (id, name)',
+            'INSERT INTO "person" ("id", "name")',
             "VALUES (",
             "%s,%s",
             ")",
@@ -117,7 +117,7 @@ def test_upsert_exec_with_id(transaction, person):
     # Add child
     upsert = person.upsert("id", "name", "parent.name")
     upsert.execute(2, "Bob", "Big Bob")
-    rows = list(person.select("name", "parent.name").execute())
+    rows = list(person.select("name", "parent.name").orderby("name").execute())
     assert rows == [("Big Bob", None), ("Bob", "Big Bob")]
 
     # Update child
@@ -304,7 +304,7 @@ def test_double_insert(transaction, person):
             ("Charly", None),
         ]
     )
-    rows = list(person.select())
+    rows = list(person.select().orderby(("name", "desc")))
     assert rows == [("Tango", None), ("Charly", None)]
 
 
@@ -381,7 +381,7 @@ def test_arrays(transaction, parameter):
         records = [[str(v) for v in r] for r in records]
     upsert.executemany(records)
 
-    records = list(parameter.select())
+    records = list(parameter.select().orderby("id"))
 
     if transaction.flavor == "sqlite":
         assert records == [

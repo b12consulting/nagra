@@ -288,7 +288,7 @@ def test_agg(transaction, temperature):
     rows = list(select)
     assert len(rows) == 1
     (record,) = rows
-    assert record[0] == "Berlin,London"
+    assert record[0] in ("Berlin,London", "London,Berlin")
 
     # Strings into array
     if is_pg:
@@ -378,7 +378,7 @@ def test_to_dict(transaction, temperature):
     if transaction.flavor == "sqlite":
         expected_date = str(expected_date.date())
 
-    records = list(temperature.select().to_dict())
+    records = list(temperature.select().orderby("city").to_dict())
     assert len(records) == 2
     assert records[0] == {
         "timestamp": expected_date,

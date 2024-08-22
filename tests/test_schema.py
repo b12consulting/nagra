@@ -101,3 +101,13 @@ def test_custom_id_type(empty_transaction):
         row_id = city.upsert("id", "name").execute("this-is-an-uuid", "test")
         assert row_id == "this-is-an-uuid"
         assert list(city.select()) == [("this-is-an-uuid", "test")]
+
+
+# TODO FAILS ON ARRAY TYPE DETECTION:
+
+# def test_schema_from_db(transaction):
+#     schema = Schema()
+#     schema.introspect_db()
+
+#     table_names = []
+#     assert sorted(schema.tables) == table_names

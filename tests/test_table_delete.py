@@ -43,7 +43,7 @@ def test_delete_cascade(transaction, person, skill):
         ("Fishing", "Zulu"),
     ])
     # Check created skills
-    assert list(skill) == [('Cooking', 'Yankee'), ('Fishing', 'Zulu')]
+    assert sorted(skill) == [('Cooking', 'Yankee'), ('Fishing', 'Zulu')]
 
     # Delete person and list skills
     person.delete('(= name "Zulu")').execute()

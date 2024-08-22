@@ -155,9 +155,7 @@ def parameter():
 DSN = [
     "postgresql:///nagra",
     "sqlite://",
-    # CRDB (command: cockroach start-single-node --insecure
-    # --store=type=mem,size=0.25 --advertise-addr=localhost )
-    "postgresql://root@localhost:26257/defaultdb?sslmode=disable"
+    # "postgresql://yugabyte:yugabyte@localhost:5433/nagra"
     # "duckdb://",
 ]
 

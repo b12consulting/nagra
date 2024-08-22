@@ -41,10 +41,10 @@ class Schema:
     @classmethod
     def from_toml(self, toml_src: IOBase | Path | str) -> "Schema":
         schema = Schema()
-        schema.load(toml_src)
+        schema.load_toml(toml_src)
         return schema
 
-    def load(self, toml_src: IOBase | Path | str):
+    def load_toml(self, toml_src: IOBase | Path | str):
         # Late import to avoid import loops
         from nagra.table import Table
 
@@ -174,22 +174,24 @@ class Schema:
             trn.execute(stm)
 
     @classmethod
-    def from_db(cls, trn:Optional[Transaction]=None) -> "Schema":
+    def from_db(cls, trn: Optional[Transaction] = None) -> "Schema":
         """"
         Instanciate a nagra Schema (and Tables) based on database
         schema
         """
+        schema = Schema()
+        schema.introspect_db(trn=trn)
+        return schema
+
+    def introspect_db(self, trn: Optional[Transaction] = None):
         from nagra.table import Table
 
         trn = trn or Transaction.current
-        schema = Schema()
-        db_fk = cls._db_fk(trn)
-        db_pk = cls._db_pk(trn)
-        db_unique = cls._db_unique(trn)
-        db_columns = cls._db_columns(trn=trn)
+        db_fk = self._db_fk(trn)
+        db_pk = self._db_pk(trn)
+        db_unique = self._db_unique(trn)
+        db_columns = self._db_columns(trn=trn)
         for table_name, cols in db_columns.items():
-            # Transform types name to canonical ones
-            cols = Table.ctypes(trn.flavor, cols)
             # Instanciate table
             Table(
                 table_name,
@@ -197,8 +199,7 @@ class Schema:
                 natural_key=db_unique.get(table_name),
                 foreign_keys=db_fk[table_name],
                 primary_key=db_pk.get(table_name, None),
-                schema=schema)
-        return schema
+                schema=self)
 
     def drop(self, trn=None):
         trn = trn or Transaction.current
