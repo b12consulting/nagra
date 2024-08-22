@@ -1,6 +1,8 @@
-from itertools import chain
 import argparse
+import csv
 import os
+import sys
+from itertools import chain
 
 from nagra import Transaction, Schema, __version__
 from nagra.utils import print_table
@@ -18,7 +20,13 @@ def select(args, schema):
         select = select.orderby(*orderby)
     rows = list(select.execute())
     headers = [d[0] for d in select.dtypes()]
-    print_table(rows, headers, args.pivot)
+    if args.csv:
+        writer = csv.writer(sys.stdout)
+        writer.writerow(headers)
+        for row in rows:
+            writer.writerow(row)
+    else:
+        print_table(rows, headers, args.pivot)
 
 
 def delete(args, schema):
@@ -103,6 +111,11 @@ def run():
         action="append",
         nargs="*",
         help="Order by given columns",
+    )
+    parser_select.add_argument(
+        "--csv",
+        action="store_true",
+        help="Format output as csv",
     )
     parser_select.set_defaults(func=select)
 
