@@ -3,6 +3,43 @@
 
 ### Ongoing
 
+**Breaking change:** Rename `Schema.load` into `Schema.load_toml`
+
+**New feature** Cli: Add csv export on select, with `--csv` flag
+
+**Fix**  Add proper quotes around column names on postgresql upsert
+
+**New feature** Add array support: So one can now declare a table like:
+
+``` python
+parameter_table = Table(
+    "parameter",
+    columns={
+        "name": "str",
+        "timestamps": "timestamp []",
+        "values": "float []",
+    },
+    natural_key=["name"],
+)
+upsert = parameter.upsert()
+records = [
+    ("one", ["2024-08-03T10:42", "2024-08-03T10:43"], [2, 3]),
+    ("two", ["2024-08-03T10:44", "2024-08-03T10:45"], [4, 5]),
+    ("three", ["2024-08-03T10:46", "2024-08-03T10:47"], [6, 7]),
+]
+upsert.executemany(records)
+```
+
+**Fix** Cli: Fix where condition on delete
+
+**New Feature** *Add query arguments support in to_dict:
+
+``` python
+temperature = Schema.get("temperature")
+records = temperature.select().where("(= value {})").to_dict(12)
+
+```
+
 
 ###  0.1.2 (released: 2024-06-30)
 
