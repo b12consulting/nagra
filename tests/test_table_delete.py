@@ -48,3 +48,7 @@ def test_delete_cascade(transaction, person, skill):
     # Delete person and list skills
     person.delete('(= name "Zulu")').execute()
     assert list(skill) == [('Cooking', 'Yankee')]
+
+    # Same, but with an  arg
+    person.delete('(= name {})').execute("Yankee")
+    assert list(skill) == []

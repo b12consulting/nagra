@@ -42,7 +42,7 @@ class Delete:
 
     def stm(self):
         asts = [AST.parse(cond) for cond in self._where]
-        eval_conditions = [ast.eval(self.env) for ast in asts]
+        eval_conditions = [ast.eval(self.env, flavor=self.trn.flavor) for ast in asts]
         joins = list(self.table.join(self.env))
         stm = Statement(
             "delete-with-join" if joins else "delete",
