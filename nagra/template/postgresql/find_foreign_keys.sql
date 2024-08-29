@@ -1,4 +1,5 @@
  SELECT
+   tc.constraint_name,
    tc.table_name,
    kcu.column_name,
    ccu.table_name AS foreign_table_name

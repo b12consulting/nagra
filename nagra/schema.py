@@ -89,7 +89,8 @@ class Schema:
         trn = trn or Transaction.current
         res = defaultdict(dict)
         stmt = Statement("find_foreign_keys", trn.flavor, pg_schema=pg_schema)
-        for tbl, col, ftable in trn.execute(stmt()):
+        for name, tbl, col, ftable in trn.execute(stmt()):
+            # TODO reorg res by tbl and fk name
             res[tbl][col] = ftable
         return res
 
