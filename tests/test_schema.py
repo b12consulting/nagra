@@ -103,11 +103,22 @@ def test_custom_id_type(empty_transaction):
         assert list(city.select()) == [("this-is-an-uuid", "test")]
 
 
-# TODO FAILS ON ARRAY TYPE DETECTION:
 
-# def test_schema_from_db(transaction):
-#     schema = Schema()
-#     schema.introspect_db()
 
-#     table_names = []
-#     assert sorted(schema.tables) == table_names
+def test_schema_from_db(transaction):
+    # FIXME FAILS ON ARRAY TYPE DETECTION
+    # TODO implement sqlite support
+    if transaction.flavor == 'sqlite':
+        return
+
+    schema = Schema()
+    whitelist = ["person", "skill"]
+    schema.introspect_db(*whitelist)
+    assert sorted(schema.tables) == whitelist
+    person = schema.get('person')
+    assert list(person.columns) == ['id', 'name', 'parent']
+    assert [c.dtype for c in person.columns.values()] == ['bigint', 'str', 'int']
+    assert person.foreign_keys == {'parent': 'person'}
+    assert person.primary_key == "id"
+    # assert person.natural_key == ["name"]
+

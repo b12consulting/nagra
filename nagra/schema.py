@@ -1,3 +1,5 @@
+from itertools import chain
+from contextlib import contextmanager
 from collections import defaultdict
 from jinja2 import Template
 from pathlib import Path
@@ -16,11 +18,11 @@ D2_TPL = """
 {{table.name}}_: "{{table.name}}" {
   shape: sql_table
   {%- for name, col in table.columns.items() %}
-  {{name}}: {{col.python_type()}}
+  {{name}}: {{col.dtype}}
   {%- endfor %}
 }
-{%- for col, f_table in table.foreign_keys.items() %}
-{{table.name}}.{{col}} -> {{f_table}}.id : {{col}}
+{%- for col, ftable in table.foreign_keys.items() %}
+{{table.name}}_.{{col}} -> {{ftable}}_.id : "{{col}}"
 {%- endfor -%}
 """
 
@@ -89,9 +91,10 @@ class Schema:
         trn = trn or Transaction.current
         res = defaultdict(dict)
         stmt = Statement("find_foreign_keys", trn.flavor, pg_schema=pg_schema)
-        for name, tbl, col, ftable in trn.execute(stmt()):
-            # TODO reorg res by tbl and fk name
-            res[tbl][col] = ftable
+        for name, tbl, col, ftable, fcol in trn.execute(stmt()):
+            if name in res[tbl]:
+                raise RuntimeError("Unexpected multi-columns foreign key")
+            res[tbl][name] = FKConstraint(name, tbl, col, ftable, fcol)
         return res
 
     @classmethod
@@ -106,10 +109,18 @@ class Schema:
     @classmethod
     def _db_unique(cls, trn=None, pg_schema="public"):
         trn = trn or Transaction.current
-        by_constraint = defaultdict(lambda: defaultdict(list))
+        by_constraint = defaultdict(list)
         stmt = Statement("find_unique_constraint", trn.flavor, pg_schema=pg_schema)
-        for tbl, constraint, col in trn.execute(stmt()):
-            by_constraint[tbl][constraint].append(col)
+        for tbl, constraint_name in trn.execute(stmt()).fetchall():
+            col_stmt = Statement(
+                "find_index_columns",
+                trn.flavor,
+                pg_schema=pg_schema,
+                name=constraint_name,
+            )
+            columns = [c for c, in trn.execute(col_stmt())]
+            by_constraint[tbl].append(columns)
+            breakpoint()
 
         # Keep the unique constraint with the lowest number of columns for
         # each table
@@ -184,7 +195,12 @@ class Schema:
         schema.introspect_db(trn=trn)
         return schema
 
-    def introspect_db(self, trn: Optional[Transaction] = None):
+    def introspect_db(self, *tables: str, trn: Optional[Transaction] = None):
+        """
+        Instanciate Table instances based on database content. If
+        `tables` is non-empty, it is used as a whitelist and all other
+        tables are ignored
+        """
         from nagra.table import Table
 
         trn = trn or Transaction.current
@@ -192,13 +208,20 @@ class Schema:
         db_pk = self._db_pk(trn)
         db_unique = self._db_unique(trn)
         db_columns = self._db_columns(trn=trn)
+
         for table_name, cols in db_columns.items():
+            if tables and table_name not in tables:
+                continue
+            fks = {
+                fk.column: fk.foreign_table
+                for fk in db_fk[table_name].values()
+            }
             # Instanciate table
             Table(
                 table_name,
                 columns=cols,
                 natural_key=db_unique.get(table_name),
-                foreign_keys=db_fk[table_name],
+                foreign_keys=fks,
                 primary_key=db_pk.get(table_name, None),
                 schema=self)
 
@@ -212,3 +235,49 @@ class Schema:
         tables = self.tables.values()
         res = "\n".join(tpl.render(table=t) for t in tables)
         return res
+
+    @contextmanager
+    def suspend_fk(self):
+        all_fks = list(chain.from_iterable(
+            fks.values()
+            for fks in self._db_fk().values()
+        ))
+        for fk in all_fks:
+            fk.drop()
+        yield
+
+        for fk in all_fks:
+            fk.add()
+
+
+class FKConstraint:
+
+    def __init__(self, name, table, column, foreign_table, foreign_column):
+        self.name = name
+        self.table = table
+        self.column = column
+        self.foreign_table = foreign_table
+        self.foreign_column = foreign_column
+
+    def drop(self, trn=None):
+        trn = trn or Transaction.current
+        stmt = Statement(
+            "drop_fk",
+            trn.flavor,
+            table=self.table,
+            name=self.name,
+        )
+        trn.execute(stmt())
+
+    def add(self, trn=None):
+        trn = trn or Transaction.current
+        stmt = Statement(
+            "add_foreign_key",
+            trn.flavor,
+            table=self.table,
+            column=self.column,
+            name=self.name,
+            foreign_table=self.foreign_table,
+            foreign_column=self.foreign_column,
+        )
+        trn.execute(stmt())
