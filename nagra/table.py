@@ -60,6 +60,7 @@ _TYPE_ALIAS = {
     "bigint": "bigint",
     "float": "float",
     "double precision": "float",
+    "numeric": "float",
     "timestamp": "timestamp",
     "timestamp without time zone": "timestamp",
     "timestamptz": "timestamptz",
