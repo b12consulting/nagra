@@ -122,3 +122,23 @@ def test_schema_from_db(transaction):
     assert person.primary_key == "id"
     # assert person.natural_key == ["name"]
 
+
+def test_suspend_fk(transaction):
+    # TODO implement sqlite support
+    if transaction.flavor == 'sqlite':
+        return
+
+    schema = Schema()
+    whitelist = ["person", "skill"]
+    schema.introspect_db(*whitelist)
+
+    before = schema._db_fk(*whitelist)
+    with schema.suspend_fk():
+        with_suspend = schema._db_fk(*whitelist)
+    after = schema._db_fk(*whitelist)
+
+    assert len(with_suspend) == 0
+    assert sorted(before) == ['person', 'skill']
+    assert sorted(after) == ['person', 'skill']
+    assert sorted(before["person"]) == ['fk_parent']
+    assert sorted(after["person"]) == ['fk_parent']

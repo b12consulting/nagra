@@ -87,11 +87,13 @@ class Schema:
         return res
 
     @classmethod
-    def _db_fk(cls, trn=None, pg_schema="public"):
+    def _db_fk(cls, *whitelist, trn=None, pg_schema="public"):
         trn = trn or Transaction.current
         res = defaultdict(dict)
         stmt = Statement("find_foreign_keys", trn.flavor, pg_schema=pg_schema)
         for name, tbl, col, ftable, fcol in trn.execute(stmt()):
+            if whitelist and tbl not in whitelist:
+                continue
             if name in res[tbl]:
                 raise RuntimeError("Unexpected multi-columns foreign key")
             res[tbl][name] = FKConstraint(name, tbl, col, ftable, fcol)
@@ -120,15 +122,13 @@ class Schema:
             )
             columns = [c for c, in trn.execute(col_stmt())]
             by_constraint[tbl].append(columns)
-            breakpoint()
 
         # Keep the unique constraint with the lowest number of columns for
         # each table
         res = {}
         for table, constraints in by_constraint.items():
-            key_fn = lambda name: len(constraints[name])
-            first, *_ = sorted(constraints, key=key_fn)
-            res[table] = constraints[first]
+            first, *_ = sorted(constraints, key=lambda item: len(item))
+            res[table] = first
         return res
 
     def setup_statements(self, db_columns, flavor):
