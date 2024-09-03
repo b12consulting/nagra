@@ -48,7 +48,7 @@ class Transaction:
         if self.flavor == "sqlite":
             cursor.executemany(stmt, args)
         else:
-            cursor.executemany(stmt, args, returning)
+            cursor.executemany(stmt, args, returning=returning)
 
         if self.flavor == "duckdb":
             return yield_from_cursor(cursor)

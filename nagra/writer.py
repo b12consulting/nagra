@@ -48,7 +48,7 @@ class WriterMixin:
         if ids:
             return ids[0]
 
-    def executemany(self, records: Iterable[tuple]):
+    def executemany(self, records: Iterable[tuple], returning=True):
         # Transform list of records into a dataframe-like dict
         value_df = dict(zip(self.columns, zip(*records)))
         arg_df = {}
@@ -74,12 +74,13 @@ class WriterMixin:
                     new_id = cursor.fetchone()
                     ids.append(new_id[0] if new_id else None)
             else:
-                cursor = self.trn.executemany(stm, chunk)
-                while True:
-                    new_id = cursor.fetchone()
-                    ids.append(new_id[0] if new_id else None)
-                    if not cursor.nextset():
-                        break
+                cursor = self.trn.executemany(stm, chunk, returning)
+                if returning:
+                    while True:
+                        new_id = cursor.fetchone()
+                        ids.append(new_id[0] if new_id else None)
+                        if not cursor.nextset():
+                            break
 
         # If conditions are present, enforce those
         if self._where:
