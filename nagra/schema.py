@@ -201,7 +201,7 @@ class Schema:
         `tables` is non-empty, it is used as a whitelist and all other
         tables are ignored
         """
-        from nagra.table import Table
+        from nagra.table import Table, UNSET
 
         trn = trn or Transaction.current
         db_fk = self._db_fk(trn)
@@ -222,7 +222,7 @@ class Schema:
                 columns=cols,
                 natural_key=db_unique.get(table_name),
                 foreign_keys=fks,
-                primary_key=db_pk.get(table_name, None),
+                primary_key=db_pk.get(table_name, UNSET),
                 schema=self)
 
     def drop(self, trn=None):

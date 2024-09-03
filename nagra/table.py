@@ -50,6 +50,8 @@ from nagra.transaction import Transaction
 from nagra.exceptions import IncorrectTable
 
 
+UNSET = object()
+
 _TYPE_ALIAS = {
     "str": "str",
     "varchar": "str",
@@ -170,7 +172,7 @@ class Table:
         self.not_null = set(self.natural_key) | set(not_null or [])
         self.one2many = one2many or {}
         self.default = default or {}
-        self.primary_key = primary_key or "id"
+        self.primary_key = "id" if primary_key is None else primary_key
         self.schema = schema
 
         # Detect malformed fk definitions
