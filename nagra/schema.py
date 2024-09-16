@@ -238,6 +238,12 @@ class Schema:
 
     @contextmanager
     def suspend_fk(self):
+        """
+        Temporarily drop all foreign keys and re-add them when
+        exiting.  The db is introspected each time `suspend_fk` is
+        called and the content of Schema is ignored, so the code may drop
+        and re-add more foreign keys.
+        """
         all_fks = list(chain.from_iterable(
             fks.values()
             for fks in self._db_fk().values()
