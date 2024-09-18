@@ -92,7 +92,6 @@ class Schema:
         res = defaultdict(dict)
         stmt = Statement("find_foreign_keys", trn.flavor, pg_schema=pg_schema)
         for name, tbl, col, ftable, fcol in trn.execute(stmt()):
-            print(name, tbl, col, ftable, fcol)
             if whitelist and tbl not in whitelist:
                 continue
             if name in res[tbl]:
