@@ -92,6 +92,7 @@ class Schema:
         res = defaultdict(dict)
         stmt = Statement("find_foreign_keys", trn.flavor, pg_schema=pg_schema)
         for name, tbl, col, ftable, fcol in trn.execute(stmt()):
+            print(name, tbl, col, ftable, fcol)
             if whitelist and tbl not in whitelist:
                 continue
             if name in res[tbl]:
@@ -204,9 +205,9 @@ class Schema:
         from nagra.table import Table, UNSET
 
         trn = trn or Transaction.current
-        db_fk = self._db_fk(trn)
-        db_pk = self._db_pk(trn)
-        db_unique = self._db_unique(trn)
+        db_fk = self._db_fk(trn=trn)
+        db_pk = self._db_pk(trn=trn)
+        db_unique = self._db_unique(trn=trn)
         db_columns = self._db_columns(trn=trn)
 
         for table_name, cols in db_columns.items():
