@@ -175,7 +175,7 @@ class Schema:
         for name, table in self.tables.items():
             stmt = Statement(
                 "create_unique_index",
-                flavor,
+                trn.flavor,
                 table=name,
                 natural_key=table.natural_key,
             )

@@ -1,9 +1,8 @@
-from collections import defaultdict
-
 from nagra import Statement
 from nagra.utils import strip_lines
 from nagra.schema import Schema
 from nagra.table import Table
+
 
 def test_create_table(empty_transaction):
     flavor = empty_transaction.flavor
@@ -21,8 +20,7 @@ def test_create_table(empty_transaction):
           primary_key="custom_id",
           schema=schema,
           )
-    db_columns = defaultdict(list)
-    lines = list(schema.setup_statements(db_columns, flavor))
+    lines = list(schema.setup_statements(trn=empty_transaction))
     create_table, add_name, add_score, create_idx = map(strip_lines, lines)
 
     if flavor == "postgresql":
