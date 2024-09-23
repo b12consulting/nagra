@@ -130,7 +130,7 @@ def test_suspend_fk(transaction):
 
     schema = Schema()
     whitelist = ["person", "skill"]
-    schema.introspect_db(*whitelist)
+    schema.introspect_db(*whitelist)  # TODO more asserts on introspect_db results
 
     before = schema._db_fk(*whitelist)
     with schema.suspend_fk():

@@ -9,6 +9,7 @@ from typing import Optional, TYPE_CHECKING
 import toml
 from nagra.statement import Statement
 from nagra.transaction import Transaction
+from nagra.utils import logger
 
 if TYPE_CHECKING:
     from nagra.table import Table
@@ -61,6 +62,7 @@ class Schema:
         tables = toml.loads(content)
         # Instanciate tables
         for name, info in tables.items():
+            logger.debug("Instanciate %s from toml", name)
             Table(name, **info, schema=self)
 
     def add(self, name: str, table: "Table"):
@@ -131,22 +133,27 @@ class Schema:
             res[table] = first
         return res
 
-    def setup_statements(self, db_columns, flavor):
+    def setup_statements(self, trn=None):
+        trn = trn or Transaction.current
+
+        # Find existing tables and columns
+        db_columns = self._db_columns(trn)
+
         # Create tables
         for name, table in self.tables.items():
             if name in db_columns:
                 continue
-            ctypes = table.ctypes(flavor, table.columns)
+            ctypes = table.ctypes(trn.flavor, table.columns)
             # TODO use KEY GENERATED ALWAYS AS IDENTITY) instead of
             # serials (see https://stackoverflow.com/a/55300741) ?
             stmt = Statement(
-                "create_table", flavor, table=table, pk_type=ctypes.get(table.primary_key)
+                "create_table", trn.flavor, table=table, pk_type=ctypes.get(table.primary_key)
             )
             yield stmt()
 
         # Add columns
         for table in self.tables.values():
-            ctypes = table.ctypes(flavor, table.columns)
+            ctypes = table.ctypes(trn.flavor, table.columns)
             for column in table.columns:
                 if column == table.primary_key:
                     continue
@@ -154,7 +161,7 @@ class Schema:
                     continue
                 stmt = Statement(
                     "add_column",
-                    flavor=flavor,
+                    flavor=trn.flavor,
                     table=table.name,
                     column=column,
                     col_def=ctypes[column],
@@ -179,10 +186,8 @@ class Schema:
         Create tables, indexes and foreign keys
         """
         trn = trn or Transaction.current
-        # Find existing tables and columns
-        db_columns = self._db_columns(trn)
         # Loop on setup statements and execute them
-        for stm in self.setup_statements(db_columns, trn.flavor):
+        for stm in self.setup_statements(trn=trn):
             trn.execute(stm)
 
     @classmethod
