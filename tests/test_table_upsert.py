@@ -1,10 +1,7 @@
-from datetime import datetime, date
-from uuid import UUID
+from datetime import datetime
 
 import pytest
-from pandas import DataFrame, to_datetime
 
-from nagra import Transaction
 from nagra.utils import strip_lines
 from nagra.exceptions import UnresolvedFK, ValidationError
 
@@ -247,47 +244,6 @@ def test_return_ids(transaction, person):
     assert update_ids == [None, None]
 
 
-def test_from_pandas(transaction, kitchensink):
-    df = DataFrame(
-        {
-            "varchar": ["ham"],
-            "bigint": [1],
-            "float": [1.0],
-            "int": [1],
-            "timestamp": to_datetime(["1970-01-01 00:00:00"]),
-            "bool": [True],
-            "date": ["1970-01-01"],
-            "json": [{}],
-            "uuid": ["F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"],
-        }
-    )
-    kitchensink.upsert().from_pandas(df)
-
-    (row,) = kitchensink.select()
-    if Transaction.current.flavor == "postgresql":
-        assert row == (
-            "ham",
-            1,
-            1.0,
-            1,
-            datetime(1970, 1, 1, 0, 0),
-            True,
-            date(1970, 1, 1),
-            {},
-            UUID("F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"),
-        )
-    else:
-        assert row == (
-            "ham",
-            1,
-            1.0,
-            1,
-            "1970-01-01",
-            1,
-            "1970-01-01",
-            "{}",
-            "F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C",
-        )
 
 
 def test_double_insert(transaction, person):

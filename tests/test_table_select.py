@@ -1,8 +1,6 @@
 import datetime
 import pytest
 
-from pandas import concat
-
 from nagra import Transaction
 from nagra.utils import strip_lines
 
@@ -337,32 +335,6 @@ def test_date_op(transaction, temperature):
         records = list(select)
         assert records[0][0] == "1970"
     assert len(records) == 2
-
-
-def test_to_pandas(transaction, temperature):
-    # Upsert
-    temperature.upsert("timestamp", "city", "value").executemany(
-        [
-            ("1970-01-02", "Berlin", 10),
-            ("1970-01-02", "London", 12),
-        ]
-    )
-    # Read data
-    df = temperature.select().to_pandas()
-    assert list(df.columns) == ["timestamp", "city", "value"]
-    assert sorted(df.city) == ["Berlin", "London"]
-
-    # Read data - with chunks
-    dfs = temperature.select().to_pandas(chunked=1)
-    df = concat(list(dfs))
-    assert list(df.columns) == ["timestamp", "city", "value"]
-    assert sorted(df.city) == ["Berlin", "London"]
-
-    # Read with custom arg
-    cond = "(= value {})"
-    df = temperature.select().where(cond).to_pandas(12)
-    assert list(df.columns) == ["timestamp", "city", "value"]
-    assert sorted(df.city) == ["London"]
 
 
 def test_to_dict(transaction, temperature):
