@@ -1,4 +1,4 @@
-SELECT DISTINCT -- XXX not sure why distinct is needed
+SELECT DISTINCT
    tc.constraint_name,
    tc.table_name,
    kcu.column_name,
