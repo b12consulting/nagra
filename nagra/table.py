@@ -67,6 +67,7 @@ _TYPE_ALIAS = {
     "timestamp without time zone": "timestamp",
     "timestamptz": "timestamptz",
     "timestamp with time zone": "timestamptz",
+    "datetime": "timestamp",
     "date": "date",
     "bool": "bool",
     "boolean": "bool",
