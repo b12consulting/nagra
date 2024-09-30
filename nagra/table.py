@@ -76,6 +76,9 @@ _TYPE_ALIAS = {
     "bytea": "blob",
 }
 
+# Add uppercase variants
+_TYPE_ALIAS.update({k.upper(): v for k, v in _TYPE_ALIAS.items()})
+
 _DB_TYPE = {
     "postgresql": {
         "str": "VARCHAR",

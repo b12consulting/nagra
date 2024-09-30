@@ -91,6 +91,9 @@ class Transaction:
         except IndexError:
             return dummy_transaction
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__} {self.flavor}>"
+
 
 def yield_from_cursor(cursor):
     while rows := cursor.fetchmany(1000):

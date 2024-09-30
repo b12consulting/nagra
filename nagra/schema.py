@@ -1,4 +1,4 @@
-from itertools import chain
+from itertools import chain, groupby
 from contextlib import contextmanager
 from collections import defaultdict
 from jinja2 import Template
@@ -107,6 +107,8 @@ class Schema:
         res = {}
         stmt = Statement("find_primary_keys", trn.flavor, pg_schema=pg_schema)
         for tbl, pk_col in trn.execute(stmt()):
+            if tbl in res:
+                raise RuntimeError("Unexpected multi-columns primary key")
             res[tbl] = pk_col
         return res
 
@@ -114,16 +116,26 @@ class Schema:
     def _db_unique(cls, trn=None, pg_schema="public"):
         trn = trn or Transaction.current
         by_constraint = defaultdict(list)
-        stmt = Statement("find_unique_constraint", trn.flavor, pg_schema=pg_schema)
-        for tbl, constraint_name in trn.execute(stmt()).fetchall():
-            col_stmt = Statement(
-                "find_index_columns",
-                trn.flavor,
-                pg_schema=pg_schema,
-                name=constraint_name,
-            )
-            columns = [c for c, in trn.execute(col_stmt())]
-            by_constraint[tbl].append(columns)
+
+        if trn.flavor == "sqlite":
+            stmt = Statement("find_unique_constraint", trn.flavor)
+            constraints = trn.execute(stmt()).fetchall()
+            for (tbl, idx_name), rows in groupby(constraints, key=lambda x: x[:2]):
+                rows = list(rows)
+                by_constraint[tbl].append([col_name for _, _, col_name in rows])
+
+        else:
+            stmt = Statement("find_unique_constraint", trn.flavor, pg_schema=pg_schema)
+            constraints = trn.execute(stmt()).fetchall()
+            for tbl, constraint_name in constraints:
+                col_stmt = Statement(
+                    "find_index_columns",
+                    trn.flavor,
+                    pg_schema=pg_schema,
+                    name=constraint_name,
+                )
+                columns = [c for c, in trn.execute(col_stmt())]
+                by_constraint[tbl].append(columns)
 
         # Keep the unique constraint with the lowest number of columns for
         # each table
@@ -209,7 +221,7 @@ class Schema:
         from nagra.table import Table, UNSET
 
         trn = trn or Transaction.current
-        db_fk = self._db_fk(trn=trn)
+        db_fk = self._db_fk(*tables, trn=trn)
         db_pk = self._db_pk(trn=trn)
         db_unique = self._db_unique(trn=trn)
         db_columns = self._db_columns(trn=trn)
@@ -242,16 +254,19 @@ class Schema:
         return res
 
     @contextmanager
-    def suspend_fk(self):
+    def suspend_fk(self, trn: Optional[Transaction] = None):
         """
         Temporarily drop all foreign keys and re-add them when
         exiting.  The db is introspected each time `suspend_fk` is
         called and the content of Schema is ignored, so the code may drop
         and re-add more foreign keys.
         """
+        msg = "suspend_fk is only supported with Postgresql"
+        assert Transaction.current.flavor == "postgresql", msg
+
         all_fks = list(chain.from_iterable(
             fks.values()
-            for fks in self._db_fk().values()
+            for fks in self._db_fk(trn=trn).values()
         ))
         for fk in all_fks:
             fk.drop()
