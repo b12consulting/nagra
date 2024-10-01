@@ -1,6 +1,22 @@
 
 # Changelog
 
+### Ongoing
+
+**New feature** DB introspection: Nagra is now able to introspect
+existing databases and infer schema.
+
+**New feature** Temporary suppression of foreign keys constraints. The
+`Schema.suspend_fk` context manager is able to drop foreign keys
+constraints and re-add them at the end of the block. This allows to
+load more complex datasets with cross-references.
+
+**New feature** The method `Schema.setup_statement` can be used to
+generate the simple migration statements without executing them
+
+**Fix** Fix delete with Sqlite when a parameter is passed (issue #15)
+
+
 ### 0.2.0 (released 2024-08-23)
 
 **Breaking change:** Rename `Schema.load` into `Schema.load_toml`
