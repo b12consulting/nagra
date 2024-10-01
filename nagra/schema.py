@@ -81,10 +81,25 @@ class Schema:
 
     @classmethod
     def _db_columns(cls, trn=None, pg_schema="public"):
+        from nagra.table import _TYPE_ALIAS
+
         trn = trn or Transaction.current
         res = defaultdict(dict)
         stmt = Statement("find_columns", trn.flavor, pg_schema=pg_schema)
-        for tbl, col_name, col_type in trn.execute(stmt()):
+        for tbl, col_name, col_type, *hints in trn.execute(stmt()):
+            if col_type.upper() == "ARRAY" and hints:
+                # Try to find type of elements, rely on the fact that
+                # _TYPE_ALIAS keys are sorted by reverse length.
+                hint = hints[0].lower()
+                for candidate in _TYPE_ALIAS:
+                    if candidate in hint:
+                        # XXX We can not detect array dimensions,
+                        # fallback to simple array
+                        col_type = f"{candidate} []"
+                        break
+                else:
+                    msg = f"Unable to detect type of column: {col_name} in table {tbl}"
+                    raise RuntimeError(msg)
             res[tbl][col_name] = col_type
         return res
 

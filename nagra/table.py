@@ -52,33 +52,32 @@ from nagra.exceptions import IncorrectTable
 
 UNSET = object()
 
-_TYPE_ALIAS = {
-    "str": "str",
-    "varchar": "str",
-    "character varying": "str",
-    "text": "str",
-    "int": "int",
-    "integer": "int",
-    "bigint": "bigint",
-    "float": "float",
-    "double precision": "float",
-    "numeric": "float",
-    "timestamp": "timestamp",
-    "timestamp without time zone": "timestamp",
-    "timestamptz": "timestamptz",
-    "timestamp with time zone": "timestamptz",
-    "datetime": "timestamp",
-    "date": "date",
-    "bool": "bool",
-    "boolean": "bool",
-    "uuid": "uuid",
-    "json": "json",
-    "blob": "blob",  # TODO ADD TEST
-    "bytea": "blob",
-}
 
-# Add uppercase variants
-_TYPE_ALIAS.update({k.upper(): v for k, v in _TYPE_ALIAS.items()})
+# Intentionally sorted by reverse lenght to help type hint detection, see Schema._db_columns
+_TYPE_ALIAS ={
+    'timestamp without time zone': 'timestamp',
+    'timestamp with time zone': 'timestamptz',
+    'character varying': 'str',
+    'double precision': 'float',
+    'timestamptz': 'timestamptz',
+    'timestamp': 'timestamp',
+    'datetime': 'timestamp',
+    'boolean': 'bool',
+    'integer': 'int',
+    'numeric': 'float',
+    'varchar': 'str',
+    'bigint': 'bigint',
+    'bytea': 'blob',
+    'float': 'float',
+    'blob': 'blob',
+    'bool': 'bool',
+    'date': 'date',
+    'json': 'json',
+    'text': 'str',
+    'uuid': 'uuid',
+    'int': 'int',
+    'str': 'str',
+}
 
 _DB_TYPE = {
     "postgresql": {
@@ -123,7 +122,7 @@ class Column:
             self.dtype = dtype.strip()
             self.dims = ""
         try:
-            self.dtype = _TYPE_ALIAS[dtype.strip()]
+            self.dtype = _TYPE_ALIAS[dtype.strip().lower()]
         except KeyError:
             raise ValueError(f"Type '{dtype}' not supported (for column '{name}')")
 

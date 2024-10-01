@@ -104,12 +104,15 @@ def test_custom_id_type(empty_transaction):
 
 
 def test_schema_from_db(transaction):
-    # FIXME FAILS ON ARRAY TYPE DETECTION
-
     schema = Schema()
-    whitelist = ["person", "skill"]
-    schema.introspect_db(*whitelist)
-    assert sorted(schema.tables) == whitelist
+    tables = [
+        'address', 'country', 'kitchensink', 'org', 'parameter',
+        'person', 'skill', 'temperature',
+    ]
+    schema.introspect_db()
+    assert sorted(schema.tables) == tables
+
+    # Check simple table
     person = schema.get('person')
     assert list(person.columns) == ['id', 'name', 'parent']
     if transaction.flavor == 'postgresql':
@@ -121,6 +124,22 @@ def test_schema_from_db(transaction):
     assert person.primary_key == "id"
     assert person.natural_key == ["name"]
 
+    # Check table with arrays
+    parameter = schema.get('parameter')
+    assert list(parameter.columns) == ['id', 'name', 'timestamps', 'values']
+    if transaction.flavor == 'postgresql':
+        expected_types = ['bigint', 'str', 'timestamp', 'float']
+        assert [c.dtype for c in parameter.columns.values()] == expected_types
+        expected_dims = ['', '', '[]', '[]']
+        assert [c.dims for c in parameter.columns.values()] == expected_dims
+    else:
+        expected_types = ['int', 'str', 'json', 'json']
+        assert [c.dtype for c in parameter.columns.values()] == expected_types
+
+    assert parameter.foreign_keys == {}
+    assert parameter.primary_key == "id"
+    assert parameter.natural_key == ["name"]
+
 
 def test_suspend_fk(transaction):
     # Skip sqlite
@@ -129,7 +148,7 @@ def test_suspend_fk(transaction):
 
     schema = Schema()
     whitelist = ["person", "skill"]
-    schema.introspect_db(*whitelist)  # TODO more asserts on introspect_db results
+    schema.introspect_db(*whitelist)
 
     before = schema._db_fk(*whitelist)
     with schema.suspend_fk():
