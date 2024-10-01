@@ -1,3 +1,12 @@
-WITH all_tables AS (SELECT name FROM sqlite_master WHERE type = 'table') 
-SELECT at.name as table_name, pti.name as column_name, pti.type as column_type
-FROM all_tables at INNER JOIN pragma_table_info(at.name) pti
+SELECT
+ m.name as table_name,
+ ti.name as column_name,
+ ti.type as column_type
+FROM
+  sqlite_master AS m,
+  pragma_table_info(m.name) AS ti
+WHERE
+  m.type = 'table'
+ORDER BY
+ table_name,
+  ti.cid

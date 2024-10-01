@@ -219,7 +219,12 @@ class Select:
                 if dt == int:
                     # Make sure we have no nan for int columns
                     srs = srs.fillna(0)
-                srs = srs.astype(dt)
+                try:
+                    srs = srs.astype(dt)
+                except TypeError:
+                    # Fallback to string if type is not supported by pandas
+                    srs = srs.astype(str)
+
             df[name] = srs
         return df
 

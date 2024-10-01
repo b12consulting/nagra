@@ -47,8 +47,8 @@ def print_schema(args, schema):
         rows = []
         headers = ["table", "column", "type"]
         for table_name in args.tables:
-            for col, dtype in schema.get(table_name).columns.items():
-                rows.append([table_name, col, dtype])
+            for col in schema.get(table_name).columns.values():
+                rows.append([table_name, col.name, col.dtype])
         print_table(rows, headers, args.pivot)
         return
 
