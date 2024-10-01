@@ -223,6 +223,7 @@ class Schema:
         Instanciate a nagra Schema (and Tables) based on database
         schema
         """
+        trn = trn or Transaction.current
         schema = Schema()
         schema.introspect_db(trn=trn)
         return schema
