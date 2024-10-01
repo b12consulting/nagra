@@ -3,29 +3,29 @@
 
 ### Ongoing
 
-**New feature** DB introspection: Nagra is now able to introspect
+**New feature:** DB introspection: Nagra is now able to introspect
 existing databases and infer schema.
 
-**New feature** Temporary suppression of foreign keys constraints. The
+**New feature:** Temporary suppression of foreign keys constraints. The
 `Schema.suspend_fk` context manager is able to drop foreign keys
 constraints and re-add them at the end of the block. This allows to
 load more complex datasets with cross-references.
 
-**New feature** The method `Schema.setup_statement` can be used to
+**New feature:** The method `Schema.setup_statement` can be used to
 generate the simple migration statements without executing them
 
-**Fix** Fix delete with Sqlite when a parameter is passed (issue #15)
+**Fix:** Fix delete with Sqlite when a parameter is passed (issue #15)
 
 
 ### 0.2.0 (released 2024-08-23)
 
 **Breaking change:** Rename `Schema.load` into `Schema.load_toml`
 
-**New feature** Cli: Add csv export on select, with `--csv` flag
+**New feature:** Cli: Add csv export on select, with `--csv` flag
 
-**Fix**  Add proper quotes around column names on postgresql upsert
+**Fix:**  Add proper quotes around column names on postgresql upsert
 
-**New feature** Add array support: So one can now declare a table like:
+**New feature:** Add array support: So one can now declare a table like:
 
 ``` python
 parameter_table = Table(
@@ -46,9 +46,9 @@ records = [
 upsert.executemany(records)
 ```
 
-**Fix** Cli: Fix where condition on delete
+**Fix:** Cli: Fix where condition on delete
 
-**New Feature** *Add query arguments support in to_dict:
+**New feature:** Add query arguments support in to_dict:
 
 ``` python
 temperature = Schema.get("temperature")
@@ -59,14 +59,14 @@ records = temperature.select().where("(= value {})").to_dict(12)
 
 ###  0.1.2 (released: 2024-06-30)
 
-**New feature** Create new cursor for each execute, it allows for
+**New feature:** Create new cursor for each execute, it allows for
 example to iterate on select and update the db record by record
 
 **New feature:** Add `Update` class and basic tests, this is mainly
 useful when updating by id when the full natural key is not known (or
 too long)
 
-**Fix** `limit` and `offset` values where lost on Select.clone
+**Fix:** `limit` and `offset` values where lost on Select.clone
 
 **Fix:** Auto-convert pandas columns to string for non-basic dtypes
 
