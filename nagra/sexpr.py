@@ -103,17 +103,21 @@ class AST:
         "true": lambda: "true",
         "false": lambda: "false",
         # Arithmetic
-        "+": lambda *xs: (" + ".join("{}" for _ in xs)).format(*xs),
-        "-": lambda *xs: (" - ".join("{}" for _ in xs)).format(*xs),
-        "*": lambda *xs: (" * ".join("{}" for _ in xs)).format(*xs),
-        "/": lambda *xs: (" / ".join("{}" for _ in xs)).format(*xs),
+        "+": lambda *xs: " + ".join(map(str, xs)),
+        "-": (
+            lambda *xs: " - ".join(map(str, xs))
+            if len(xs) > 1
+            else f"-{xs[0]}"
+        ),
+        "*": lambda *xs: " * ".join(map(str, xs)),
+        "/": lambda *xs: " / ".join(map(str, xs)),
         # dates and time
         "strftime": "strftime({}, {})".format,
         "extract": "EXTRACT({} FROM {})".format,
         # Strings
         "like": "{} LIKE {}".format,
         "ilike": "{} ILIKE {}".format,
-        "||": lambda *xs: (" || ".join("{}" for _ in xs)).format(*xs),
+        "||": lambda *xs: " || ".join(map(str, xs)),
         # Others
         "in": lambda x, *ys: f"{x} in (%s)" % ", ".join(map(str, ys)),
         "null": lambda: "NULL",
