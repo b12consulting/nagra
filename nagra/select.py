@@ -93,10 +93,10 @@ class Select:
                 expression = o
                 direction = "asc"
 
-        if isinstance(expression, int):
-            expression = self.columns[expression]
-        expressions.append(expression)
-        directions.append(direction)
+            if isinstance(expression, int):
+                expression = self.columns[expression]
+            expressions.append(expression)
+            directions.append(direction)
 
         cln = self.clone()
         cln.order_ast += tuple(AST.parse(e) for e in expressions)
