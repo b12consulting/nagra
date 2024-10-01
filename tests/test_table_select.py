@@ -346,7 +346,7 @@ def test_to_dict(transaction, temperature):
         ]
     )
     # Read data
-    expected_date =  datetime.datetime(1970, 1, 2, 0, 0)
+    expected_date = datetime.datetime(1970, 1, 2, 0, 0)
     if transaction.flavor == "sqlite":
         expected_date = str(expected_date.date())
 

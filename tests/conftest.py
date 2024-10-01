@@ -147,6 +147,7 @@ def kitchensink():
 def temperature():
     return temperature_table
 
+
 @pytest.fixture(scope="session")
 def parameter():
     return parameter_table

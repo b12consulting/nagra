@@ -174,7 +174,10 @@ class Schema:
             # TODO use KEY GENERATED ALWAYS AS IDENTITY) instead of
             # serials (see https://stackoverflow.com/a/55300741) ?
             stmt = Statement(
-                "create_table", trn.flavor, table=table, pk_type=ctypes.get(table.primary_key)
+                "create_table",
+                trn.flavor,
+                table=table,
+                pk_type=ctypes.get(table.primary_key),
             )
             yield stmt()
 
@@ -219,7 +222,7 @@ class Schema:
 
     @classmethod
     def from_db(cls, trn: Optional[Transaction] = None) -> "Schema":
-        """"
+        """ "
         Instanciate a nagra Schema (and Tables) based on database
         schema
         """
@@ -245,10 +248,7 @@ class Schema:
         for table_name, cols in db_columns.items():
             if tables and table_name not in tables:
                 continue
-            fks = {
-                fk.column: fk.foreign_table
-                for fk in db_fk[table_name].values()
-            }
+            fks = {fk.column: fk.foreign_table for fk in db_fk[table_name].values()}
             # Instanciate table
             Table(
                 table_name,
@@ -256,7 +256,8 @@ class Schema:
                 natural_key=db_unique.get(table_name),
                 foreign_keys=fks,
                 primary_key=db_pk.get(table_name, UNSET),
-                schema=self)
+                schema=self,
+            )
 
     def drop(self, trn=None):
         trn = trn or Transaction.current
@@ -280,10 +281,9 @@ class Schema:
         msg = "suspend_fk is only supported with Postgresql"
         assert Transaction.current.flavor == "postgresql", msg
 
-        all_fks = list(chain.from_iterable(
-            fks.values()
-            for fks in self._db_fk(trn=trn).values()
-        ))
+        all_fks = list(
+            chain.from_iterable(fks.values() for fks in self._db_fk(trn=trn).values())
+        )
         for fk in all_fks:
             fk.drop()
         yield
@@ -293,7 +293,6 @@ class Schema:
 
 
 class FKConstraint:
-
     def __init__(self, name, table, column, foreign_table, foreign_column):
         self.name = name
         self.table = table

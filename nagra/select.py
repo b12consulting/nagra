@@ -181,7 +181,9 @@ class Select:
         )
         return stm()
 
-    def to_pandas(self, *args, chunked:int=0) -> Union["DataFrame", Iterable["DataFrame"]]:
+    def to_pandas(
+        self, *args, chunked: int = 0
+    ) -> Union["DataFrame", Iterable["DataFrame"]]:
         """
         Execute the query with given args and return a pandas
         DataFrame. If chunked is bigger than 0, return an iterable
@@ -196,8 +198,7 @@ class Select:
         chunkify = (list(islice(cursor, chunked)) for _ in repeat(None))
         # Return df as long as the generator yield non-empty list
         return (
-            self.create_df(chunk, names, dtypes)
-            for chunk in takewhile(bool, chunkify)
+            self.create_df(chunk, names, dtypes) for chunk in takewhile(bool, chunkify)
         )
 
     @classmethod
@@ -241,5 +242,3 @@ class Select:
 
     def __iter__(self):
         return iter(self.execute())
-
-

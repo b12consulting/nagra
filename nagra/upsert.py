@@ -62,6 +62,7 @@ class Upsert(WriterMixin):
 
     def stm(self):
         from nagra.table import UNSET
+
         pk = self.table.primary_key
         conflict_key = [pk] if pk in self.groups else self.table.natural_key
         columns = self.groups
@@ -80,4 +81,3 @@ class Upsert(WriterMixin):
     def _exec_args(self, arg_df):
         args = zip(*(arg_df[c] for c in self.groups))
         return args
-

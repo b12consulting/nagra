@@ -244,8 +244,6 @@ def test_return_ids(transaction, person):
     assert update_ids == [None, None]
 
 
-
-
 def test_double_insert(transaction, person):
     """
     Show that 'last write win' when duplicates are given

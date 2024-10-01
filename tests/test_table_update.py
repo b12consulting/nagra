@@ -18,7 +18,7 @@ def test_simple_update_by_id(transaction, person):
     assert new_id_copy == new_id
 
     # Test update is successful
-    row, = person.select("id", "name")
+    (row,) = person.select("id", "name")
     assert row == (new_id, "BOB")
 
 
@@ -33,7 +33,7 @@ def test_simple_update_by_nk(transaction, temperature):
     assert new_id_copy == new_id
 
     # Test update is successful
-    row, = temperature.select("timestamp", "city", "value")
+    (row,) = temperature.select("timestamp", "city", "value")
     ts = "2024-06-27 17:52:00"
     if transaction.flavor != "sqlite":
         ts = datetime.fromisoformat(ts)
@@ -43,26 +43,26 @@ def test_simple_update_by_nk(transaction, temperature):
 def test_return_ids(transaction, person):
     # Add lines
     upsert = person.upsert("name", "parent.name")
-    records = [("Alice", None), ("Bob", None), ('Charlie', None)]
+    records = [("Alice", None), ("Bob", None), ("Charlie", None)]
     insert_ids = upsert.executemany(records)
 
     # Fisrt updates - by nk
     update = person.update("name", "parent")
     pid = insert_ids[0]
-    records = [("Bob", pid), ('Charlie', pid)]
+    records = [("Bob", pid), ("Charlie", pid)]
     update_ids = update.executemany(records)
     assert update_ids == insert_ids[1:]
 
     # Second update - by id
     update = person.update("name", "id")
     a, b, c = insert_ids
-    records = [("BOB", b), ('CHARLIE', c)]
+    records = [("BOB", b), ("CHARLIE", c)]
     update_ids = update.executemany(records)
     assert update_ids == insert_ids[1:]
 
     # Check consistency
     rows = list(person.select("name").where(f"(= parent {a}").orderby("id"))
-    assert rows ==[("BOB",), ("CHARLIE",)]
+    assert rows == [("BOB",), ("CHARLIE",)]
 
 
 def test_from_pandas(transaction, kitchensink):
@@ -81,7 +81,6 @@ def test_from_pandas(transaction, kitchensink):
         }
     )
     ids = kitchensink.upsert().from_pandas(df)
-
 
     # Update values
     df = DataFrame(

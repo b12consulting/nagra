@@ -32,23 +32,27 @@ def test_delete(person):
 
 def test_delete_cascade(transaction, person, skill):
     # Insert persons
-    person.upsert("name").executemany([
-        ("Yankee",),
-        ("Zulu",),
-    ])
+    person.upsert("name").executemany(
+        [
+            ("Yankee",),
+            ("Zulu",),
+        ]
+    )
 
     # Add skills (person is a fk and is not null)
-    skill.upsert("name", "person.name").executemany([
-        ("Cooking", "Yankee"),
-        ("Fishing", "Zulu"),
-    ])
+    skill.upsert("name", "person.name").executemany(
+        [
+            ("Cooking", "Yankee"),
+            ("Fishing", "Zulu"),
+        ]
+    )
     # Check created skills
-    assert sorted(skill) == [('Cooking', 'Yankee'), ('Fishing', 'Zulu')]
+    assert sorted(skill) == [("Cooking", "Yankee"), ("Fishing", "Zulu")]
 
     # Delete person and list skills
     person.delete('(= name "Zulu")').execute()
-    assert list(skill) == [('Cooking', 'Yankee')]
+    assert list(skill) == [("Cooking", "Yankee")]
 
     # Same, but with an  arg
-    person.delete('(= name {})').execute("Yankee")
+    person.delete("(= name {})").execute("Yankee")
     assert list(skill) == []
