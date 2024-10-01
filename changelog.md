@@ -16,6 +16,8 @@ generate the simple migration statements without executing them
 
 **Fix:** Fix delete with Sqlite when a parameter is passed (issue #15)
 
+**Breaking change:** CockroachDB support removed
+
 
 ### 0.2.0 (released 2024-08-23)
 
