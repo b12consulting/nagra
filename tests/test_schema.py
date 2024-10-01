@@ -103,11 +103,60 @@ def test_custom_id_type(empty_transaction):
         assert list(city.select()) == [("this-is-an-uuid", "test")]
 
 
-# TODO FAILS ON ARRAY TYPE DETECTION:
+def test_schema_from_db(transaction):
+    schema = Schema()
+    tables = [
+        'address', 'country', 'kitchensink', 'org', 'parameter',
+        'person', 'skill', 'temperature',
+    ]
+    schema.introspect_db()
+    assert sorted(schema.tables) == tables
 
-# def test_schema_from_db(transaction):
-#     schema = Schema()
-#     schema.introspect_db()
+    # Check simple table
+    person = schema.get('person')
+    assert list(person.columns) == ['id', 'name', 'parent']
+    if transaction.flavor == 'postgresql':
+        expected = ['bigint', 'str', 'int']
+    else:
+        expected = ['int', 'str', 'int']
+    assert [c.dtype for c in person.columns.values()] == expected
+    assert person.foreign_keys == {'parent': 'person'}
+    assert person.primary_key == "id"
+    assert person.natural_key == ["name"]
 
-#     table_names = []
-#     assert sorted(schema.tables) == table_names
+    # Check table with arrays
+    parameter = schema.get('parameter')
+    assert list(parameter.columns) == ['id', 'name', 'timestamps', 'values']
+    if transaction.flavor == 'postgresql':
+        expected_types = ['bigint', 'str', 'timestamp', 'float']
+        assert [c.dtype for c in parameter.columns.values()] == expected_types
+        expected_dims = ['', '', '[]', '[]']
+        assert [c.dims for c in parameter.columns.values()] == expected_dims
+    else:
+        expected_types = ['int', 'str', 'json', 'json']
+        assert [c.dtype for c in parameter.columns.values()] == expected_types
+
+    assert parameter.foreign_keys == {}
+    assert parameter.primary_key == "id"
+    assert parameter.natural_key == ["name"]
+
+
+def test_suspend_fk(transaction):
+    # Skip sqlite
+    if transaction.flavor == 'sqlite':
+        return
+
+    schema = Schema()
+    whitelist = ["person", "skill"]
+    schema.introspect_db(*whitelist)
+
+    before = schema._db_fk(*whitelist)
+    with schema.suspend_fk():
+        with_suspend = schema._db_fk(*whitelist)
+    after = schema._db_fk(*whitelist)
+
+    assert len(with_suspend) == 0
+    assert sorted(before) == ['person', 'skill']
+    assert sorted(after) == ['person', 'skill']
+    assert sorted(before["person"]) == ['fk_parent']
+    assert sorted(after["person"]) == ['fk_parent']

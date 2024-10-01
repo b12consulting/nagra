@@ -29,7 +29,7 @@ def test_simple_upsert_stm(person):
         ")",
         "DO UPDATE SET",
         '"parent" = EXCLUDED."parent"',
-        "RETURNING id",
+        'RETURNING "id"',
     ]
 
 
@@ -75,7 +75,7 @@ def test_upsert_stmt_with_id(transaction, person):
             ")",
             "DO UPDATE SET",
             '"name" = EXCLUDED."name" , "parent" = EXCLUDED."parent"',
-            "RETURNING id",
+            'RETURNING "id"',
         ]
 
         # Test stmt with one columns
@@ -91,7 +91,7 @@ def test_upsert_stmt_with_id(transaction, person):
             ")",
             "DO UPDATE SET",
             '"name" = EXCLUDED."name"',
-            "RETURNING id",
+            'RETURNING "id"',
         ]
 
     # Insert & update on db

@@ -61,6 +61,7 @@ class Upsert(WriterMixin):
         return self.clone(where=conditions)
 
     def stm(self):
+        from nagra.table import UNSET
         pk = self.table.primary_key
         conflict_key = [pk] if pk in self.groups else self.table.natural_key
         columns = self.groups
@@ -72,7 +73,7 @@ class Upsert(WriterMixin):
             columns=columns,
             conflict_key=conflict_key,
             do_update=do_update,
-            pk=pk,
+            pk=pk if pk is not UNSET else None,
         )
         return stm()
 

@@ -42,13 +42,13 @@ class Transaction:
         else:
             return cursor
 
-    def executemany(self, stmt, args=None):
+    def executemany(self, stmt, args=None, returning=True):
         logger.debug(stmt)
         cursor = self.connection.cursor()
         if self.flavor == "sqlite":
             cursor.executemany(stmt, args)
         else:
-            cursor.executemany(stmt, args, returning=True)
+            cursor.executemany(stmt, args, returning=returning)
 
         if self.flavor == "duckdb":
             return yield_from_cursor(cursor)
@@ -90,6 +90,9 @@ class Transaction:
             return cls._local.stack[-1]
         except IndexError:
             return dummy_transaction
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} {self.flavor}>"
 
 
 def yield_from_cursor(cursor):

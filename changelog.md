@@ -1,7 +1,7 @@
 
 # Changelog
 
-### Ongoing
+### 0.2.0 (released 2024-08-23)
 
 **Breaking change:** Rename `Schema.load` into `Schema.load_toml`
 
