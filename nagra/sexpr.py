@@ -104,11 +104,7 @@ class AST:
         "false": lambda: "false",
         # Arithmetic
         "+": lambda *xs: " + ".join(map(str, xs)),
-        "-": (
-            lambda *xs: " - ".join(map(str, xs))
-            if len(xs) > 1
-            else f"-{xs[0]}"
-        ),
+        "-": (lambda *xs: " - ".join(map(str, xs)) if len(xs) > 1 else f"-{xs[0]}"),
         "*": lambda *xs: " * ".join(map(str, xs)),
         "/": lambda *xs: " / ".join(map(str, xs)),
         # dates and time
