@@ -9,7 +9,7 @@ DB = "sqlite://weather.db"
 
 
 def init():
-    Schema.default.load(HERE / "weather_schema.toml")
+    Schema.default.load_toml(HERE / "weather_schema.toml")
     db_ok = Path(DB).exists()
     if not db_ok:
         Schema.default.create_tables()

@@ -4,7 +4,21 @@
 ### Ongoing
 
 **New feature:** DB introspection: Nagra is now able to introspect
-existing databases and infer schema.
+existing databases and infer schema:
+
+``` python
+from nagra import Transaction, Schema
+
+with Transaction('sqlite://examples/weather/weather.db'):
+    schema = Schema.from_db()
+    print(list(schema.tables))
+    # -> ['city', 'weather']
+
+    city = schema.get('city')
+    print(list(city.columns))
+    # -> ['id', 'name']
+```
+
 
 **New feature:** Temporary suppression of foreign keys constraints. The
 `Schema.suspend_fk` context manager is able to drop foreign keys
