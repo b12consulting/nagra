@@ -143,7 +143,7 @@ class DummyTransaction(Transaction):
     def execute(self, stmt, args=tuple()):
         raise NoActiveTransaction()
 
-    def executemany(self, stmt, args=None):
+    def executemany(self, stmt, args=None, returning=True):
         raise NoActiveTransaction()
 
 
