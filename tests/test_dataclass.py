@@ -95,6 +95,7 @@ def test_kitchensink(kitchensink):
         float: Optional[float]
         int: Optional[int]
         timestamp: Optional[datetime]
+        timestamptz: Optional[datetime]
         bool: Optional[bool]
         date: Optional[date]
         json: Optional[dict | list]
@@ -110,6 +111,7 @@ def test_aggregates(kitchensink):
         "(avg float)",
         "(max int)",
         "(max timestamp)",
+        "(max timestamptz)",
         "(count)",
         "(every bool)",
         "(max date)",
@@ -120,6 +122,7 @@ def test_aggregates(kitchensink):
         "float",
         "int",
         "timestamp",
+        "timestamptz",
         "count",
         "bool",
         "date",
@@ -132,6 +135,7 @@ def test_aggregates(kitchensink):
         float: Optional[float]
         int: Optional[int]
         timestamp: Optional[datetime]
+        timestamptz: Optional[datetime]
         count: Optional[int]
         bool: Optional[bool]
         date: Optional[date]
