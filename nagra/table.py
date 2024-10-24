@@ -36,19 +36,18 @@ temperature = Table(
 
 """
 
-from datetime import datetime, date
+from datetime import date, datetime
 from functools import lru_cache
-from typing import Optional, Union, Iterable
+from typing import Iterable, Optional, Union
 
-from nagra.schema import Schema
 from nagra.delete import Delete
+from nagra.exceptions import IncorrectTable
+from nagra.schema import Schema
 from nagra.select import Select
-from nagra.upsert import Upsert
-from nagra.update import Update
 from nagra.statement import Statement
 from nagra.transaction import Transaction
-from nagra.exceptions import IncorrectTable
-
+from nagra.update import Update
+from nagra.upsert import Upsert
 
 UNSET = object()
 
@@ -89,7 +88,6 @@ _DB_TYPE = {
         "timestamptz": "TIMESTAMPTZ",
         "date": "DATE",
         "bool": "BOOL",
-        "boolean": "BOOL",
         "uuid": "UUID",
         "json": "JSON",
         "blob": "BYTEA",
@@ -100,6 +98,7 @@ _DB_TYPE = {
         "bigint": "INTEGER",
         "float": "FLOAT",
         "timestamp": "DATETIME",
+        "timestamptz": "DATETIME",
         "date": "DATE",
         "bool": "BOOL",
         "uuid": "TEXT",
