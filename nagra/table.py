@@ -88,7 +88,6 @@ _DB_TYPE = {
         "timestamptz": "TIMESTAMPTZ",
         "date": "DATE",
         "bool": "BOOL",
-        "boolean": "BOOL",
         "uuid": "UUID",
         "json": "JSON",
         "blob": "BYTEA",
