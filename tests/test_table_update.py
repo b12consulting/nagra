@@ -1,3 +1,4 @@
+import zoneinfo
 from datetime import datetime, date
 from uuid import UUID
 
@@ -74,6 +75,7 @@ def test_from_pandas(transaction, kitchensink):
             "float": [1.0],
             "int": [1],
             "timestamp": to_datetime(["1970-01-01 00:00:00"]),
+            "timestamptz": to_datetime(["1970-01-01 00:00:00+00:00"]),
             "bool": [True],
             "date": ["1970-01-01"],
             "json": [{}],
@@ -91,6 +93,7 @@ def test_from_pandas(transaction, kitchensink):
             "float": [2.0],
             "int": [2],
             "timestamp": to_datetime(["1970-01-02 00:00:00"]),
+            "timestamptz": to_datetime(["1970-01-02 00:00:00+00:00"]),
             "bool": [False],
             "date": ["1970-01-02"],
             "json": '[{"foo": "bar"}]',
@@ -100,7 +103,7 @@ def test_from_pandas(transaction, kitchensink):
     kitchensink.update(*df.columns).from_pandas(df)
 
     (row,) = kitchensink.select()
-
+    BRUTZ = zoneinfo.ZoneInfo(key='Europe/Brussels')
     if transaction.flavor == "postgresql":
         assert row == (
             "HAM",
@@ -108,6 +111,7 @@ def test_from_pandas(transaction, kitchensink):
             2.0,
             2,
             datetime(1970, 1, 2, 0, 0),
+            datetime(1970, 1, 2, 1, 0, tzinfo=BRUTZ),
             False,
             date(1970, 1, 2),
             [{"foo": "bar"}],
@@ -120,6 +124,7 @@ def test_from_pandas(transaction, kitchensink):
             2.0,
             2,
             "1970-01-02",
+            "1970-01-02 00:00:00+00:00",
             0,
             "1970-01-02",
             '[{"foo": "bar"}]',
