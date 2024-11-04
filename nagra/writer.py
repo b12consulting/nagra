@@ -54,6 +54,9 @@ class WriterMixin:
 
         # Transform list of records into a dataframe-like dict
         value_df = dict(zip(self.columns, zip(*records)))
+        if not value_df:
+            return []
+
         arg_df = {}
         for col, to_select in self.groups.items():
             if to_select:
