@@ -89,6 +89,7 @@ kitchensink_table = Table(
         "float": "float",
         "int": "int",
         "timestamp": "timestamp",
+        "timestamptz": "timestamptz",
         "bool": "bool",
         "date": "date",
         "json": "json",

@@ -1,3 +1,4 @@
+import zoneinfo
 from datetime import datetime, date
 from uuid import UUID
 from pandas import concat, DataFrame, to_datetime
@@ -39,6 +40,7 @@ def test_from_pandas(transaction, kitchensink):
             "float": [1.0],
             "int": [1],
             "timestamp": to_datetime(["1970-01-01 00:00:00"]),
+            "timestamptz": to_datetime(["1970-01-01 00:00:00+00:00"]),
             "bool": [True],
             "date": ["1970-01-01"],
             "json": [{}],
@@ -49,6 +51,7 @@ def test_from_pandas(transaction, kitchensink):
     # UPSERT
     kitchensink.upsert().from_pandas(df)
     (row,) = kitchensink.select()
+    BRUTZ = zoneinfo.ZoneInfo(key='Europe/Brussels')
     if Transaction.current.flavor == "postgresql":
         assert row == (
             "ham",
@@ -56,6 +59,7 @@ def test_from_pandas(transaction, kitchensink):
             1.0,
             1,
             datetime(1970, 1, 1, 0, 0),
+            datetime(1970, 1, 1, 1, 0, tzinfo=BRUTZ),
             True,
             date(1970, 1, 1),
             {},
@@ -68,6 +72,7 @@ def test_from_pandas(transaction, kitchensink):
             1.0,
             1,
             "1970-01-01",
+            "1970-01-01 00:00:00+00:00",
             1,
             "1970-01-01",
             "{}",
