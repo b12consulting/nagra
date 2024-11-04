@@ -46,6 +46,13 @@ def test_simple_upsert(transaction, person):
     rows = list(person.select("name", "parent.name").orderby("name").execute())
     assert rows == [("Big Bob", None), ("Bob", "Big Bob")]
 
+    # Empty input
+    upsert = person.upsert("name", "parent.name")
+    upsert.execute()
+    upsert.executemany([])
+    rows = list(person.select("name", "parent.name").orderby("name").execute())
+    assert rows == [("Big Bob", None), ("Bob", "Big Bob")]
+
 
 def test_insert(transaction, person):
     # First upsert
