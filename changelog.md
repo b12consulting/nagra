@@ -28,15 +28,15 @@ load more complex datasets with cross-references.
 **New feature:** The method `Schema.setup_statement` can be used to
 generate the simple migration statements without executing them
 
-**Fix:** Fix delete with SQLite when a parameter is passed (issue #15)
+**Fix** delete with SQLite when a parameter is passed (issue #15)
 
 **Breaking change:** CockroachDB support removed
 
-**Fix** Support for '-' operator when only one operand is given
+**Fix** support for '-' operator when only one operand is given
 
-**Fix** Fix `Select.orderby` when multiple expressions are given
+**Fix** `Select.orderby` when multiple expressions are given
 
-**Fix** Fix `Upsert.executemany` when no data is given (empty list)
+**Fix** `Upsert.executemany` when no data is given (empty list)
 
 
 ### 0.2.0 (released 2024-08-23)
@@ -91,7 +91,7 @@ too long)
 
 **Fix:** `limit` and `offset` values where lost on Select.clone
 
-**Fix:** Auto-convert pandas columns to string for non-basic dtypes
+**Fix** Auto-convert pandas columns to string for non-basic dtypes
 
 **Fix:** Ensure schema loading is correct
 
