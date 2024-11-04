@@ -1,7 +1,7 @@
 
 # Changelog
 
-### Ongoing
+### 0.3
 
 **New feature:** DB introspection: Nagra is now able to introspect
 existing databases and infer schema:
@@ -28,9 +28,15 @@ load more complex datasets with cross-references.
 **New feature:** The method `Schema.setup_statement` can be used to
 generate the simple migration statements without executing them
 
-**Fix:** Fix delete with Sqlite when a parameter is passed (issue #15)
+**Fix:** Fix delete with SQLite when a parameter is passed (issue #15)
 
 **Breaking change:** CockroachDB support removed
+
+**Fix** Support for '-' operator when only one operand is given
+
+**Fix** Fix `Select.orderby` when multiple expressions are given
+
+**Fix** Fix `Upsert.executemany` when no data is given (empty list)
 
 
 ### 0.2.0 (released 2024-08-23)
@@ -62,15 +68,16 @@ records = [
 upsert.executemany(records)
 ```
 
-**Fix:** Cli: Fix where condition on delete
+**Fix:** Cli: Fix where condition on delete when used from the cli.
 
 **New feature:** Add query arguments support in to_dict:
 
 ``` python
 temperature = Schema.get("temperature")
 records = temperature.select().where("(= value {})").to_dict(12)
-
 ```
+
+**New feature:** Type `timestamptz` is now accepted for SQLite.
 
 
 ###  0.1.2 (released: 2024-06-30)
