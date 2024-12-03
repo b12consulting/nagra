@@ -16,9 +16,12 @@ You can then run:
 This should simply print "Done". You should then be able to query the
 sqlite db like this:
 
-    $ sqlite3 nagra-sync-demo "select * from temperature natural join city"
-    1|2|2023-11-27 16:00:00|6.0||Brussels|50.8476° N|4.3572° E
-    2|1|2023-11-27 17:00:00|7.0||Louvain-la-Neuve|50.6681° N|4.6118° E
+    $ sqlite3 nagra-sync-demo.db "SELECT c.name, t.value  FROM temperature t JOIN city c ON (t.city = c.id)"
+    Louvain-la-Neuve|6.0
+    Brussels|7.0
+    Brussels|8.0
+    Brussels|5.0
+    Brussels|3.0
 
 """
 
@@ -61,14 +64,14 @@ def pg_init(pg_dsn):
         ]
         city = schema.get("city")
         upsert = city.upsert("name", "lat", "long")
-        upsert.executemany(cities) # Execute upsert
+        upsert.executemany(cities)  # Execute upsert
 
         # Add temperatures
         temperature = schema.get("temperature")
         upsert = temperature.upsert("city.name", "timestamp", "value")
 
-        upsert.execute("Louvain-la-Neuve", "2023-11-27 16:00:00", 6)
         upsert.executemany([
+            ("Louvain-la-Neuve", "2023-11-27 16:00:00", 6),
             ("Brussels", "2023-11-27 17:00:00", 7),
             ("Brussels", "2023-11-27 20:00:00", 8),
             ("Brussels", "2023-11-27 23:00:00", 5),
@@ -94,7 +97,7 @@ def sync_to_sqlite(pg_dsn, sqlite_dsn):
 
 if __name__ == "__main__":
     pg_dsn = "postgresql:///nagra-sync-demo"
-    sqlite_dsn = "sqlite://nagra-sync-demo"
+    sqlite_dsn = "sqlite://nagra-sync-demo.db"
 
     pg_init(pg_dsn)
     sync_to_sqlite(pg_dsn, sqlite_dsn)
