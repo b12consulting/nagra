@@ -23,6 +23,9 @@ if os.environ.get("NAGRA_DEBUG"):
     logger.debug("Log level set to debug")
 
 
+UNSET = object()
+
+
 def autoquote(x):
     if x.startswith('"'):
         return x

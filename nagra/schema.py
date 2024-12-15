@@ -9,7 +9,8 @@ from typing import Optional, TYPE_CHECKING
 import toml
 from nagra.statement import Statement
 from nagra.transaction import Transaction
-from nagra.utils import logger
+from nagra.utils import logger, UNSET
+
 
 if TYPE_CHECKING:
     from nagra.table import Table
@@ -237,7 +238,7 @@ class Schema:
         `tables` is non-empty, it is used as a whitelist and all other
         tables are ignored
         """
-        from nagra.table import Table, UNSET
+        from nagra.table import Table
 
         trn = trn or Transaction.current
         db_fk = self._db_fk(*tables, trn=trn)

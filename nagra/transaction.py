@@ -1,7 +1,7 @@
 import sqlite3
 import threading
 
-from nagra.utils import logger
+from nagra.utils import logger, UNSET
 from nagra.exceptions import NoActiveTransaction
 
 
@@ -10,7 +10,10 @@ class Transaction:
     _local = threading.local()
     _local.stack = []
 
-    def __init__(self, dsn, rollback=False):
+    def __init__(self, dsn, rollback=False, with_cache=True):
+        self.auto_rollback = rollback
+        self.with_cache = with_cache
+
         if dsn.startswith("postgresql://"):
             import psycopg
 
@@ -31,7 +34,6 @@ class Transaction:
             self.connection.begin()
         else:
             raise ValueError(f"Invalid dsn string: {dsn}")
-        self.auto_rollback = rollback
 
     def execute(self, stmt, args=tuple()):
         logger.debug(stmt)
@@ -106,28 +108,98 @@ class ExecMany:
     yielded to a (returning) executemany statement.
     """
 
-    def __init__(self, stm, values, trn):
+    def __init__(self, stm, values, trn, lru=None):
         self.stm = stm
         self.values = values
         self.trn = trn
+        self.lru = lru
 
     def __iter__(self):
+        if self.lru:
+            yield from lru(self.exec, self.values)
+        else:
+            yield from self.exec(self.values)
+
+    def exec(self, values):
         # Create a dedicated cursor
         cursor = self.trn.connection.cursor()
         if self.trn.flavor == "sqlite":
-            for vals in self.values:
+            for vals in values:
                 logger.debug(self.stm)
                 cursor.execute(self.stm, vals)
                 res = cursor.fetchone()
                 yield res
         else:
             logger.debug(self.stm)
-            cursor.executemany(self.stm, self.values, returning=True)
+            cursor.executemany(self.stm, values, returning=True)
             while True:
                 vals = cursor.fetchone()
                 yield vals
                 if not cursor.nextset():
                     break
+
+
+class LRUGenerator:
+    """
+    LRUGenerator wraps generator calls and implement LRU caching
+    """
+
+    def __init__(self, generator, size=1000):
+        self.size = size
+        self.generator = generator
+        self.recent = {}
+        self.older = {}
+
+    def run(self, keys):
+        # Capture existing known values in `cached`
+        cached = {}
+        fresh = []
+        for k in keys:
+            v = self.get(k)
+            if v is UNSET:
+                fresh.append(k)
+            else:
+                cached[k] = v
+
+        # Update internal state with generator results
+        for fresh_k, fresh_v in zip(fresh, self.generator(fresh)):
+            self.set(fresh_k, fresh_v)
+
+        # Yield results
+        for k in keys:
+            if k in cached:
+                yield cached[k]
+            else:
+                yield self.get(k)
+
+        # Vaccum
+        self.vaccum()
+
+    def __contains__(self, key):
+        return key in self.recent or key in self.older
+
+    def get(self, key, default=UNSET):
+        if key in self.recent:
+            return self.recent[key]
+
+        if key in self.older:
+            value = self.older[key]
+            self.recent[key] = value
+            return value
+
+        return default
+
+    def set(self, key, value):
+        self.recent[key] = value
+
+    def update(self, values):
+        self.recent.update(values)
+        self.vaccum()
+
+    def vaccum(self):
+        if len(self.older) + len(self.recent) > self.size:
+            self.older = self.recent
+            self.recent = {}
 
 
 class DummyTransaction(Transaction):
