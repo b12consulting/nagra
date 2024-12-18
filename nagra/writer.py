@@ -59,8 +59,13 @@ class WriterMixin:
         for col, to_select in self.groups.items():
             if to_select:
                 values = list(zip(*(value_df[f"{col}.{s}"] for s in to_select)))
-                if self.trn.with_cache:
-                    lru = LRUGenerator(partial(self._resolve, col))
+                # Try to instanciate lru cache
+                cache_key = (self.resolve_stm[col], str(self.lenient))
+                lru = self.trn.get_fk_cache(
+                    cache_key,
+                    fn=partial(self._resolve, col)
+                )
+                if lru is not None:
                     arg_df[col] = lru.run(values)
                 else:
                     arg_df[col] = self._resolve(col, values)
