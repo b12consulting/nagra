@@ -48,6 +48,10 @@ class Schema:
         schema.load_toml(toml_src)
         return schema
 
+    @property
+    def empty(self) -> bool:
+        return not self.tables
+
     def load_toml(self, toml_src: IOBase | Path | str):
         # Late import to avoid import loops
         from nagra.table import Table
