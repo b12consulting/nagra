@@ -49,7 +49,6 @@ from nagra.transaction import Transaction
 from nagra.update import Update
 from nagra.upsert import Upsert
 
-UNSET = object()
 
 
 # Intentionally sorted by reverse lenght to help type hint detection, see Schema._db_columns

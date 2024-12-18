@@ -33,7 +33,7 @@ def test_simple_upsert_stm(person):
     ]
 
 
-def test_simple_upsert(transaction, person):
+def test_simple_upsert(cacheable_transaction, person):
     # First upsert
     upsert = person.upsert("name")
     upsert.execute("Big Bob")
@@ -54,7 +54,7 @@ def test_simple_upsert(transaction, person):
     assert rows == [("Big Bob", None), ("Bob", "Big Bob")]
 
 
-def test_insert(transaction, person):
+def test_insert(cacheable_transaction, person):
     # First upsert
     upsert = person.upsert("name")
     records = [("Big Bob",), ("Bob",)]
@@ -67,8 +67,8 @@ def test_insert(transaction, person):
     assert rows == [("Big Bob", None), ("Bob", None)]
 
 
-def test_upsert_stmt_with_id(transaction, person):
-    if transaction.flavor == "postgresql":
+def test_upsert_stmt_with_id(cacheable_transaction, person):
+    if cacheable_transaction.flavor == "postgresql":
         # Test stmt with all columns
         upsert = person.upsert("id", "name", "parent.name")
         res = list(strip_lines(upsert.stm()))
@@ -111,7 +111,7 @@ def test_upsert_stmt_with_id(transaction, person):
     assert record == (new_id, "Lima2")
 
 
-def test_upsert_exec_with_id(transaction, person):
+def test_upsert_exec_with_id(cacheable_transaction, person):
     # Add parent
     upsert = person.upsert("id", "name")
     upsert.execute(1, "Big Bob")
@@ -132,7 +132,7 @@ def test_upsert_exec_with_id(transaction, person):
     assert rows == ("BOB",)
 
 
-def test_many_upsert(transaction, person):
+def test_many_upsert(cacheable_transaction, person):
     # First upsert
     upsert = person.upsert("name")
     records = [("Big Alice",), ("Big Bob",)]
@@ -158,7 +158,7 @@ def test_many_upsert(transaction, person):
     assert len(rows) == 4
 
 
-def test_dbl_fk_upsert(transaction, person):
+def test_dbl_fk_upsert(cacheable_transaction, person):
     # GP
     upsert = person.upsert("name")
     records = [("GP Alice",), ("GP Bob",)]
@@ -208,7 +208,7 @@ def test_dbl_fk_upsert(transaction, person):
     ]
 
 
-def test_missing_fk(transaction, person):
+def test_missing_fk(cacheable_transaction, person):
     # If pass None in parent.name, we get None back
     upsert = person.upsert("name", "parent.name")
     records = [("Big Alice", None), ("Big Bob", None)]
@@ -232,7 +232,7 @@ def test_missing_fk(transaction, person):
         assert rows == [(None,)]
 
 
-def test_return_ids(transaction, person):
+def test_return_ids(cacheable_transaction, person):
     # Create an "on conflict update" upsert
     upsert = person.upsert("name", "parent.name")
     records = [("Big Alice", None), ("Big Bob", None)]
@@ -251,7 +251,7 @@ def test_return_ids(transaction, person):
     assert update_ids == [None, None]
 
 
-def test_double_insert(transaction, person):
+def test_double_insert(cacheable_transaction, person):
     """
     Show that 'last write win' when duplicates are given
     """
@@ -269,7 +269,7 @@ def test_double_insert(transaction, person):
     assert rows == [("Tango", None), ("Charly", None)]
 
 
-def test_one2many_ref(transaction, person, org):
+def test_one2many_ref(cacheable_transaction, person, org):
     person.upsert("name").execute("Charly")
     person.upsert("name").execute("Juliet")
     org.upsert("name", "person.name").execute("Alpha", "Charly")
@@ -284,7 +284,7 @@ def test_one2many_ref(transaction, person, org):
     assert rows == [("Juliet", "Charly")]
 
 
-def test_where_cond(transaction, person):
+def test_where_cond(cacheable_transaction, person):
     """
     Shows that an exception is raised when a row infrige a where condition
     """
@@ -309,7 +309,7 @@ def test_default_value(transaction, org):
     assert (name, status) == ("Lima", "OK")
 
 
-def test_mixed_cursor(transaction, person):
+def test_mixed_cursor(cacheable_transaction, person):
     # First upsert
     upsert = person.upsert("name")
     records = [("Romeo",), ("Sierra",), ("Tango",)]
@@ -330,7 +330,7 @@ def test_mixed_cursor(transaction, person):
         assert parent == "Tango"
 
 
-def test_arrays(transaction, parameter):
+def test_arrays(cacheable_transaction, parameter):
     # First upsert
     upsert = parameter.upsert()
     records = [
@@ -338,13 +338,13 @@ def test_arrays(transaction, parameter):
         ("two", ["2024-08-03T10:44", "2024-08-03T10:45"], [4, 5]),
         ("three", ["2024-08-03T10:46", "2024-08-03T10:47"], [6, 7]),
     ]
-    if transaction.flavor == "sqlite":
+    if cacheable_transaction.flavor == "sqlite":
         records = [[str(v) for v in r] for r in records]
     upsert.executemany(records)
 
     records = list(parameter.select().orderby("id"))
 
-    if transaction.flavor == "sqlite":
+    if cacheable_transaction.flavor == "sqlite":
         assert records == [
             ("one", "['2024-08-03T10:42', '2024-08-03T10:43']", "[2, 3]"),
             ("two", "['2024-08-03T10:44', '2024-08-03T10:45']", "[4, 5]"),

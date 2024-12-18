@@ -9,6 +9,8 @@ except ImportError:
 from nagra import Statement
 from nagra.transaction import Transaction
 from nagra.writer import WriterMixin
+from nagra.utils import UNSET
+
 
 if TYPE_CHECKING:
     from nagra.table import Table
@@ -61,8 +63,6 @@ class Upsert(WriterMixin):
         return self.clone(where=conditions)
 
     def stm(self):
-        from nagra.table import UNSET
-
         pk = self.table.primary_key
         conflict_key = [pk] if pk in self.groups else self.table.natural_key
         columns = self.groups

@@ -1,10 +1,11 @@
 from collections import defaultdict
 from collections.abc import Iterable
+from functools import partial
 from itertools import islice
 
 from nagra.exceptions import UnresolvedFK, ValidationError
-from nagra.utils import logger
-from nagra.transaction import ExecMany
+from nagra.utils import logger, UNSET
+from nagra.transaction import ExecMany, LRUGenerator
 
 try:
     from pandas import DataFrame
@@ -49,9 +50,6 @@ class WriterMixin:
             return ids[0]
 
     def executemany(self, records: Iterable[tuple]):
-        # Late import to avoid import loops
-        from nagra.table import UNSET
-
         # Transform list of records into a dataframe-like dict
         value_df = dict(zip(self.columns, zip(*records)))
         if not value_df:
@@ -61,7 +59,16 @@ class WriterMixin:
         for col, to_select in self.groups.items():
             if to_select:
                 values = list(zip(*(value_df[f"{col}.{s}"] for s in to_select)))
-                arg_df[col] = self._resolve(col, values)
+                # Try to instanciate lru cache
+                cache_key = (self.resolve_stm[col], str(self.lenient))
+                lru = self.trn.get_fk_cache(
+                    cache_key,
+                    fn=partial(self._resolve, col)
+                )
+                if lru is not None:
+                    arg_df[col] = lru.run(values)
+                else:
+                    arg_df[col] = self._resolve(col, values)
             else:
                 arg_df[col] = value_df[col]
 

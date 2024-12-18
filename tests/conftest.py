@@ -1,5 +1,6 @@
-import pytest
+from itertools import product
 
+import pytest
 from typeguard import install_import_hook
 
 install_import_hook("nagra")
@@ -174,3 +175,11 @@ def transaction(request, empty_transaction):
     # Start from empty_transaction and load tables
     Schema.default.create_tables(empty_transaction)
     yield empty_transaction
+
+
+@pytest.fixture(scope="function", params=product(DSN, [(True, False)]))
+def cacheable_transaction(request):
+    dsn, fk_cache = request.param
+    with Transaction(dsn, rollback=True, fk_cache=fk_cache) as tr:
+        Schema.default.create_tables(tr)
+        yield tr
