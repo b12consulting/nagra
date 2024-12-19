@@ -67,8 +67,11 @@ class Alias:
 def tokenize(expr):
     lexer = shlex.shlex(expr)
     lexer.wordchars += ".!=<>:{}-|"
+    prev_tk = None
     for i in lexer:
-        yield Token.from_value(i)
+        tk = Token.from_value(i, prev_tk)
+        prev_tk = tk
+        yield tk
 
 
 def scan(tokens, end_tk=")"):
@@ -100,8 +103,6 @@ class AST:
         "or": lambda *x: " OR ".join(x),
         "not": "NOT {}".format,
         "is": "{} is {}".format,
-        "true": lambda: "true",
-        "false": lambda: "false",
         # Arithmetic
         "+": lambda *xs: " + ".join(map(str, xs)),
         "-": (lambda *xs: " - ".join(map(str, xs)) if len(xs) > 1 else f"-{xs[0]}"),
@@ -116,6 +117,11 @@ class AST:
         "||": lambda *xs: " || ".join(map(str, xs)),
         # Others
         "in": lambda x, *ys: f"{x} in (%s)" % ", ".join(map(str, ys)),
+    }
+
+    literals = {
+        "true": lambda: "true",
+        "false": lambda: "false",
         "null": lambda: "NULL",
     }
 
@@ -202,11 +208,28 @@ class Token:
         return False
 
     @staticmethod
-    def from_value(value):
-        if value in AST.builtins:
-            return BuiltinToken(value)
-        if value in AST.aggregates:
-            return AggToken(value)
+    def from_value(value, prev_tk):
+        # Handle exceptions
+        if value == "(":
+            return LParen(value)
+
+        # Dot prefix force Vartoken
+        if value.startswith("."):
+            return VarToken(value.lstrip("."))
+
+        # Literals take precedence over everything else
+        if value in AST.literals:
+            return LiteralToken(value)
+
+        # First item should be an operator
+        if isinstance(prev_tk, LParen):
+            if value in AST.builtins:
+                return BuiltinToken(value)
+            if value in AST.literals:
+                return LiteralToken(value)
+            if value in AST.aggregates:
+                return AggToken(value)
+
         if (value[0], value[-1]) == ("{", "}"):
             return ParamToken(value)
         try:
@@ -229,6 +252,10 @@ class Token:
 
     def _eval(self, env, flavor, *args):
         return None
+
+
+class LParen(Token):
+    "Left Parenthesis"
 
 
 class ParamToken(Token):
@@ -308,7 +335,7 @@ class VarToken(Token):
 
 
 class OpToken(Token):
-    ops = AST.builtins
+    ops = AST.builtins | AST.literals
 
     def _eval(self, env, flavor, *args):
         op = self.ops[self.value]
@@ -344,6 +371,14 @@ class BuiltinToken(OpToken):
             return bool
         else:
             return str
+
+
+class LiteralToken(OpToken):
+
+    def _eval_type(self, env, *operands):
+        if self.value == "null":
+            return None
+        return bool
 
 
 class AggToken(OpToken):

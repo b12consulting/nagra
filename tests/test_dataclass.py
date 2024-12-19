@@ -11,6 +11,7 @@ def equivalent_classes(A, B):
 
     for A_field, B_field in zip(A_fields, B_fields):
         if A_field.name != B_field.name:
+            breakpoint()
             return False
         if A_field.type != B_field.type:
             return False
@@ -86,7 +87,8 @@ def test_select_with_sexp(person):
 
 def test_kitchensink(kitchensink):
     select = kitchensink.select()
-    dclass = select.to_dataclass()
+    aliases = kitchensink.columns
+    dclass = select.to_dataclass(*aliases)
 
     @dataclass
     class KitchenSink:
@@ -100,6 +102,8 @@ def test_kitchensink(kitchensink):
         date: Optional[date]
         json: Optional[dict | list]
         uuid: Optional[str]
+        max: Optional[str]
+        true: Optional[str]
 
     assert equivalent_classes(dclass, KitchenSink)
 
