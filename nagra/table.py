@@ -272,7 +272,7 @@ class Table:
         for column in columns:
             # Escape literals (nul, true, false)
             if column in AST.literals:
-                yield f"(var {column})"
+                yield f".{column}"
                 continue
             # Handle non foreign keys
             if column not in self.foreign_keys or nk_only:

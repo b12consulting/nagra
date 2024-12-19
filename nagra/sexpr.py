@@ -117,7 +117,6 @@ class AST:
         "||": lambda *xs: " || ".join(map(str, xs)),
         # Others
         "in": lambda x, *ys: f"{x} in (%s)" % ", ".join(map(str, ys)),
-        "var": lambda x: x
     }
 
     literals = {
@@ -214,10 +213,12 @@ class Token:
         if value == "(":
             return LParen(value)
 
-        # Literals take precedence over everything except
-        # when following a var operator
-        is_prev_var_op = prev_tk and prev_tk.is_var_op
-        if not is_prev_var_op and value in AST.literals:
+        # Dot prefix force Vartoken
+        if value.startswith("."):
+            return VarToken(value.lstrip("."))
+
+        # Literals take precedence over everything else
+        if value in AST.literals:
             return LiteralToken(value)
 
         # First item should be an operator
@@ -252,9 +253,6 @@ class Token:
     def _eval(self, env, flavor, *args):
         return None
 
-    @property
-    def is_var_op(self):
-        return isinstance(self, BuiltinToken) and self.value == "var"
 
 class LParen(Token):
     "Left Parenthesis"

@@ -41,7 +41,7 @@ def test_kitchensink_select(kitchensink):
         ';',
     ]
 
-    stm = kitchensink.select('(var true)').stm()
+    stm = kitchensink.select('.true').stm()
     res = strip_lines(stm)
     assert res == ['SELECT', '"kitchensink"."true"', 'FROM "kitchensink"', ';']
 

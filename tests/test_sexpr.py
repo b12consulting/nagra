@@ -48,11 +48,10 @@ def test_sexpr():
     ast = AST.parse(expr)
     assert str(ast.tokens) == "[<BuiltinToken is>, <LiteralToken null>, <LiteralToken true>]"
 
-    # Use var builtin to escape variables
-    expr = "(is null (var true))"
+    # Use dot prefix to escape literal
+    expr = "(is null .true))"
     ast = AST.parse(expr)
-    assert str(ast.tokens[:2]) == "[<BuiltinToken is>, <LiteralToken null>]"
-    assert str(ast.tokens[2].tokens) == "[<BuiltinToken var>, <VarToken true>]"
+    assert str(ast.tokens) == "[<BuiltinToken is>, <LiteralToken null>, <VarToken true>]"
 
     # Compare litterals
     expr = "(!= true false)"

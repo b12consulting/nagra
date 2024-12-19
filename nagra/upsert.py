@@ -28,7 +28,7 @@ class Upsert(WriterMixin):
         where: Iterable[str] = [],
     ):
         self.table = table
-        self.columns = list(columns)
+        self.columns = [c.lstrip(".") for c in columns]
         self._insert_only = insert_only
         self.lenient = lenient or []
         self._where = list(where)
@@ -65,21 +65,10 @@ class Upsert(WriterMixin):
     def where(self, *conditions: str):
         return self.clone(where=conditions)
 
-    def eval_col(self, c):
-        c = c.strip()
-        if not c.startswith("("):
-            return c
-        ast = AST.parse(c)
-        if ast.tokens[0].is_var_op:
-            return ast.tokens[1].value
-        else:
-            msg = f"Invalid column '{c}' in upsert of table {self.table.name}"
-            raise ValueError(msg)
-
     def stm(self):
         pk = self.table.primary_key
         conflict_key = [pk] if pk in self.groups else self.table.natural_key
-        columns = [self.eval_col(c) for c in self.groups]
+        columns = self.groups
         do_update = False if self._insert_only else len(columns) > len(conflict_key)
         stm = Statement(
             "upsert",

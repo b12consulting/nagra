@@ -81,7 +81,7 @@ def test_from_pandas(transaction, kitchensink):
             "json": [{}],
             "uuid": ["F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"],
             "max": ["max"],
-            "(var true)": ["true"],
+            "true": ["true"],
         }
     )
     ids = kitchensink.upsert().from_pandas(df)
