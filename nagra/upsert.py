@@ -10,10 +10,10 @@ from nagra import Statement
 from nagra.transaction import Transaction
 from nagra.writer import WriterMixin
 from nagra.utils import UNSET
-
+from nagra.sexpr import AST
 
 if TYPE_CHECKING:
-    from nagra.table import Table
+    from nagra.table import Table, Env
 
 
 class Upsert(WriterMixin):
@@ -22,6 +22,7 @@ class Upsert(WriterMixin):
         table: "Table",
         *columns: str,
         trn: Transaction,
+        env: "Env",
         lenient: Union[bool, list[str], None] = None,
         insert_only: bool = False,
         where: Iterable[str] = [],
@@ -32,6 +33,7 @@ class Upsert(WriterMixin):
         self.lenient = lenient or []
         self._where = list(where)
         self.trn = trn
+        self.env = env
         super().__init__()
 
     def clone(
@@ -50,6 +52,7 @@ class Upsert(WriterMixin):
             self.table,
             *self.columns,
             trn=trn,
+            env=self.env.clone(),
             lenient=self.lenient,
             insert_only=insert_only,
             where=where,
@@ -62,10 +65,21 @@ class Upsert(WriterMixin):
     def where(self, *conditions: str):
         return self.clone(where=conditions)
 
+    def eval_col(self, c):
+        c = c.strip()
+        if not c.startswith("("):
+            return c
+        ast = AST.parse(c)
+        if ast.tokens[0].is_var_op:
+            return ast.tokens[1].value
+        else:
+            msg = f"Invalid column '{c}' in upsert of table {self.table.name}"
+            raise ValueError(msg)
+
     def stm(self):
         pk = self.table.primary_key
         conflict_key = [pk] if pk in self.groups else self.table.natural_key
-        columns = self.groups
+        columns = [self.eval_col(c) for c in self.groups]
         do_update = False if self._insert_only else len(columns) > len(conflict_key)
         stm = Statement(
             "upsert",

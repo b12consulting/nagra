@@ -44,6 +44,7 @@ from nagra.delete import Delete
 from nagra.exceptions import IncorrectTable
 from nagra.schema import Schema
 from nagra.select import Select
+from nagra.sexpr import AST
 from nagra.statement import Statement
 from nagra.transaction import Transaction
 from nagra.update import Update
@@ -67,6 +68,7 @@ _TYPE_ALIAS = {
     "bigint": "bigint",
     "bytea": "blob",
     "float": "float",
+    "real": "float",
     "blob": "blob",
     "bool": "bool",
     "date": "date",
@@ -229,7 +231,7 @@ class Table:
         if not columns:
             columns = self.default_columns()
         trn = trn or Transaction.current
-        return Upsert(self, *columns, trn=trn, lenient=lenient)
+        return Upsert(self, *columns, trn=trn, env=Env(self), lenient=lenient)
 
     def update(
         self,
@@ -268,10 +270,15 @@ class Table:
         """
         columns = self.natural_key if nk_only else self.columns
         for column in columns:
+            # Escape literals (nul, true, false)
+            if column in AST.literals:
+                yield f"(var {column})"
+                continue
+            # Handle non foreign keys
             if column not in self.foreign_keys or nk_only:
                 yield column
                 continue
-
+            # FK
             ftable = self.schema.get(self.foreign_keys[column])
             yield from (f"{column}.{k}" for k in ftable.default_columns(nk_only=True))
 

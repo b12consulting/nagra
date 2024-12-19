@@ -28,6 +28,36 @@ def test_sexpr():
     ast = AST.parse(expr)
     assert str(ast.tokens) == "[<BuiltinToken ||>, <StrToken one>, <StrToken two>]"
 
+    # With variable clashing with an aggregate
+    expr = "(max min)"
+    ast = AST.parse(expr)
+    assert str(ast.tokens) == "[<AggToken max>, <VarToken min>]"
+
+    # With lone aggregate
+    expr = "(count)"
+    ast = AST.parse(expr)
+    assert str(ast.tokens) == "[<AggToken count>]"
+
+    # With an operator sign as variable
+    expr = "(1 + 1)"
+    ast = AST.parse(expr)
+    assert str(ast.tokens) == "[<IntToken 1>, <VarToken +>, <IntToken 1>]"
+
+    # With litterals
+    expr = "(is null true)"
+    ast = AST.parse(expr)
+    assert str(ast.tokens) == "[<BuiltinToken is>, <LiteralToken null>, <LiteralToken true>]"
+
+    # Use var builtin to escape variables
+    expr = "(is null (var true))"
+    ast = AST.parse(expr)
+    assert str(ast.tokens[:2]) == "[<BuiltinToken is>, <LiteralToken null>]"
+    assert str(ast.tokens[2].tokens) == "[<BuiltinToken var>, <VarToken true>]"
+
+    # Compare litterals
+    expr = "(!= true false)"
+    ast = AST.parse(expr)
+    assert str(ast.tokens) ==  "[<BuiltinToken !=>, <LiteralToken true>, <LiteralToken false>]"
 
 def test_find_relations():
     expr = "(= ham.spam foo.bar)"
