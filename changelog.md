@@ -1,6 +1,35 @@
 
 # Changelog
 
+### Upcoming
+
+**New feature:** Add support for tables and columns using reserved
+words like `null`, `max` or `select`.
+
+**New feature:** Add `LRUGenerator` for `WriterMixin._resolve`. This will
+cache foreign keys resolution within the duration of a transaction. It
+has to be enabled through the `fk_cache` parameter when the
+transaction is created:
+
+``` python
+with Transaction(dsn, fk_cache=True): # default is False
+    ...
+
+```
+
+It will speed-up upserts (and inserts and updates) when a foreign key
+is involved.  It shouldn't impact application logic in most
+situation. The main corner case is when the `id` value for a given
+natural key changes, but this kind of operation is discouraged.
+
+
+**Various:**
+- New `empty` property on `Schema`, return true if no table are present.
+- New `sync.py` in `examples/`, demonstrate how to synchonise two
+  databases with the help of Nagra.
+- New `substr` operator
+
+
 ### 0.3
 
 **New feature:** DB introspection: Nagra is now able to introspect
