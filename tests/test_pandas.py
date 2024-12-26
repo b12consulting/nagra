@@ -45,6 +45,8 @@ def test_from_pandas(transaction, kitchensink):
             "date": ["1970-01-01"],
             "json": [{}],
             "uuid": ["F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"],
+            "max": ["max"],
+            "true": ["true"],
         }
     )
 
@@ -64,6 +66,8 @@ def test_from_pandas(transaction, kitchensink):
             date(1970, 1, 1),
             {},
             UUID("F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"),
+            "max",
+            "true",
         )
     else:
         assert row == (
@@ -77,6 +81,8 @@ def test_from_pandas(transaction, kitchensink):
             "1970-01-01",
             "{}",
             "F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C",
+            "max",
+            "true",
         )
 
     # SELECT

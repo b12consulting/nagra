@@ -80,6 +80,8 @@ def test_from_pandas(transaction, kitchensink):
             "date": ["1970-01-01"],
             "json": [{}],
             "uuid": ["F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"],
+            "max": ["max"],
+            "true": ["true"],
         }
     )
     ids = kitchensink.upsert().from_pandas(df)
@@ -98,6 +100,8 @@ def test_from_pandas(transaction, kitchensink):
             "date": ["1970-01-02"],
             "json": '[{"foo": "bar"}]',
             "uuid": ["F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11D"],
+            "max": ["max"],
+            "true": ["true"],
         }
     )
     kitchensink.update(*df.columns).from_pandas(df)
@@ -116,6 +120,8 @@ def test_from_pandas(transaction, kitchensink):
             date(1970, 1, 2),
             [{"foo": "bar"}],
             UUID("F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11D"),
+            "max",
+            "true",
         )
     else:
         assert row == (
@@ -129,6 +135,8 @@ def test_from_pandas(transaction, kitchensink):
             "1970-01-02",
             '[{"foo": "bar"}]',
             "F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11D",
+            "max",
+            "true",
         )
 
 
