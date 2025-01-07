@@ -6,6 +6,9 @@
 **New feature:** Add support for tables and columns using reserved
 words like `null`, `max` or `select`.
 
+**Fix:** support for tables using reserved word like `transaction`,
+`limit`, etc.
+
 **New feature:** Add `LRUGenerator` for `WriterMixin._resolve`. This will
 cache foreign keys resolution within the duration of a transaction. It
 has to be enabled through the `fk_cache` parameter when the

@@ -147,7 +147,7 @@ class Transaction:
     @classmethod
     def pop(cls, expected_trn):
         trn = cls._local.stack.pop()
-        assert trn is expected_trn
+        assert trn is expected_trn, "Unexpected Transaction when leaving context"
 
     @classmethod
     @property
