@@ -86,7 +86,6 @@ init()
 if __name__ == "__main__":
     print("LOAD DATA")
 
-
     with Transaction(DB):
         sch.create_tables()
         city = sch.get("city")

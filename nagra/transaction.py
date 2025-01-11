@@ -150,7 +150,6 @@ class Transaction:
         assert trn is expected_trn
 
     @classmethod
-    @property
     def current(cls):
         try:
             return cls._local.stack[-1]

@@ -196,14 +196,14 @@ class Table:
         return schema.get(name)
 
     def select(self, *columns, trn=None):
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         if not columns:
             columns = self.default_columns()
         slct = Select(self, *columns, trn=trn, env=Env(self))
         return slct
 
     def delete(self, where=None, trn=None):
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         delete = Delete(self, trn=trn, env=Env(self))
         if where:
             return delete.where(where)
@@ -228,7 +228,7 @@ class Table:
         """
         if not columns:
             columns = self.default_columns()
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         return Upsert(self, *columns, trn=trn, lenient=lenient)
 
     def update(
@@ -239,7 +239,7 @@ class Table:
     ):
         if not columns:
             columns = self.default_columns()
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         return Update(self, *columns, trn=trn, lenient=lenient)
 
     def insert(
@@ -252,11 +252,11 @@ class Table:
         Provide an insert-only statement (won't raise error if
         record already exists). See `Table.upsert` for `lenient` role.
         """
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         return self.upsert(*columns, trn=trn, lenient=lenient).insert_only()
 
     def drop(self, trn: Optional[Transaction] = None):
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         stmt = Statement("drop_table", trn.flavor, name=self.name)
         trn.execute(stmt())
 
