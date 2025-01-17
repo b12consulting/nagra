@@ -77,6 +77,7 @@ _TYPE_ALIAS = {
     "uuid": "uuid",
     "int": "int",
     "str": "str",
+    "": "str",
 }
 
 _DB_TYPE = {
