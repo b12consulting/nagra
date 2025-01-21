@@ -17,4 +17,6 @@ DO UPDATE SET
 {% else %}
 DO NOTHING
 {% endif %}
-RETURNING id
+{% if pk %}
+RETURNING "{{pk}}"
+{% endif %}
