@@ -300,7 +300,7 @@ def test_agg(transaction, temperature):
     assert len(rows) == 2
 
     # String concat
-    is_pg = Transaction.current.flavor == "postgresql"
+    is_pg = Transaction.current().flavor == "postgresql"
     if is_pg:
         select = temperature.select("(string_agg city ',')")
     else:
@@ -340,7 +340,7 @@ def test_agg(transaction, temperature):
 
 
 def test_date_op(transaction, temperature):
-    is_pg = Transaction.current.flavor == "postgresql"
+    is_pg = Transaction.current().flavor == "postgresql"
 
     temperature.upsert("timestamp", "city", "value").executemany(
         [

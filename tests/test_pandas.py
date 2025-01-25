@@ -54,7 +54,7 @@ def test_from_pandas(transaction, kitchensink):
     kitchensink.upsert().from_pandas(df)
     (row,) = kitchensink.select()
     BRUTZ = zoneinfo.ZoneInfo(key="Europe/Brussels")
-    if Transaction.current.flavor == "postgresql":
+    if Transaction.current().flavor == "postgresql":
         assert row == (
             "ham",
             1,
