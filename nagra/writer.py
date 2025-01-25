@@ -61,10 +61,7 @@ class WriterMixin:
                 values = list(zip(*(value_df[f"{col}.{s}"] for s in to_select)))
                 # Try to instanciate lru cache
                 cache_key = (self.resolve_stm[col], str(self.lenient))
-                lru = self.trn.get_fk_cache(
-                    cache_key,
-                    fn=partial(self._resolve, col)
-                )
+                lru = self.trn.get_fk_cache(cache_key, fn=partial(self._resolve, col))
                 if lru is not None:
                     arg_df[col] = lru.run(values)
                 else:

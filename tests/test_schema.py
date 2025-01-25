@@ -43,8 +43,16 @@ def test_toml_loader():
     assert blog_table.foreign_keys == {"user": "user"}
     assert user_table.primary_key == "id"
     assert blog_table.primary_key is None
-    assert user_table.ctypes("postgresql", user_table.columns) == {'first_name': 'TEXT', 'last_name': 'TEXT', 'birthdate': 'DATE'}
-    assert blog_table.ctypes("postgresql", blog_table.columns) == {'title': 'TEXT', 'length': 'INTEGER', 'user': 'BIGINT'}
+    assert user_table.ctypes("postgresql", user_table.columns) == {
+        "first_name": "TEXT",
+        "last_name": "TEXT",
+        "birthdate": "DATE",
+    }
+    assert blog_table.ctypes("postgresql", blog_table.columns) == {
+        "title": "TEXT",
+        "length": "INTEGER",
+        "user": "BIGINT",
+    }
 
     # Must fail when a duplicate table is added
     with pytest.raises(RuntimeError):
@@ -119,7 +127,6 @@ def test_custom_id_type(empty_transaction):
         row_id = city.upsert("id", "name").execute("this-is-an-uuid", "test")
         assert row_id == "this-is-an-uuid"
         assert list(city.select()) == [("this-is-an-uuid", "test")]
-
 
 
 def test_schema_from_db(transaction):

@@ -107,7 +107,7 @@ def test_from_pandas(transaction, kitchensink):
     kitchensink.update(*df.columns).from_pandas(df)
 
     (row,) = kitchensink.select()
-    BRUTZ = zoneinfo.ZoneInfo(key='Europe/Brussels')
+    BRUTZ = zoneinfo.ZoneInfo(key="Europe/Brussels")
     if transaction.flavor == "postgresql":
         assert row == (
             "HAM",

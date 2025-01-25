@@ -29,7 +29,6 @@ ValueError: Unexpected token: "x"
 """
 
 import shlex
-from datetime import datetime, date
 
 from nagra.exceptions import EvalTypeError
 
@@ -375,7 +374,6 @@ class BuiltinToken(OpToken):
 
 
 class LiteralToken(OpToken):
-
     def _eval_type(self, env, *operands):
         if self.value == "null":
             return None

@@ -97,7 +97,6 @@ kitchensink_table = Table(
         "uuid": "uuid",
         "max": "varchar",
         "true": "varchar",
-
     },
     natural_key=["varchar"],
 )

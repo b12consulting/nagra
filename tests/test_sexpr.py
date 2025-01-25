@@ -46,17 +46,26 @@ def test_sexpr():
     # With litterals
     expr = "(is null true)"
     ast = AST.parse(expr)
-    assert str(ast.tokens) == "[<BuiltinToken is>, <LiteralToken null>, <LiteralToken true>]"
+    assert (
+        str(ast.tokens)
+        == "[<BuiltinToken is>, <LiteralToken null>, <LiteralToken true>]"
+    )
 
     # Use dot prefix to escape literal
     expr = "(is null .true))"
     ast = AST.parse(expr)
-    assert str(ast.tokens) == "[<BuiltinToken is>, <LiteralToken null>, <VarToken true>]"
+    assert (
+        str(ast.tokens) == "[<BuiltinToken is>, <LiteralToken null>, <VarToken true>]"
+    )
 
     # Compare litterals
     expr = "(!= true false)"
     ast = AST.parse(expr)
-    assert str(ast.tokens) ==  "[<BuiltinToken !=>, <LiteralToken true>, <LiteralToken false>]"
+    assert (
+        str(ast.tokens)
+        == "[<BuiltinToken !=>, <LiteralToken true>, <LiteralToken false>]"
+    )
+
 
 def test_find_relations():
     expr = "(= ham.spam foo.bar)"
