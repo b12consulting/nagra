@@ -65,7 +65,7 @@ class Update(WriterMixin):
             table=self.table.name,
             columns=columns,
             condition_key=condition_key,
-            pk=pk,
+            returning=[pk] if pk else self.table.natural_key,
         )
         return stm()
 

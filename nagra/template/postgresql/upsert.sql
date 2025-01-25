@@ -17,5 +17,8 @@ DO UPDATE SET
 DO NOTHING
 {% endif %}
 
+{% if returning %}
 RETURNING {{ returning | map('autoquote') |join(', ') }}
+{% endif %}
+
 

@@ -17,6 +17,7 @@ DO UPDATE SET
 {% else %}
 DO NOTHING
 {% endif %}
-{% if pk %}
-RETURNING "{{pk}}"
+
+{% if returning %}
+RETURNING {{ returning | map('autoquote') |join(', ') }}
 {% endif %}
