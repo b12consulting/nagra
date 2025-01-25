@@ -91,7 +91,7 @@ class Schema:
     def _db_columns(cls, trn=None, pg_schema="public"):
         from nagra.table import _TYPE_ALIAS
 
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         res = defaultdict(dict)
         stmt = Statement("find_columns", trn.flavor, pg_schema=pg_schema)
         for tbl, col_name, col_type, *hints in trn.execute(stmt()):
@@ -113,7 +113,7 @@ class Schema:
 
     @classmethod
     def _db_fk(cls, *whitelist, trn=None, pg_schema="public"):
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         res = defaultdict(dict)
         stmt = Statement("find_foreign_keys", trn.flavor, pg_schema=pg_schema)
         for name, tbl, col, ftable, fcol in trn.execute(stmt()):
@@ -126,7 +126,7 @@ class Schema:
 
     @classmethod
     def _db_pk(cls, trn=None, pg_schema="public"):
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         res = {}
         stmt = Statement("find_primary_keys", trn.flavor, pg_schema=pg_schema)
         for tbl, pk_col in trn.execute(stmt()):
@@ -137,7 +137,7 @@ class Schema:
 
     @classmethod
     def _db_unique(cls, trn=None, pg_schema="public"):
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         by_constraint = defaultdict(list)
 
         if trn.flavor == "sqlite":
@@ -169,8 +169,7 @@ class Schema:
         return res
 
     def setup_statements(self, trn=None):
-        trn = trn or Transaction.current
-
+        trn = trn or Transaction.current()
         # Find existing tables and columns
         db_columns = self._db_columns(trn)
 
@@ -236,7 +235,7 @@ class Schema:
         """
         Create tables, indexes and foreign keys
         """
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         # Loop on setup statements and execute them
         for stm in self.setup_statements(trn=trn):
             trn.execute(stm)
@@ -247,7 +246,7 @@ class Schema:
         Instanciate a nagra Schema (and Tables) based on database
         schema
         """
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         schema = Schema()
         schema.introspect_db(trn=trn)
         return schema
@@ -260,7 +259,7 @@ class Schema:
         """
         from nagra.table import Table
 
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         db_fk = self._db_fk(*tables, trn=trn)
         db_pk = self._db_pk(trn=trn)
         db_unique = self._db_unique(trn=trn)
@@ -281,7 +280,7 @@ class Schema:
             )
 
     def drop(self, trn=None):
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         for table in self.tables.values():
             table.drop(trn)
 
@@ -300,7 +299,7 @@ class Schema:
         and re-add more foreign keys.
         """
         msg = "suspend_fk is only supported with Postgresql"
-        assert Transaction.current.flavor == "postgresql", msg
+        assert Transaction.current().flavor == "postgresql", msg
 
         all_fks = list(
             chain.from_iterable(fks.values() for fks in self._db_fk(trn=trn).values())
@@ -322,7 +321,7 @@ class FKConstraint:
         self.foreign_column = foreign_column
 
     def drop(self, trn=None):
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         stmt = Statement(
             "drop_fk",
             trn.flavor,
@@ -332,7 +331,7 @@ class FKConstraint:
         trn.execute(stmt())
 
     def add(self, trn=None):
-        trn = trn or Transaction.current
+        trn = trn or Transaction.current()
         stmt = Statement(
             "add_foreign_key",
             trn.flavor,

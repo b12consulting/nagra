@@ -21,7 +21,7 @@ You can also do :
 from typing import List
 
 from nagra import Transaction, Schema
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 
 schema_toml = """
 [city]
@@ -49,19 +49,13 @@ DB = "sqlite://example.db"
 sch = Schema.from_toml(schema_toml)
 
 
-def trn():
-    transaction = Transaction(DB)
-    try:
-        yield transaction
-    finally:
-        transaction.commit()
-
-
 def endpoint(app, name, select):
     dclass = select.to_dataclass()
+
     @app.get(f"/{name}", response_model=List[dclass])
-    def getter(trn: Transaction = Depends(trn)):
-        records = select.clone(trn).to_dict()
+    def getter():
+        with Transaction(DB) as trn:
+            records = list(select.clone(trn).to_dict())
         return records
 
 
@@ -75,6 +69,7 @@ def init():
         select = table.select()
         endpoint(app, name, select)
 
+
 # Custom endpoint
 @app.get("/")
 async def root():
@@ -82,10 +77,8 @@ async def root():
 
 init()
 
-
 if __name__ == "__main__":
     print("LOAD DATA")
-
 
     with Transaction(DB):
         sch.create_tables()
