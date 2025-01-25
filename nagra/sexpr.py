@@ -38,9 +38,6 @@ DEFAULT_FLAVOR = "postgresql"
 __all__ = ["AST"]
 
 
-UNSET = object()
-
-
 def list_to_dict(*items):
     it = iter(items)
     return dict(zip(it, it))
@@ -103,6 +100,7 @@ class AST:
         "or": lambda *x: " OR ".join(x),
         "not": "NOT {}".format,
         "is": "{} is {}".format,
+        "isnot": "NOT {} IS {}".format,
         # Arithmetic
         "+": lambda *xs: " + ".join(map(str, xs)),
         "-": (lambda *xs: " - ".join(map(str, xs)) if len(xs) > 1 else f"-{xs[0]}"),
@@ -359,6 +357,7 @@ class BuiltinToken(OpToken):
         "or",
         "not",
         "is",
+        "isnot",
         "like",
         "ilike",
     )

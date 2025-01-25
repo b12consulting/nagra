@@ -51,7 +51,6 @@ from nagra.update import Update
 from nagra.upsert import Upsert
 
 
-
 # Intentionally sorted by reverse lenght to help type hint detection, see Schema._db_columns
 _TYPE_ALIAS = {
     "timestamp without time zone": "timestamp",
@@ -82,7 +81,7 @@ _TYPE_ALIAS = {
 
 _DB_TYPE = {
     "postgresql": {
-        "str": "VARCHAR",
+        "str": "TEXT",
         "int": "INTEGER",
         "bigint": "BIGINT",
         "float": "FLOAT",
@@ -166,7 +165,7 @@ class Table:
         not_null: Optional[list[str]] = None,
         one2many: Optional[dict] = None,
         default: Optional[dict] = None,
-        primary_key: Optional[str] = None,
+        primary_key: Optional[str] = "id",
         schema: Schema = Schema.default,
     ):
         self.name = name
@@ -176,7 +175,7 @@ class Table:
         self.not_null = set(self.natural_key) | set(not_null or [])
         self.one2many = one2many or {}
         self.default = default or {}
-        self.primary_key = "id" if primary_key is None else primary_key
+        self.primary_key = primary_key
         self.schema = schema
 
         # Detect malformed fk definitions

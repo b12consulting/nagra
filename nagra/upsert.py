@@ -9,8 +9,6 @@ except ImportError:
 from nagra import Statement
 from nagra.transaction import Transaction
 from nagra.writer import WriterMixin
-from nagra.utils import UNSET
-from nagra.sexpr import AST
 
 if TYPE_CHECKING:
     from nagra.table import Table, Env
@@ -77,7 +75,7 @@ class Upsert(WriterMixin):
             columns=columns,
             conflict_key=conflict_key,
             do_update=do_update,
-            pk=pk if pk is not UNSET else None,
+            returning=[pk] if pk else self.table.natural_key,
         )
         return stm()
 

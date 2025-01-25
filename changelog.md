@@ -3,6 +3,41 @@
 
 ### Upcoming
 
+
+**New feature:** Add support for tables without primarey key. No `id`
+column is created and the table can not be referenced by other tables.
+Usefull for large table like timeseries.
+
+Toml example:
+
+``` toml
+[blog]
+natural_key = ["title"]
+primary_key = ""
+[blog.columns]
+title = "text"
+length = "int"
+user = "bigint"
+[blog.foreign_keys]
+user = "user"
+```
+
+Python example:
+
+``` python
+Table(
+    "blog",
+    columns={
+        "tile": "text",
+        "length": "int",
+        "user": "bigint",
+    },
+    natural_key=["title"],
+    primary_key=None,
+    foreign_keys={"user": "user"}
+)
+```
+
 **New feature:** Add support for tables and columns using reserved
 words like `null`, `max` or `select`.
 
@@ -30,7 +65,9 @@ natural key changes, but this kind of operation is discouraged.
 - New `empty` property on `Schema`, return true if no table are present.
 - New `sync.py` in `examples/`, demonstrate how to synchonise two
   databases with the help of Nagra.
-- New `substr` operator
+- New `substr`, `isnot` and `match` operators
+- Default to `TEXT` instead of `VARCHAR` for string-like column in
+  Postgresql (improve compatibitly with Timescaledb)
 
 
 ### 0.3
