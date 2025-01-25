@@ -4,8 +4,8 @@ from functools import partial
 from itertools import islice
 
 from nagra.exceptions import UnresolvedFK, ValidationError
-from nagra.utils import logger, UNSET
-from nagra.transaction import ExecMany, LRUGenerator
+from nagra.utils import logger
+from nagra.transaction import ExecMany
 
 try:
     from pandas import DataFrame
@@ -61,10 +61,7 @@ class WriterMixin:
                 values = list(zip(*(value_df[f"{col}.{s}"] for s in to_select)))
                 # Try to instanciate lru cache
                 cache_key = (self.resolve_stm[col], str(self.lenient))
-                lru = self.trn.get_fk_cache(
-                    cache_key,
-                    fn=partial(self._resolve, col)
-                )
+                lru = self.trn.get_fk_cache(cache_key, fn=partial(self._resolve, col))
                 if lru is not None:
                     arg_df[col] = lru.run(values)
                 else:
@@ -87,7 +84,7 @@ class WriterMixin:
                     new_id = cursor.fetchone()
                     ids.append(new_id[0] if new_id else None)
             else:
-                returning = self.table.primary_key != UNSET
+                returning = self.table.primary_key is not None
                 cursor = self.trn.executemany(stm, chunk, returning)
                 if returning:
                     while True:

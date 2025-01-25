@@ -4,3 +4,13 @@ natural_key = ["first_name", "last_name"]
 first_name = "varchar"
 last_name = "varchar"
 birthdate = "date"
+
+[blog]
+natural_key = ["title"]
+primary_key = ""
+[blog.columns]
+title = "text"
+length = "int"
+user = "bigint"
+[blog.foreign_keys]
+user = "user"

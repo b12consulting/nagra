@@ -9,11 +9,9 @@ except ImportError:
 from nagra import Statement
 from nagra.transaction import Transaction
 from nagra.writer import WriterMixin
-from nagra.utils import UNSET
-
 
 if TYPE_CHECKING:
-    from nagra.table import Table
+    from nagra.table import Table, Env
 
 
 class Upsert(WriterMixin):
@@ -22,16 +20,18 @@ class Upsert(WriterMixin):
         table: "Table",
         *columns: str,
         trn: Transaction,
+        env: "Env",
         lenient: Union[bool, list[str], None] = None,
         insert_only: bool = False,
         where: Iterable[str] = [],
     ):
         self.table = table
-        self.columns = list(columns)
+        self.columns = [c.lstrip(".") for c in columns]
         self._insert_only = insert_only
         self.lenient = lenient or []
         self._where = list(where)
         self.trn = trn
+        self.env = env
         super().__init__()
 
     def clone(
@@ -50,6 +50,7 @@ class Upsert(WriterMixin):
             self.table,
             *self.columns,
             trn=trn,
+            env=self.env.clone(),
             lenient=self.lenient,
             insert_only=insert_only,
             where=where,
@@ -74,7 +75,7 @@ class Upsert(WriterMixin):
             columns=columns,
             conflict_key=conflict_key,
             do_update=do_update,
-            pk=pk if pk is not UNSET else None,
+            returning=[pk] if pk else self.table.natural_key,
         )
         return stm()
 

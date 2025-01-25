@@ -147,7 +147,7 @@ class Transaction:
     @classmethod
     def pop(cls, expected_trn):
         trn = cls._local.stack.pop()
-        assert trn is expected_trn
+        assert trn is expected_trn, "Unexpected Transaction when leaving context"
 
     @classmethod
     def current(cls):
@@ -159,7 +159,9 @@ class Transaction:
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.flavor}>"
 
-    def get_fk_cache(self, cache_key: tuple[str, ...], fn: Callable) -> LRUGenerator | None:
+    def get_fk_cache(
+        self, cache_key: tuple[str, ...], fn: Callable
+    ) -> LRUGenerator | None:
         """
         Instanciate an LRUGenerator for the given function
         `fn`. Use `cache_key` to identify them. Will return
@@ -208,8 +210,6 @@ class ExecMany:
                 yield vals
                 if not cursor.nextset():
                     break
-
-
 
 
 class DummyTransaction(Transaction):

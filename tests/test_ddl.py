@@ -30,25 +30,46 @@ def test_create_table(empty_transaction):
             '"custom_id" BIGSERIAL PRIMARY KEY',
             ");",
         ]
-        assert add_name == [
-            "ALTER TABLE my_table",
-            'ADD COLUMN "name" VARCHAR NOT NULL',
-        ]
     else:
         assert create_table == [
             'CREATE TABLE  "my_table" (',
             '"custom_id"  INTEGER PRIMARY KEY',
             ");",
         ]
-        assert add_name == ["ALTER TABLE my_table", 'ADD COLUMN "name" TEXT NOT NULL']
+    assert add_name == ['ALTER TABLE "my_table"', 'ADD COLUMN "name" TEXT NOT NULL']
 
     assert add_score == [
-        "ALTER TABLE my_table",
+        'ALTER TABLE "my_table"',
         'ADD COLUMN "score" INTEGER NOT NULL',
         "DEFAULT 0",
     ]
     assert create_idx == [
         'CREATE UNIQUE INDEX IF NOT EXISTS my_table_idx ON "my_table" (',
+        '"name"',
+        ");",
+    ]
+
+    schema = Schema()
+    Table(
+        "my_table_no_pk",
+        columns={
+            "name": "varchar",
+            "score": "int",
+        },
+        natural_key=["name"],
+        primary_key=None,
+        schema=schema,
+    )
+    lines = list(schema.setup_statements(trn=empty_transaction))
+    create_table, add_score, create_idx = map(strip_lines, lines)
+    assert create_table == [
+        'CREATE TABLE  "my_table_no_pk" (',
+        '"name"  TEXT NOT NULL',
+        ");",
+    ]
+    assert add_score == ['ALTER TABLE "my_table_no_pk"', 'ADD COLUMN "score" INTEGER']
+    assert create_idx == [
+        'CREATE UNIQUE INDEX IF NOT EXISTS my_table_no_pk_idx ON "my_table_no_pk" (',
         '"name"',
         ");",
     ]

@@ -9,4 +9,5 @@ WHERE
   "{{col}}" = {{ "? AND " if not loop.last else "?" }}
   {%- endfor %}
 
-RETURNING id
+RETURNING {{ returning | map('autoquote') |join(', ') }}
+

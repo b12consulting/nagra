@@ -95,6 +95,8 @@ kitchensink_table = Table(
         "date": "date",
         "json": "json",
         "uuid": "uuid",
+        "max": "varchar",
+        "true": "varchar",
     },
     natural_key=["varchar"],
 )

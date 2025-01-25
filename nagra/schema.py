@@ -9,7 +9,7 @@ from typing import Optional, TYPE_CHECKING
 import toml
 from nagra.statement import Statement
 from nagra.transaction import Transaction
-from nagra.utils import logger, UNSET
+from nagra.utils import logger
 
 
 if TYPE_CHECKING:
@@ -68,6 +68,9 @@ class Schema:
         # Instanciate tables
         for name, info in tables.items():
             logger.debug("Instanciate %s from toml", name)
+            if "primary_key" in info:
+                if info["primary_key"].strip() == "":
+                    info["primary_key"] = None
             Table(name, **info, schema=self)
 
     def add(self, name: str, table: "Table"):
@@ -175,21 +178,34 @@ class Schema:
             if name in db_columns:
                 continue
             ctypes = table.ctypes(trn.flavor, table.columns)
-            # TODO use KEY GENERATED ALWAYS AS IDENTITY) instead of
+            # TODO use "KEY GENERATED ALWAYS AS IDENTITY" instead of
             # serials (see https://stackoverflow.com/a/55300741) ?
-            stmt = Statement(
-                "create_table",
-                trn.flavor,
-                table=table,
-                pk_type=ctypes.get(table.primary_key),
-            )
+            if table.primary_key is None:
+                ctypes = table.ctypes(trn.flavor, table.columns)
+                natural_key = [(c, ctypes[c]) for c in table.natural_key]
+                stmt = Statement(
+                    "create_table_nk",
+                    trn.flavor,
+                    table=table,
+                    natural_key=natural_key,
+                )
+            else:
+                stmt = Statement(
+                    "create_table",
+                    trn.flavor,
+                    table=table,
+                    pk_type=ctypes.get(table.primary_key),
+                )
             yield stmt()
 
         # Add columns
         for table in self.tables.values():
             ctypes = table.ctypes(trn.flavor, table.columns)
             for column in table.columns:
+                # The base table can contain either the pk either the nk
                 if column == table.primary_key:
+                    continue
+                if table.primary_key is None and column in table.natural_key:
                     continue
                 if column in db_columns.get(table.name, []):
                     continue
@@ -259,7 +275,7 @@ class Schema:
                 columns=cols,
                 natural_key=db_unique.get(table_name),
                 foreign_keys=fks,
-                primary_key=db_pk.get(table_name, UNSET),
+                primary_key=db_pk.get(table_name),
                 schema=self,
             )
 

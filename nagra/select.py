@@ -23,7 +23,7 @@ def clean_col(name):
 class Select:
     def __init__(self, table, *columns: str, trn: "Transaction", env: "Env"):
         self.table = table
-        self.env = env  # Env(table)
+        self.env = env
         self.where_asts = tuple()
         self._offset = None
         self._limit = None

@@ -28,6 +28,28 @@ def test_select_with_join(person):
     ]
 
 
+def test_kitchensink_select(kitchensink):
+    stm = kitchensink.select().stm()
+    res = strip_lines(stm)
+    assert res == [
+        "SELECT",
+        '"kitchensink"."varchar", "kitchensink"."bigint", "kitchensink"."float", '
+        '"kitchensink"."int", "kitchensink"."timestamp", "kitchensink"."timestamptz", '
+        '"kitchensink"."bool", "kitchensink"."date", "kitchensink"."json", '
+        '"kitchensink"."uuid", "kitchensink"."max", "kitchensink"."true"',
+        'FROM "kitchensink"',
+        ";",
+    ]
+
+    stm = kitchensink.select(".true").stm()
+    res = strip_lines(stm)
+    assert res == ["SELECT", '"kitchensink"."true"', 'FROM "kitchensink"', ";"]
+
+    stm = kitchensink.select("true").stm()
+    res = strip_lines(stm)
+    assert res == ["SELECT", "true", 'FROM "kitchensink"', ";"]
+
+
 def test_select_clone(person):
     queries = [
         person.select("name")
