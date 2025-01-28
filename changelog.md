@@ -47,8 +47,8 @@ words like `null`, `max` or `select`.
 etc.
 - Fix returning in with SQLite for tables with custom primary key
   (thanks @JonathanSamelsonB12).
-- Python 3.13, ` Transaction.current` is not a property anymore, it is
-  no a function.
+- Python 3.13, `Transaction.current` is not a property anymore, it is
+  now a function.
 
 **New feature:** Add `LRUGenerator` for `WriterMixin._resolve`. This will
 cache foreign keys resolution within the duration of a transaction. It
