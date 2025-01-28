@@ -1,7 +1,8 @@
 
 # Changelog
 
-### Upcoming
+
+### 0.4
 
 
 **New feature:** Add support for tables without primarey key. No `id`
@@ -41,8 +42,13 @@ Table(
 **New feature:** Add support for tables and columns using reserved
 words like `null`, `max` or `select`.
 
-**Fix:** support for tables using reserved word like `transaction`,
-`limit`, etc.
+**Fixes:**
+- Add support for tables using reserved word like `transaction`, `limit`,
+etc.
+- Fix returning in with SQLite for tables with custom primary key
+  (thanks @JonathanSamelsonB12).
+- Python 3.13, ` Transaction.current` is not a property anymore, it is
+  no a function.
 
 **New feature:** Add `LRUGenerator` for `WriterMixin._resolve`. This will
 cache foreign keys resolution within the duration of a transaction. It
@@ -68,7 +74,8 @@ natural key changes, but this kind of operation is discouraged.
 - New `substr`, `isnot` and `match` operators
 - Default to `TEXT` instead of `VARCHAR` for string-like column in
   Postgresql (improve compatibitly with Timescaledb)
-
+- New `empty` property on `Schema`
+- `timestamptz` support in SQLite (thanks @cecilehautecoeur)
 
 ### 0.3
 
