@@ -44,7 +44,7 @@ def test_create_table(empty_transaction):
         "DEFAULT 0",
     ]
     assert create_idx == [
-        'CREATE UNIQUE INDEX IF NOT EXISTS my_table_idx ON "my_table" (',
+        'CREATE UNIQUE INDEX my_table_idx ON "my_table" (',
         '"name"',
         ");",
     ]
@@ -69,7 +69,7 @@ def test_create_table(empty_transaction):
     ]
     assert add_score == ['ALTER TABLE "my_table_no_pk"', 'ADD COLUMN "score" INTEGER']
     assert create_idx == [
-        'CREATE UNIQUE INDEX IF NOT EXISTS my_table_no_pk_idx ON "my_table_no_pk" (',
+        'CREATE UNIQUE INDEX my_table_no_pk_idx ON "my_table_no_pk" (',
         '"name"',
         ");",
     ]
@@ -80,7 +80,7 @@ def test_create_unique_index():
     doc = stmt()
     lines = strip_lines(doc)
     assert lines == [
-        'CREATE UNIQUE INDEX IF NOT EXISTS my_table_idx ON "my_table" (',
+        'CREATE UNIQUE INDEX my_table_idx ON "my_table" (',
         '"name"',
         ");",
     ]

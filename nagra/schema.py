@@ -111,6 +111,12 @@ class Schema:
             res[tbl][col_name] = col_type
         return res
 
+    def _db_indexes(cls, trn=None, pg_schema="public"):
+        trn = trn or Transaction.current()
+        stmt = Statement("find_indexes", trn.flavor, pg_schema=pg_schema)
+        res = [n for n, in trn.execute(stmt())]
+        return res
+
     @classmethod
     def _db_fk(cls, *whitelist, trn=None, pg_schema="public"):
         trn = trn or Transaction.current()
@@ -172,6 +178,7 @@ class Schema:
         trn = trn or Transaction.current()
         # Find existing tables and columns
         db_columns = self._db_columns(trn)
+        db_indexes = self._db_indexes(trn)
 
         # Create tables
         for name, table in self.tables.items():
@@ -223,6 +230,8 @@ class Schema:
 
         # Add index on natural keys
         for name, table in self.tables.items():
+            if f"{name}_idx" in db_indexes:
+                continue
             stmt = Statement(
                 "create_unique_index",
                 trn.flavor,
