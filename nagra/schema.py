@@ -30,17 +30,9 @@ D2_TPL = """
 
 
 class Schema:
-    _default = None
 
     def __init__(self, tables=None):
         self.tables = tables or {}
-
-    @classmethod
-    @property
-    def default(cls):
-        if not cls._default:
-            cls._default = Schema()
-        return cls._default
 
     @classmethod
     def from_toml(self, toml_src: IOBase | Path | str) -> "Schema":
@@ -319,6 +311,10 @@ class Schema:
 
         for fk in all_fks:
             fk.add()
+
+
+# Define default schema
+Schema.default = Schema()
 
 
 class FKConstraint:
