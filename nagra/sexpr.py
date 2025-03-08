@@ -96,7 +96,7 @@ class AST:
         ">": "{} > {}".format,
         ">=": "{} >= {}".format,
         "and": lambda *x: " AND ".join(x),
-        "or": lambda *x: " OR ".join(x),
+        "or": lambda *x: "(%s)" % (" OR ".join(x)),
         "not": "NOT {}".format,
         "is": "{} is {}".format,
         "isnot": "NOT {} IS {}".format,

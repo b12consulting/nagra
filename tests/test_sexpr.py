@@ -90,6 +90,22 @@ def test_simple_eval():
     env = Env(table)
     assert ast.eval(env) == '"spam"."a" = (1 = 1)'
 
+    # AND and OR, OR add extra parents in evaled form
+    expr = "(and true true)"
+    ast = AST.parse(expr)
+    env = Env(table)
+    assert ast.eval(env) == 'true AND true'
+
+    expr = "(or true true)"
+    ast = AST.parse(expr)
+    env = Env(table)
+    assert ast.eval(env) == '(true OR true)'
+
+    expr = "(or (and true false) true)"
+    ast = AST.parse(expr)
+    env = Env(table)
+    assert ast.eval(env) == '((true AND false) OR true)'
+
 
 def test_join_eval(person):
     # Unique  join
