@@ -232,6 +232,18 @@ def test_missing_fk(cacheable_transaction, person):
         assert rows == [(None,)]
 
 
+def test_resolve(cacheable_transaction, person):
+    # Prepare table
+    upsert = person.upsert("name", "parent.name")
+    records = [("Big Alice", None), ("Big Bob", None)]
+    upsert.executemany(records)
+
+    # Direct call to resolve, without upserting anything
+    values = ["Big Alice", "Big Bob"]
+    ids = list(upsert.resolve("parent", values))
+    assert ids == [1, 2]
+
+
 def test_return_ids(cacheable_transaction, person):
     # Create an "on conflict update" upsert
     upsert = person.upsert("name", "parent.name")

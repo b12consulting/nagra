@@ -82,3 +82,7 @@ class Upsert(WriterMixin):
     def _exec_args(self, arg_df):
         args = zip(*(arg_df[c] for c in self.groups))
         return args
+
+    def resolve(self, column: str, *values: list[any]):
+        rows = list(zip(*values))
+        yield from self._resolve(column, rows)
