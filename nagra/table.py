@@ -187,6 +187,14 @@ class Table:
                 msg = f"Table '{name}': Foreign key '{fk}' refers to table natural key"
                 raise IncorrectTable(msg)
 
+        # Detect incorrect nk
+        for nk_name in self.natural_key:
+            if nk_name not in self.columns:
+                raise IncorrectTable(
+                    f"Table '{name}': unknown column name '{nk_name}'"
+                    " referenced in natural key"
+                )
+
         # Add table to schema
         self.schema.add(self.name, self)
 

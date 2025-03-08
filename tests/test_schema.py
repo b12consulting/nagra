@@ -86,6 +86,17 @@ def test_bogus_fk(empty_transaction):
         )
 
 
+def test_incorrect_nk(empty_transaction):
+    with pytest.raises(IncorrectTable):
+        Table(
+            "bad_nk",
+            columns={
+                "key": "uuid",
+            },
+            natural_key=["i_do_not_exist"],
+        )
+
+
 def test_create_tables(empty_transaction):
     # Associate schema with the transaction
     schema = Schema.default

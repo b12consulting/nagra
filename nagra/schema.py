@@ -164,6 +164,9 @@ class Schema:
                     name=constraint_name,
                 )
                 columns = [c for c, in trn.execute(col_stmt())]
+                # Postgresql will wrap columns names with quotes for
+                # reserved words
+                columns = [c.strip('"') for c in columns]
                 by_constraint[tbl].append(columns)
 
         # Keep the unique constraint with the lowest number of columns for
