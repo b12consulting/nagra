@@ -225,8 +225,12 @@ class Select:
                 except TypeError:
                     # Fallback to string if type is not supported by pandas
                     srs = srs.astype(str)
-
             df[name] = srs
+
+        if df.columns.empty:
+            # No records were returned by the cursor
+            return DataFrame(columns=names)
+
         return df
 
     def to_dict(self, *args) -> Iterable[dict]:
