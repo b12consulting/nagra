@@ -110,6 +110,8 @@ class AST:
         "extract": "EXTRACT({} FROM {})".format,
         # Strings
         "like": "{} LIKE {}".format,
+        "lower": "LOWER({})".format,
+        "upper": "UPPER({})".format,
         "match": "{} MATCH {}".format,
         "ilike": "{} ILIKE {}".format,
         "||": lambda *xs: " || ".join(map(str, xs)),
