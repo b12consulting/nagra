@@ -82,6 +82,7 @@ def test_from_pandas(transaction, kitchensink):
             "uuid": ["F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"],
             "max": ["max"],
             "true": ["true"],
+            "blob": [b"blob"],
         }
     )
     ids = kitchensink.upsert().from_pandas(df)
@@ -122,6 +123,7 @@ def test_from_pandas(transaction, kitchensink):
             UUID("F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11D"),
             "max",
             "true",
+            b"blob",
         )
     else:
         assert row == (
@@ -137,6 +139,7 @@ def test_from_pandas(transaction, kitchensink):
             "F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11D",
             "max",
             "true",
+            "blob",
         )
 
 

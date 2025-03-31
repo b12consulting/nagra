@@ -104,6 +104,7 @@ def test_kitchensink(kitchensink):
         uuid: Optional[str]
         max: Optional[str]
         true: Optional[str]
+        blob: Optional[bytes]
 
     assert equivalent_classes(dclass, KitchenSink)
 

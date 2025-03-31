@@ -59,7 +59,7 @@ def pg_init(pg_dsn):
 
         # Add cities
         cities = [
-            ("Brussels","50.8476° N", "4.3572° E"),
+            ("Brussels", "50.8476° N", "4.3572° E"),
             ("Louvain-la-Neuve", "50.6681° N", "4.6118° E"),
         ]
         city = schema.get("city")
