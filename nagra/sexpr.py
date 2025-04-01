@@ -109,6 +109,7 @@ class AST:
         "strftime": "strftime({}, {})".format,
         "extract": "EXTRACT({} FROM {})".format,
         # Strings
+        "length": "LENGTH({})".format,
         "like": "{} LIKE {}".format,
         "lower": "LOWER({})".format,
         "upper": "UPPER({})".format,
