@@ -36,7 +36,8 @@ def test_kitchensink_select(kitchensink):
         '"kitchensink"."varchar", "kitchensink"."bigint", "kitchensink"."float", '
         '"kitchensink"."int", "kitchensink"."timestamp", "kitchensink"."timestamptz", '
         '"kitchensink"."bool", "kitchensink"."date", "kitchensink"."json", '
-        '"kitchensink"."uuid", "kitchensink"."max", "kitchensink"."true"',
+        '"kitchensink"."uuid", "kitchensink"."max", "kitchensink"."true", '
+        '"kitchensink"."blob"',
         'FROM "kitchensink"',
         ";",
     ]

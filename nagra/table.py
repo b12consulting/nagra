@@ -145,6 +145,8 @@ class Column:
                 res = date
             case "uuid":
                 res = str
+            case "blob":
+                res = bytes
             case _:
                 raise RuntimeError("Unexpected error")
 

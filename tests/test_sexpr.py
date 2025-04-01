@@ -138,3 +138,11 @@ def test_join_eval(person):
         ("parent",): "parent_0",
     }
     assert res == """("parent_0"."name" = 'Roger') AND ("parent_0"."id" = 1)"""
+
+
+def test_eval_dtype(kitchensink):
+    env = Env(table=kitchensink)
+    expr = "(is blob null)"
+    ast = AST.parse(expr)
+    res = ast.eval_type(env)
+    assert res is bool

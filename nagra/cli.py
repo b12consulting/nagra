@@ -9,7 +9,14 @@ from nagra.utils import print_table
 
 
 def select(args, schema):
-    select = schema.get(args.table).select(*args.columns)
+    table = schema.get(args.table)
+    if args.columns:
+        cols = args.columns
+    else:
+        # Ignore blob col by default
+        cols = [n for n, c in table.columns.items() if c.dtype != "blob"]
+
+    select = table.select(*cols)
     if args.where:
         where = chain.from_iterable(args.where)
         select = select.where(*where)
