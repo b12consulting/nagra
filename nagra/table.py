@@ -169,6 +169,7 @@ class Table:
         default: Optional[dict] = None,
         primary_key: Optional[str] = "id",
         schema: Schema = Schema.default,
+        is_view: Optional[bool] = False,
     ):
         self.name = name
         self.columns = {name: Column(name, dtype) for name, dtype in columns.items()}
@@ -179,6 +180,7 @@ class Table:
         self.default = default or {}
         self.primary_key = primary_key
         self.schema = schema
+        self.is_view = is_view
 
         # Detect malformed fk definitions
         if len(self.natural_key) == 1:
@@ -198,7 +200,7 @@ class Table:
                 )
 
         # Add table to schema
-        self.schema.add(self.name, self)
+        self.schema.add_table(self.name, self)
 
     @classmethod
     def get(self, name, schema=Schema.default):
@@ -348,6 +350,55 @@ class Table:
 
     def __repr__(self):
         return f"<Table {self.name}>"
+
+
+class View:
+    def __init__(
+        self,
+        name: str,
+        view_columns: Optional[dict] = None,
+        columns: Optional[dict] = None,
+        as_select: Optional[str] = None,
+        select: Optional[str] = None,
+        schema: Schema = Schema.default,
+    ):
+        self.name = name
+        self.view_columns = view_columns
+        self.columns = columns
+        self.as_select = as_select
+        self.view_select = select
+        self.schema = schema
+
+        # Create underlying table
+        if not columns:
+            if not view_columns:
+                raise "TODO"
+
+            columns = {}
+            select = schema.get(self.view_select).select(*view_columns.values())
+            dtypes = select.dtypes(with_optional=False)
+            for col_name, (_, dt) in zip(view_columns, dtypes):
+                columns[col_name] = dt.__name__
+
+        self.table = Table(name, columns=columns, is_view=True)
+        # Add view to schema
+        self.schema.add_view(self.name, self)
+
+    def select(self, *columns, trn=None):
+        return self.table.select(*columns, trn=trn)
+
+    def view_def(self):
+        if self.as_select:
+            return self.as_select
+        # generate a select from the referenced table
+        stm = self.schema.get(
+            self.view_select
+        ).select(
+            *self.view_columns.values()
+        ).aliases(
+            *self.view_columns.keys()
+        ).stm()
+        return stm.rstrip(";")
 
 
 class Env:

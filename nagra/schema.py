@@ -13,7 +13,7 @@ from nagra.utils import logger
 
 
 if TYPE_CHECKING:
-    from nagra.table import Table
+    from nagra.table import Table, View
 
 
 D2_TPL = """
@@ -31,8 +31,9 @@ D2_TPL = """
 
 class Schema:
 
-    def __init__(self, tables=None):
+    def __init__(self, tables=None, views=None):
         self.tables = tables or {}
+        self.views = views or {}
 
     @classmethod
     def from_toml(self, toml_src: IOBase | Path | str) -> "Schema":
@@ -46,7 +47,7 @@ class Schema:
 
     def load_toml(self, toml_src: IOBase | Path | str):
         # Late import to avoid import loops
-        from nagra.table import Table
+        from nagra.table import Table, View
 
         # load table definitions
         match toml_src:
@@ -63,21 +64,34 @@ class Schema:
             if "primary_key" in info:
                 if info["primary_key"].strip() == "":
                     info["primary_key"] = None
-            Table(name, **info, schema=self)
 
-    def add(self, name: str, table: "Table"):
+            # Handle view info
+            if any(info.get(c) for c in ("view_columns", "as_select", "select")):
+                View(name, **info, schema=self)
+            else:
+                Table(name, **info, schema=self)
+
+    def add_table(self, name: str, table: "Table"):
         if name in self.tables:
             raise RuntimeError(f"Table {name} already in schema!")
         self.tables[name] = table
 
+    def add_view(self, name: str, view: "View"):
+        if name in self.views:
+            raise RuntimeError(f"View {name} already in schema!")
+        self.views[name] = view
+
     def reset(self):
         self.tables = {}
 
-    def get(self, name: str) -> "Table":
+    def get(self, name: str) -> "Table | View":
         """
-        Return the table with name `name`
+        Return the view or the table with name `name`
         """
-        return self.tables[name]
+        res = self.views.get(name) or self.tables[name]
+        if not res:
+            raise KeyError(f"No view or table named {name}")
+        return res
 
     @classmethod
     def _db_columns(cls, trn=None, pg_schema="public"):
@@ -169,14 +183,23 @@ class Schema:
             res[table] = first
         return res
 
-    def setup_statements(self, trn=None):
-        trn = trn or Transaction.current()
-        # Find existing tables and columns
-        db_columns = self._db_columns(trn)
-        db_indexes = self._db_indexes(trn)
+    def _create_views(self, trn):
+        # Create tables
+        for name, view in self.views.items():
+            stmt = Statement(
+                "create_view",
+                trn.flavor,
+                name=name,
+                view_def=view.view_def(),
+            )
+            yield stmt()
 
+    def _create_tables(self, db_columns, trn):
         # Create tables
         for name, table in self.tables.items():
+            if table.is_view:
+                continue
+
             if name in db_columns:
                 continue
             ctypes = table.ctypes(trn.flavor, table.columns)
@@ -200,8 +223,12 @@ class Schema:
                 )
             yield stmt()
 
+    def _add_columns(self, db_columns, trn):
         # Add columns
         for table in self.tables.values():
+            if table.is_view:
+                continue
+
             ctypes = table.ctypes(trn.flavor, table.columns)
             for column in table.columns:
                 # The base table can contain either the pk either the nk
@@ -223,9 +250,10 @@ class Schema:
                 )
                 yield stmt()
 
+    def _create_indexes(self, db_indexes, trn):
         # Add index on natural keys
         for name, table in self.tables.items():
-            if f"{name}_idx" in db_indexes:
+            if table.is_view or f"{name}_idx" in db_indexes:
                 continue
             stmt = Statement(
                 "create_unique_index",
@@ -234,6 +262,17 @@ class Schema:
                 natural_key=table.natural_key,
             )
             yield stmt()
+
+    def setup_statements(self, trn=None):
+        trn = trn or Transaction.current()
+        # Find existing tables and columns
+        db_columns = self._db_columns(trn)
+        db_indexes = self._db_indexes(trn)
+
+        yield from self._create_tables(db_columns, trn)
+        yield from self._add_columns(db_columns, trn)
+        yield from self._create_indexes(db_indexes, trn)
+        yield from self._create_views(trn)
 
     def create_tables(self, trn=None):
         """
@@ -246,7 +285,7 @@ class Schema:
 
     @classmethod
     def from_db(cls, trn: Optional[Transaction] = None) -> "Schema":
-        """ "
+        """
         Instanciate a nagra Schema (and Tables) based on database
         schema
         """
