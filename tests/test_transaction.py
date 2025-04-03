@@ -36,5 +36,7 @@ def test_concurrent_transaction(person):
         assert records == [("Romeo",)]
 
         # Cleanup
-        for name in Schema.default.tables:
-            tr.execute(f"DROP TABLE {name} CASCADE")
+        for tbl in Schema.default.tables.values():
+            if tbl.is_view:
+                continue
+            tr.execute(f"DROP TABLE {tbl.name} CASCADE")

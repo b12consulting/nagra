@@ -4,7 +4,7 @@ import os
 import sys
 from itertools import chain
 
-from nagra import Transaction, Schema, __version__
+from nagra import Transaction, Schema, View, __version__
 from nagra.utils import print_table
 
 
@@ -60,11 +60,9 @@ def print_schema(args, schema):
         return
 
     # List all tables
-    rows = []
-    for name in sorted(schema.tables.keys()):
-        rows.append([name])
-    headers = ["table"]
-    print_table(rows, headers, args.pivot)
+    rows = [(tbl.name, tbl.is_view) for tbl in schema.tables.values()]
+    headers = ["table", "view"]
+    print_table(sorted(rows), headers, args.pivot)
 
 
 def show_version():

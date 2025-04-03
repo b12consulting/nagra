@@ -41,7 +41,7 @@ from functools import lru_cache
 from typing import Iterable, Optional, Union
 
 from nagra.delete import Delete
-from nagra.exceptions import IncorrectTable
+from nagra.exceptions import IncorrectSchema
 from nagra.schema import Schema
 from nagra.select import Select
 from nagra.sexpr import AST
@@ -51,7 +51,7 @@ from nagra.update import Update
 from nagra.upsert import Upsert
 
 
-# Intentionally sorted by reverse lenght to help type hint detection, see Schema._db_columns
+# Intentionally sorted by reverse length to help type hint detection, see Schema._db_columns
 _TYPE_ALIAS = {
     "timestamp without time zone": "timestamp",
     "timestamp with time zone": "timestamptz",
@@ -66,6 +66,7 @@ _TYPE_ALIAS = {
     "varchar": "str",
     "bigint": "bigint",
     "bytea": "blob",
+    "bytes": "blob",
     "float": "float",
     "real": "float",
     "blob": "blob",
@@ -169,6 +170,7 @@ class Table:
         default: Optional[dict] = None,
         primary_key: Optional[str] = "id",
         schema: Schema = Schema.default,
+        is_view: Optional[bool] = False,
     ):
         self.name = name
         self.columns = {name: Column(name, dtype) for name, dtype in columns.items()}
@@ -179,6 +181,7 @@ class Table:
         self.default = default or {}
         self.primary_key = primary_key
         self.schema = schema
+        self.is_view = is_view
 
         # Detect malformed fk definitions
         if len(self.natural_key) == 1:
@@ -187,25 +190,25 @@ class Table:
                 if fk != nk or fk_table != name:
                     continue
                 msg = f"Table '{name}': Foreign key '{fk}' refers to table natural key"
-                raise IncorrectTable(msg)
+                raise IncorrectSchema(msg)
 
         # Detect incorrect nk
         for nk_name in self.natural_key:
             if nk_name not in self.columns:
-                raise IncorrectTable(
+                raise IncorrectSchema(
                     f"Table '{name}': unknown column name '{nk_name}'"
                     " referenced in natural key"
                 )
 
         # Add table to schema
-        self.schema.add(self.name, self)
+        self.schema.add_table(self.name, self)
 
     @classmethod
     def get(self, name, schema=Schema.default):
         """
         Shortcut method to Schema.default().get()
         """
-        return schema.get(name)
+        return schema.tables.get(name)
 
     def select(self, *columns, trn=None):
         trn = trn or Transaction.current()

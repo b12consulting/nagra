@@ -27,6 +27,7 @@ class Select:
         self.where_asts = tuple()
         self._offset = None
         self._limit = None
+        self._aliases = tuple()
         self.groupby_ast = tuple()
         self.order_ast = tuple()
         self.order_directions = tuple()
@@ -55,11 +56,17 @@ class Select:
         cln.order_directions = self.order_directions
         cln._limit = self._limit
         cln._offset = self._offset
+        cln._aliases = self._aliases
         return cln
 
     def where(self, *conditions: str):
         cln = self.clone()
         cln.where_asts += tuple(AST.parse(cond) for cond in conditions)
+        return cln
+
+    def aliases(self, *names: str):
+        cln = self.clone()
+        cln._aliases += names
         return cln
 
     def select(self, *columns: str):
@@ -168,10 +175,17 @@ class Select:
         # Create joins
         joins = self.table.join(self.env)
 
+        if self._aliases:
+            query_columns = [f"{c} AS {a}" for c, a in zip(
+                self.query_columns, self._aliases
+            )]
+        else:
+            query_columns = self.query_columns
+
         stm = Statement(
             "select",
             table=self.table.name,
-            columns=self.query_columns,
+            columns=query_columns,
             joins=joins,
             conditions=where_conditions,
             limit=self._limit,

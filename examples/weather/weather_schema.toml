@@ -13,3 +13,11 @@ city = "city"
 natural_key = ["name"]
 [city.columns]
 name = "varchar"
+
+[avg_temperature]
+view_select = "weather"
+[avg_temperature.view_columns]
+avg_temp = "(avg temperature)"
+city = "city"
+[avg_temperature.foreign_keys]
+city = "city"

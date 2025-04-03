@@ -10,7 +10,7 @@ here = Path(__file__).parent
 
 @st.cache_data
 def init():
-    Schema.default.load(here / "weather_schema.toml")
+    Schema.default.load_toml(here / "weather_schema.toml")
 
 
 def main():
@@ -25,7 +25,7 @@ def main():
     ).orderby("timestamp")
     rows = select.execute(name)
     df = DataFrame(rows, columns=select.columns)
-    st.dataframe(df)
+    st.dataframe(df, hide_index=True)
 
 
 with Transaction(DB):
