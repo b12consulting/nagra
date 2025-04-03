@@ -49,9 +49,8 @@ key resolution before db insertion.
 
 **Various :**
 - Add `length`, `upper` and `lower` operators
-- Python >= 3.11 compat  (end of support of class properties):
-  * `Schema.default` is now a class member
-  * `Transaction.current` is now a function
+- Python >= 3.11 compat (end of support of class properties):
+  `Schema.default` is now a class member
 - Timescaledb compat: Do not rely on `IF NOT EXISTS` stanza when creating indexes
 
 
