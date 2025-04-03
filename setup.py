@@ -25,6 +25,7 @@ setup(
     url="https://github.com/b12consulting/nagra",
     install_requires=[
         "jinja2",
+        "rich",
         "toml",
     ],
     packages=[
@@ -33,7 +34,6 @@ setup(
     extras_require={
         "dev": ["pytest", "pandas", "typeguard"],
         "pg": ["psycopg"],
-        "rich": ["rich"],
     },
     package_data={"nagra": ["template/*/*sql"]},
     entry_points={

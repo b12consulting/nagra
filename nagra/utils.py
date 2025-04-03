@@ -8,14 +8,10 @@ from time import perf_counter
 
 
 from jinja2 import FileSystemLoader, Environment
-try:
-    import rich
-    from rich import box
-    from rich.console import Console
-    from rich.markup import escape
-    import rich.table
-except ImportError:
-    rich = None
+from rich import box
+from rich.console import Console
+from rich.markup import escape
+import rich.table
 
 
 HERE = Path(__file__).parent
@@ -75,8 +71,6 @@ def timeit(title=""):
 
 
 def print_table(rows, headers, pivot=False):
-    assert rich is not None, "rich library is required for printing tables"
-
     console = Console()
     escstr = lambda s: escape(str(s))
 
