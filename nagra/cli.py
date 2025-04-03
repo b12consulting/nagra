@@ -4,7 +4,7 @@ import os
 import sys
 from itertools import chain
 
-from nagra import Transaction, Schema, __version__
+from nagra import Transaction, Schema, View, __version__
 from nagra.utils import print_table
 
 
@@ -61,9 +61,13 @@ def print_schema(args, schema):
 
     # List all tables
     rows = []
-    for name in sorted(schema.tables.keys()):
-        rows.append([name])
-    headers = ["table"]
+    items = chain(
+        ((n, t) for n, t in schema.tables.items() if not t.is_view),
+        schema.views.items(),
+    )
+    for name, tbl in sorted(items):
+        rows.append([name, isinstance(tbl, View)])
+    headers = ["table", "view"]
     print_table(rows, headers, args.pivot)
 
 

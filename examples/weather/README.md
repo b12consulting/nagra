@@ -20,13 +20,13 @@ or capitalization.
 ``` shell
 $ cat city.csv
 name
-Bruxelles
+Brussels
 Louvain-la-Neuve
 Leuven
 
 $ cat weather.csv
 city,timestamp,temperature,wind_speed
-Bruxelles, "2024-06-01 12:00", 20, 30
+Brussels, "2024-06-01 12:00", 20, 30
 Louvain-la-Neuve, "2024-06-01 12:00", 21, 20
 Leuven, "2024-06-01 12:00", 19, 10
 ```
@@ -153,7 +153,7 @@ DO NOTHING
 Or we can execute it like this:
 
 ``` python
-city_upsert.execute("Bruxelles")
+city_upsert.execute("Brussels")
 ```
 
 This will add a line in the table. Since we already have a dataframe,
@@ -179,7 +179,7 @@ with Transaction(db):
     schema.create_tables()
     city_upsert = Table.get("city").upsert("name")
     records = [
-        ("Bruxelles",),
+        ("Brussels",),
         ("Louvain-la-Neuve",),
     ]
     city_upsert.executemany(records)
@@ -197,7 +197,7 @@ sqlite> .mode col
 sqlite> SELECT * FROM city;
 id  name
 --  ----------------
-1   Bruxelles
+1   Brussels
 2   Louvain-la-Neuve
 ```
 
@@ -220,7 +220,7 @@ and then for example:
 $ nagra select city
 name
 ----------------
-Bruxelles
+Brussels
 Louvain-la-Neuve
 ```
 
@@ -231,7 +231,7 @@ you want to see:
 $ nagra select city name id
 name                id
 ----------------  ----
-Bruxelles            1
+Brussels             1
 Louvain-la-Neuve     2
 ```
 
@@ -322,12 +322,42 @@ to choose the column to read. We then filter the results with
 `.where`: it takes one or more boolean expression. Those expressions
 use a polish notation and are composable, eg:
 
-    '(or (= city.name "Bruxelles") (> timestamp "2024-01-01") )'
+    '(or (= city.name "Brussels") (> timestamp "2024-01-01") )'
 
 If more than one expression is given, a conjunction is implied:
 `.where(A, B)` becomes `.where("(and A B)")`.
 
 
+## Views
+
+The `weather_schema.toml` files also contains a view definition:
+
+``` toml
+[avg_temperature]
+view_select = "weather"
+[avg_temperature.view_columns]
+avg_temp = "(avg temperature)"
+city = "city"
+[avg_temperature.foreign_keys]
+city = "city"
+```
+
+This will instanciate a `View` object that will be added to the
+database when `Schema.create_tables` is called.
+
+It can be used in the code like this:
+
+``` python
+rows = View.get(  # or schema.get(...)
+       'avg_temperature'
+    ).select(
+        'avg_temp'
+    ).where(
+         '(= city.name "Brussels")'
+    )
+```
+
+
 ## API with FastAPI
 
-TODO
+See [fastapi-example.py](../fastapi-example.py)

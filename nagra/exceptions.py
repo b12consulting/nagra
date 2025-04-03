@@ -15,7 +15,7 @@ class ValidationError(BaseException):
     pass
 
 
-class IncorrectTable(BaseException):
+class IncorrectSchema(BaseException):
     pass
 
 

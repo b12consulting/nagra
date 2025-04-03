@@ -5,7 +5,7 @@ from typeguard import install_import_hook
 
 install_import_hook("nagra")
 
-from nagra import Table, Transaction, Schema
+from nagra import Table, Transaction, Schema, View
 
 
 person_table = Table(
@@ -65,6 +65,9 @@ country_table = Table(
         "name": "varchar",
     },
     natural_key=["name"],
+    one2many={
+        "populations": "population.country",
+    },
 )
 
 
@@ -102,6 +105,7 @@ kitchensink_table = Table(
     natural_key=["varchar"],
 )
 
+
 temperature_table = Table(
     "temperature",
     columns={
@@ -112,6 +116,7 @@ temperature_table = Table(
     natural_key=["timestamp", "city"],
 )
 
+
 parameter_table = Table(
     "parameter",
     columns={
@@ -121,6 +126,46 @@ parameter_table = Table(
     },
     natural_key=["name"],
 )
+
+
+population_table = Table(
+    "population",
+    columns={
+        "country": "bigint",
+        "year": "int",
+        "value": "int",
+    },
+    natural_key=["country", "year"],
+    foreign_keys={
+        "country": "country",
+    },
+)
+
+
+max_pop_view = View(
+    "max_pop",
+    columns={
+        "country": "varchar",
+        "max": "float",
+    },
+    as_select="""
+    SELECT name as country, max(population.value) as max
+    FROM country
+    JOIN population on (population.country = country.id)
+    GROUP BY country.name
+    """
+)
+
+
+min_pop_view = View(
+    "min_pop",
+    view_columns={
+        "country": "name",
+        "min": "(min populations.value)",
+    },
+    view_select="country",
+)
+
 
 
 @pytest.fixture(scope="session")
@@ -151,6 +196,26 @@ def kitchensink():
 @pytest.fixture(scope="session")
 def temperature():
     return temperature_table
+
+
+@pytest.fixture(scope="session")
+def country():
+    return country_table
+
+
+@pytest.fixture(scope="session")
+def population():
+    return population_table
+
+
+@pytest.fixture(scope="session")
+def min_pop():
+    return min_pop_view
+
+
+@pytest.fixture(scope="session")
+def max_pop():
+    return max_pop_view
 
 
 @pytest.fixture(scope="session")

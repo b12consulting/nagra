@@ -41,7 +41,7 @@ from functools import lru_cache
 from typing import Iterable, Optional, Union
 
 from nagra.delete import Delete
-from nagra.exceptions import IncorrectTable
+from nagra.exceptions import IncorrectSchema
 from nagra.schema import Schema
 from nagra.select import Select
 from nagra.sexpr import AST
@@ -51,7 +51,7 @@ from nagra.update import Update
 from nagra.upsert import Upsert
 
 
-# Intentionally sorted by reverse lenght to help type hint detection, see Schema._db_columns
+# Intentionally sorted by reverse length to help type hint detection, see Schema._db_columns
 _TYPE_ALIAS = {
     "timestamp without time zone": "timestamp",
     "timestamp with time zone": "timestamptz",
@@ -66,6 +66,7 @@ _TYPE_ALIAS = {
     "varchar": "str",
     "bigint": "bigint",
     "bytea": "blob",
+    "bytes": "blob",
     "float": "float",
     "real": "float",
     "blob": "blob",
@@ -189,12 +190,12 @@ class Table:
                 if fk != nk or fk_table != name:
                     continue
                 msg = f"Table '{name}': Foreign key '{fk}' refers to table natural key"
-                raise IncorrectTable(msg)
+                raise IncorrectSchema(msg)
 
         # Detect incorrect nk
         for nk_name in self.natural_key:
             if nk_name not in self.columns:
-                raise IncorrectTable(
+                raise IncorrectSchema(
                     f"Table '{name}': unknown column name '{nk_name}'"
                     " referenced in natural key"
                 )
@@ -207,7 +208,7 @@ class Table:
         """
         Shortcut method to Schema.default().get()
         """
-        return schema.get(name)
+        return schema.tables.get(name)
 
     def select(self, *columns, trn=None):
         trn = trn or Transaction.current()
@@ -358,21 +359,24 @@ class View:
         name: str,
         view_columns: Optional[dict] = None,
         columns: Optional[dict] = None,
+        natural_key: Optional[list[str]] = None,
+        foreign_keys: Optional[dict] = None,
         as_select: Optional[str] = None,
-        select: Optional[str] = None,
+        view_select: Optional[str] = None,
         schema: Schema = Schema.default,
     ):
         self.name = name
         self.view_columns = view_columns
-        self.columns = columns
         self.as_select = as_select
-        self.view_select = select
+        self.view_select = view_select
         self.schema = schema
 
         # Create underlying table
         if not columns:
             if not view_columns:
-                raise "TODO"
+                msg = f"Error on view '{name}': one of "\
+                    "`columns` or `view_columns` must be defined"
+                raise IncorrectSchema(msg)
 
             columns = {}
             select = schema.get(self.view_select).select(*view_columns.values())
@@ -380,9 +384,19 @@ class View:
             for col_name, (_, dt) in zip(view_columns, dtypes):
                 columns[col_name] = dt.__name__
 
-        self.table = Table(name, columns=columns, is_view=True)
+        self.table = Table(
+            name,
+            columns=columns,
+            natural_key=natural_key,
+            foreign_keys=foreign_keys,
+            is_view=True,
+            schema=self.schema,
+        )
         # Add view to schema
         self.schema.add_view(self.name, self)
+
+        # We try to quack like a table
+        self.columns = self.table.columns
 
     def select(self, *columns, trn=None):
         return self.table.select(*columns, trn=trn)
@@ -399,6 +413,13 @@ class View:
             *self.view_columns.keys()
         ).stm()
         return stm.rstrip(";")
+
+    @classmethod
+    def get(self, name:str, schema:Schema=Schema.default):
+        """
+        Return view object for the given `name`
+        """
+        return schema.views.get(name)
 
 
 class Env:

@@ -4,7 +4,7 @@ import pytest
 
 from nagra import Table, Schema
 from nagra.table import Column
-from nagra.exceptions import IncorrectTable
+from nagra.exceptions import IncorrectSchema
 
 
 HERE = Path(__file__).parent
@@ -73,7 +73,7 @@ def test_setup():
 
 
 def test_bogus_fk(empty_transaction):
-    with pytest.raises(IncorrectTable):
+    with pytest.raises(IncorrectSchema):
         Table(
             "bogus",
             columns={
@@ -87,7 +87,7 @@ def test_bogus_fk(empty_transaction):
 
 
 def test_incorrect_nk(empty_transaction):
-    with pytest.raises(IncorrectTable):
+    with pytest.raises(IncorrectSchema):
         Table(
             "bad_nk",
             columns={
@@ -146,14 +146,24 @@ def test_schema_from_db(transaction):
         "address",
         "country",
         "kitchensink",
+        "max_pop",
+        "min_pop",
         "org",
         "parameter",
         "person",
+        "population",
         "skill",
         "temperature",
     ]
     schema.introspect_db()
     assert sorted(schema.tables) == tables
+    assert all(schema.tables[n].is_view for n in ["max_pop", "min_pop"])
+
+    views = [
+        "max_pop",
+        "min_pop",
+    ]
+    assert sorted(schema.views) == views
 
     # Check simple table
     person = schema.get("person")
