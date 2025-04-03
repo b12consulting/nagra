@@ -33,17 +33,17 @@ The `View` object behaves like the `Table` object (for select
 statements) and a view can be accessed by name with
 `schema.get("my_view_nane")` of with `View.get("name")`
 
-**New feature** Add `Upsert.from_dict`, the mirror method of
+**New feature:** Add `Upsert.from_dict`, the mirror method of
 `Select.to_dict`, see example usage in
 [db-sync.py](examples/db-sync.py).
 
-**New feature** Add `Upsert.resolve`, this allows to re-use foreign
+**New feature:** Add `Upsert.resolve`, this allows to re-use foreign
 key resolution before db insertion.
 
 **Fixes:**
 - Support for blob type: `Select.dtype` failed to resolve data
   type. Now nagra will ignore blob column in select by default.
-- `Select.to_pandas` now return correct dataframe when resultset is empty
+- `Select.to_pandas` now returns correct dataframe when resultset is empty
 - Fix parenthesization for OR expressions
 - Raise error on malformed natural key
 
@@ -52,8 +52,7 @@ key resolution before db insertion.
 - Python >= 3.11 compat  (end of support of class properties):
   * `Schema.default` is now a class member
   * `Transaction.current` is now a function
-- Timescaledb compat:
-  * Do not rely on `IF NOT EXISTS` stanza when creating indexes
+- Timescaledb compat: Do not rely on `IF NOT EXISTS` stanza when creating indexes
 
 
 ### 0.4 (released 2024-01-28)
