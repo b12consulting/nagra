@@ -60,12 +60,9 @@ def print_schema(args, schema):
         return
 
     # List all tables
-    rows = []
-
-    for name, tbl in sorted(schema.tables.items()):
-        rows.append([name, tbl.is_view])
+    rows = [(tbl.name, tbl.is_view) for tbl in schema.tables.values()]
     headers = ["table", "view"]
-    print_table(rows, headers, args.pivot)
+    print_table(sorted(rows), headers, args.pivot)
 
 
 def show_version():
