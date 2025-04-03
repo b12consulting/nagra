@@ -61,12 +61,9 @@ def print_schema(args, schema):
 
     # List all tables
     rows = []
-    items = chain(
-        ((n, t) for n, t in schema.tables.items() if not t.is_view),
-        schema.views.items(),
-    )
-    for name, tbl in sorted(items):
-        rows.append([name, isinstance(tbl, View)])
+
+    for name, tbl in sorted(schema.tables.items()):
+        rows.append([name, tbl.is_view])
     headers = ["table", "view"]
     print_table(rows, headers, args.pivot)
 
