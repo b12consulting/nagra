@@ -47,7 +47,8 @@ class Schema:
 
     def load_toml(self, toml_src: IOBase | Path | str):
         # Late import to avoid import loops
-        from nagra.table import Table, View
+        from nagra.table import Table
+        from nagra.view import View
 
         # load table definitions
         match toml_src:
@@ -318,7 +319,8 @@ class Schema:
         `tables` is non-empty, it is used as a whitelist and all other
         tables are ignored
         """
-        from nagra.table import Table, View
+        from nagra.table import Table
+        from nagra.view import View
 
         trn = trn or Transaction.current()
         db_fk = self._db_fk(*tables, trn=trn)
