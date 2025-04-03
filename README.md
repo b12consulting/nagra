@@ -236,5 +236,4 @@ The project changelog is available here:
 [changelog.md](https://github.com/b12consulting/nagra/blob/master/changelog.md)
 
 Future ideas:
-- Integration with FastAPI
-- Support for CockroachDB
+- Support for other DBMS

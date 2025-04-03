@@ -1,9 +1,62 @@
 
 # Changelog
 
+### Upcoming release
 
-### 0.4
+**New feature:** Add support for views, both creation and
+introspection are supported.
 
+Views can be defined with two different fashion in toml:
+
+``` toml
+# With explicit definition ..
+[max_temp]
+as_select = """
+SELECT city.name as city, max(temperature.value) as max_temp
+FROM city
+JOIN temperature on (temperature.city = city.id)
+GROUP BY city.name
+"""
+[max_temp.columns]
+city = "str"
+max_temp = "float"
+
+# .. or with nagra s-expressions
+[min_temp]
+view_select = "city"
+[min_temp.view_columns]
+min_temp = "(min temperatures.value)"
+city = "name"
+```
+
+The `View` object behaves like the `Table` object (for select
+statements) and a view can be accessed by name with
+`schema.get("my_view_nane")` of with `View.get("name")`
+
+**New feature** Add `Upsert.from_dict`, the mirror method of
+`Select.to_dict`, see example usage in
+[db-sync.py](examples/db-sync.py).
+
+**New feature** Add `Upsert.resolve`, this allows to re-use foreign
+key resolution before db insertion.
+
+**Fixes:**
+- Support for blob type: `Select.dtype` failed to resolve data
+  type. Now nagra will ignore blob column in select by default.
+- `Select.to_pandas` now return correct dataframe when resultset is empty
+- Fix parenthesization for OR expressions
+- Raise error on malformed natural key
+
+**Various :**
+- Add `length`, `upper` and `lower` operators
+- Python >= 3.11 compat  (end of support of class properties):
+  * `Schema.default` is now a class member
+  * `Transaction.current` is now a function
+- Timescaledb compat:
+  * Do not rely on `IF NOT EXISTS` stanza when creating indexes
+
+
+### 0.4 (released 2024-01-28)
 
 **New feature:** Add support for tables without primarey key. No `id`
 column is created and the table can not be referenced by other tables.
@@ -77,7 +130,7 @@ natural key changes, but this kind of operation is discouraged.
 - New `empty` property on `Schema`
 - `timestamptz` support in SQLite (thanks @cecilehautecoeur)
 
-### 0.3
+### 0.3 (released 2024-11-04)
 
 **New feature:** DB introspection: Nagra is now able to introspect
 existing databases and infer schema:
