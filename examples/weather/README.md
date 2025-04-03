@@ -349,12 +349,12 @@ It can be used in the code like this:
 
 ``` python
 rows = View.get(  # or schema.get(...)
-       'avg_temperature'
-    ).select(
-        'avg_temp'
-    ).where(
-         '(= city.name "Brussels")'
-    )
+   'avg_temperature'
+).select(
+    'avg_temp'
+).where(
+     '(= city.name "Brussels")'
+)
 ```
 
 
