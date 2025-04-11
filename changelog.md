@@ -1,7 +1,7 @@
 
 # Changelog
 
-### Upcoming release
+### 0.5 (released 2025-04-11)
 
 **New feature:** Add support for views, both creation and
 introspection are supported.
