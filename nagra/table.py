@@ -48,6 +48,7 @@ from nagra.sexpr import AST
 from nagra.statement import Statement
 from nagra.transaction import Transaction
 from nagra.update import Update
+from nagra.copy import copy_from
 from nagra.upsert import Upsert
 
 
@@ -269,6 +270,20 @@ class Table:
         """
         trn = trn or Transaction.current()
         return self.upsert(*columns, trn=trn, lenient=lenient).insert_only()
+
+    def copy_from(
+        self,
+        rows: Iterable[tuple] | "DataFrame",
+        trn: Optional[Transaction] = None,
+        lenient: Union[bool, list[str]] = False,
+    ):
+        """
+        Execute a COPY <table> FROM STDIN (only supported with
+        postgresql). See `Table.upsert` for `lenient` role.
+        """
+        trn = trn or Transaction.current()
+        return copy_from(self, rows=rows, trn=trn, lenient=lenient)
+
 
     def drop(self, trn: Optional[Transaction] = None):
         trn = trn or Transaction.current()
