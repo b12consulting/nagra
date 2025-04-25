@@ -38,7 +38,7 @@ temperature = Table(
 
 from datetime import date, datetime
 from functools import lru_cache
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Union, TYPE_CHECKING
 
 from nagra.delete import Delete
 from nagra.exceptions import IncorrectSchema
@@ -48,10 +48,15 @@ from nagra.sexpr import AST
 from nagra.statement import Statement
 from nagra.transaction import Transaction
 from nagra.update import Update
+from nagra.copy import copy_from
 from nagra.upsert import Upsert
 
+if TYPE_CHECKING:
+    from pandas import DataFrame
 
-# Intentionally sorted by reverse length to help type hint detection, see Schema._db_columns
+
+# Intentionally sorted by reverse length to help type hint detection,
+# see Schema._db_columns
 _TYPE_ALIAS = {
     "timestamp without time zone": "timestamp",
     "timestamp with time zone": "timestamptz",
@@ -269,6 +274,20 @@ class Table:
         """
         trn = trn or Transaction.current()
         return self.upsert(*columns, trn=trn, lenient=lenient).insert_only()
+
+    def copy_from(
+        self,
+        rows: Iterable[tuple] | "DataFrame",
+        trn: Optional[Transaction] = None,
+        lenient: Union[bool, list[str]] = False,
+    ):
+        """
+        Execute a COPY <table> FROM STDIN (only supported with
+        postgresql). See `Table.upsert` for `lenient` role.
+        """
+        trn = trn or Transaction.current()
+        return copy_from(self, rows=rows, trn=trn, lenient=lenient)
+
 
     def drop(self, trn: Optional[Transaction] = None):
         trn = trn or Transaction.current()
