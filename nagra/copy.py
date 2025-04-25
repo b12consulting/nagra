@@ -34,5 +34,19 @@ def copy_from(
 
 
 def serialize_chunk(rows, columns):
-    row_strs = ("\t".join(str(v) for v in row) for row in rows)
+    row_strs = ("\t".join(stringify(v) for v in row) for row in rows)
     return "\n".join(row_strs) + "\n"
+
+
+def stringify(value):
+    """
+    Convert value to string for COPY FROM
+    """
+    if isinstance(value, str):
+        return f'"{value}"'
+    elif isinstance(value, bool):
+        return "true" if value else "false"
+    elif value is None:
+        return "\\N"
+    else:
+        return str(value)

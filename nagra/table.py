@@ -38,7 +38,7 @@ temperature = Table(
 
 from datetime import date, datetime
 from functools import lru_cache
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Union, TYPE_CHECKING
 
 from nagra.delete import Delete
 from nagra.exceptions import IncorrectSchema
@@ -51,8 +51,12 @@ from nagra.update import Update
 from nagra.copy import copy_from
 from nagra.upsert import Upsert
 
+if TYPE_CHECKING:
+    from pandas import DataFrame
 
-# Intentionally sorted by reverse length to help type hint detection, see Schema._db_columns
+
+# Intentionally sorted by reverse length to help type hint detection,
+# see Schema._db_columns
 _TYPE_ALIAS = {
     "timestamp without time zone": "timestamp",
     "timestamp with time zone": "timestamptz",
