@@ -257,6 +257,11 @@ class Schema:
                     continue
                 if column in db_columns.get(table.name, []):
                     continue
+                if fk_table_name := table.foreign_keys.get(column):
+                    fk_table = self.get(fk_table_name)
+                else:
+                    fk_table = None
+
                 stmt = Statement(
                     "add_column",
                     flavor=trn.flavor,
@@ -264,7 +269,7 @@ class Schema:
                     column=column,
                     col_def=ctypes[column],
                     not_null=column in table.not_null,
-                    fk_table=table.foreign_keys.get(column),
+                    fk_table=fk_table,
                     default=table.default.get(column),
                 )
                 yield stmt()
