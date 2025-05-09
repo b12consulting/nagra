@@ -29,7 +29,7 @@ class Upsert(WriterMixin):
         self.columns = [c.lstrip(".") for c in columns]
         self._insert_only = insert_only
         self.lenient = lenient or []
-        self._where = list(where)
+        self._where = list(where)  # FIXME where is not used ?!
         self.trn = trn
         self.env = env
         super().__init__()
