@@ -16,6 +16,7 @@ class View:
         foreign_keys: Optional[dict] = None,
         as_select: Optional[str] = None,
         view_select: Optional[str] = None,
+        view_where: Optional[str] = None,
         schema: Schema = Schema.default,
     ):
         self.name = name

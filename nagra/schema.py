@@ -226,7 +226,18 @@ class Schema:
             # serials (see https://stackoverflow.com/a/55300741) ?
             if table.primary_key is None:
                 ctypes = table.ctypes(trn.flavor, table.columns)
-                natural_key = [(c, ctypes[c]) for c in table.natural_key]
+                # Create the list of natural key columns, respecting
+                # table definition order:
+                nk_cols = [c for c in table.columns if c in table.natural_key]
+
+                # Create tuples of (name, type, foreign_table, default)
+                natural_key = [(
+                    c,
+                    ctypes[c],
+                    table.foreign_keys.get(c),
+                    table.default.get(c),
+                ) for c in nk_cols]
+
                 stmt = Statement(
                     "create_table_nk",
                     trn.flavor,

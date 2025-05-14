@@ -49,28 +49,80 @@ def test_create_table(empty_transaction):
         ");",
     ]
 
+
+def test_create_table_no_pk(empty_transaction):
+    flavor = empty_transaction.flavor
     schema = Schema()
-    Table(
-        "my_table_no_pk",
+    Table(  # Regular table
+        "concept",
         columns={
             "name": "varchar",
-            "score": "int",
         },
         natural_key=["name"],
+        schema=schema,
+    )
+    Table(  # Table with no primary key and a fk in the nk
+        "score",
+        columns={
+            "concept": "bigint",
+            "score": "int",
+        },
+        natural_key=["concept"],
         primary_key=None,
+        foreign_keys={
+            "concept": "concept",
+        },
         schema=schema,
     )
     lines = list(schema.setup_statements(trn=empty_transaction))
-    create_table, add_score, create_idx = map(strip_lines, lines)
-    assert create_table == [
-        'CREATE TABLE  "my_table_no_pk" (',
-        '"name"  TEXT NOT NULL',
+    (
+        create_concept,
+        create_score_table,
+        add_concept_name,
+        add_score,
+        create_concept_idx,
+        create_score_idx,
+    ) = map(strip_lines, lines)
+
+    if flavor == "postgresql":
+        assert create_concept == [
+            'CREATE TABLE  "concept" (',
+            '"id" BIGSERIAL PRIMARY KEY',
+            ");",
+        ]
+
+        assert create_score_table == [
+            'CREATE TABLE  "score" (',
+            '"concept"  BIGINT NOT NULL',
+            'CONSTRAINT fk_concept REFERENCES "concept"(id)',
+            ");",
+        ]
+    else:
+        assert create_concept == [
+            'CREATE TABLE  "concept" (',
+            '"id"  INTEGER PRIMARY KEY',
+            ");",
+        ]
+
+        assert create_score_table == [
+            'CREATE TABLE  "score" (',
+            '"concept"  INTEGER NOT NULL',
+            'CONSTRAINT fk_concept REFERENCES "concept"(id)',
+            ");",
+        ]
+    assert add_concept_name == [
+        'ALTER TABLE "concept"',
+        'ADD COLUMN "name" TEXT NOT NULL',
+    ]
+    assert add_score == ['ALTER TABLE "score"', 'ADD COLUMN "score" INTEGER']
+    assert create_concept_idx == [
+        'CREATE UNIQUE INDEX concept_idx ON "concept" (',
+        '"name"',
         ");",
     ]
-    assert add_score == ['ALTER TABLE "my_table_no_pk"', 'ADD COLUMN "score" INTEGER']
-    assert create_idx == [
-        'CREATE UNIQUE INDEX my_table_no_pk_idx ON "my_table_no_pk" (',
-        '"name"',
+    assert create_score_idx == [
+        'CREATE UNIQUE INDEX score_idx ON "score" (',
+        '"concept"',
         ");",
     ]
 
