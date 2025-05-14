@@ -226,8 +226,8 @@ class Schema:
             # serials (see https://stackoverflow.com/a/55300741) ?
             if table.primary_key is None:
                 ctypes = table.ctypes(trn.flavor, table.columns)
-                # Create the list of natura l key columns, respecting
-                # table deinition order:
+                # Create the list of natural key columns, respecting
+                # table definition order:
                 nk_cols = [c for c in table.columns if c in table.natural_key]
 
                 # Create tuples of (name, type, foreign_table, default)
