@@ -402,6 +402,7 @@ class Schema:
         for fk in all_fks:
             fk.add()
 
+    default: Schema = None
 
 # Define default schema
 Schema.default = Schema()
