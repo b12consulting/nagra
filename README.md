@@ -232,8 +232,20 @@ If pandas is installed you can use `Select.to_pandas` and
 
 # Miscellaneous
 
+## Changelog and roadmap
+
 The project changelog is available here:
 [changelog.md](https://github.com/b12consulting/nagra/blob/master/changelog.md)
 
 Future ideas:
-- Support for other DBMS
+- Support for other DBMS (SQL Server)
+
+
+## Similar solutions / inspirations
+
+https://github.com/malloydata/malloy/tree/main
+:  Malloy is an experimental language for describing data
+   relationships and transformations.
+
+https://github.com/jeremyevans/sequel
+:  Sequel: The Database Toolkit for Ruby
