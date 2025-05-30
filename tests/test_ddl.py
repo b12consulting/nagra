@@ -144,7 +144,7 @@ def test_create_table_no_pk(empty_transaction):
         assert create_score_table == [
             'CREATE TABLE  "score" (',
             '"concept"  BIGINT NOT NULL',
-            'CONSTRAINT fk_concept REFERENCES "concept"(id)',
+            'CONSTRAINT fk_concept REFERENCES "concept"("id")',
             ");",
         ]
     else:
@@ -157,7 +157,7 @@ def test_create_table_no_pk(empty_transaction):
         assert create_score_table == [
             'CREATE TABLE  "score" (',
             '"concept"  INTEGER NOT NULL',
-            'CONSTRAINT fk_concept REFERENCES "concept"(id)',
+            'CONSTRAINT fk_concept REFERENCES "concept"("id")',
             ");",
         ]
     assert add_concept_name == [

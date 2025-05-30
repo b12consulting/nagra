@@ -222,6 +222,7 @@ class Schema:
             if name in db_columns:
                 continue
             ctypes = table.ctypes(trn.flavor, table.columns)
+
             # TODO use "KEY GENERATED ALWAYS AS IDENTITY" instead of
             # serials (see https://stackoverflow.com/a/55300741) ?
             if table.primary_key is None:
@@ -238,18 +239,23 @@ class Schema:
                     table.default.get(c),
                 ) for c in nk_cols]
 
+                fk_tables = {}
+                for nk_col, *_ in natural_key:
+                    if fk_table_name := table.foreign_keys.get(nk_col):
+                        fk_tables[nk_col] = self.get(fk_table_name)
+
                 stmt = Statement(
                     "create_table_nk",
                     trn.flavor,
                     table=table,
                     natural_key=natural_key,
+                    fk_tables=fk_tables,
                 )
             else:
                 if fk_table_name := table.foreign_keys.get(table.primary_key):
                     fk_table = self.get(fk_table_name)
                 else:
                     fk_table = None
-
                 stmt = Statement(
                     "create_table",
                     trn.flavor,
