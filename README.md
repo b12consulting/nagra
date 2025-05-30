@@ -249,3 +249,7 @@ https://github.com/malloydata/malloy/tree/main
 
 https://github.com/jeremyevans/sequel
 :  Sequel: The Database Toolkit for Ruby
+
+
+https://orm.drizzle.team/
+: Headless TypeScript ORM with a head.

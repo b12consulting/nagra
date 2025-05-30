@@ -245,11 +245,17 @@ class Schema:
                     natural_key=natural_key,
                 )
             else:
+                if fk_table_name := table.foreign_keys.get(table.primary_key):
+                    fk_table = self.get(fk_table_name)
+                else:
+                    fk_table = None
+
                 stmt = Statement(
                     "create_table",
                     trn.flavor,
                     table=table,
                     pk_type=ctypes.get(table.primary_key),
+                    fk_table=fk_table,
                 )
             yield stmt()
 
@@ -304,7 +310,7 @@ class Schema:
         db_columns = self._db_columns(trn)
         db_indexes = self._db_indexes(trn)
 
-        yield from self._create_tables(db_columns, trn)
+        yield from self._create_tables(db_columns,  trn)
         yield from self._add_columns(db_columns, trn)
         yield from self._create_indexes(db_indexes, trn)
         yield from self._create_views(trn)

@@ -50,6 +50,56 @@ def test_create_table(empty_transaction):
     ]
 
 
+def test_create_table_pk_is_fk(empty_transaction):
+    flavor = empty_transaction.flavor
+    schema = Schema()
+    Table(  # Regular table
+        "concept",
+        columns={
+            "name": "varchar",
+        },
+        natural_key=["name"],
+        primary_key="concept_id",
+        schema=schema,
+    )
+    Table(  # Table with no primary key and a fk in the nk
+        "score",
+        columns={
+            "concept": "bigint",
+            "score": "int",
+        },
+        primary_key="concept",
+        foreign_keys={
+            "concept": "concept",
+        },
+        schema=schema,
+    )
+    lines = list(schema.setup_statements(trn=empty_transaction))
+    if flavor == "postgresql":
+        assert lines == [
+            'CREATE TABLE  "concept" (\n  "concept_id" BIGSERIAL PRIMARY KEY\n);',
+            'CREATE TABLE  "score" (\n'
+            '  "concept" BIGINT PRIMARY KEY\n'
+            '   CONSTRAINT fk_concept REFERENCES "concept"("concept_id")\n'
+            ');',
+            'ALTER TABLE "concept"\n ADD COLUMN "name" TEXT NOT NULL',
+            'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER NOT NULL',
+            'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
+            'CREATE UNIQUE INDEX score_idx ON "score" (\n  "concept", "score"\n);',
+        ]
+    else:
+        assert lines == [
+            'CREATE TABLE  "concept" (\n  "concept_id"  INTEGER PRIMARY KEY\n);',
+            'CREATE TABLE  "score" (\n'
+            '  "concept"  INTEGER PRIMARY KEY\n'
+            '   CONSTRAINT fk_concept REFERENCES "concept"("concept_id")\n'
+            ');',
+            'ALTER TABLE "concept"\n ADD COLUMN "name" TEXT NOT NULL\n',
+            'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER NOT NULL\n',
+            'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
+            'CREATE UNIQUE INDEX score_idx ON "score" (\n  "concept", "score"\n);',
+        ]
+
 def test_create_table_no_pk(empty_transaction):
     flavor = empty_transaction.flavor
     schema = Schema()
