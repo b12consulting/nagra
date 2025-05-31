@@ -140,7 +140,10 @@ def test_custom_id_type(empty_transaction):
         assert list(city.select()) == [("this-is-an-uuid", "test")]
 
 
-def test_schema_from_db(transaction):
+def test_schema_from_nagra_db(transaction):
+    """
+    Check introspection of a nagra created tables.
+    """
     schema = Schema()
     tables = [
         "address",
@@ -192,6 +195,50 @@ def test_schema_from_db(transaction):
     assert parameter.foreign_keys == {}
     assert parameter.primary_key == "id"
     assert parameter.natural_key == ["name"]
+
+
+def test_schema_from_db(transaction):
+    """
+    Check introspection on various coner cases
+    """
+    stmts = [
+        "CREATE TABLE patient (patient_id int primary key)",
+        # Primary key is also a foreign key
+        """
+        CREATE TABLE death (
+           patient_id int primary key CONSTRAINT fk_patient REFERENCES patient(patient_id),
+           death_date date
+        )
+        """,
+        # One column of the natural key is a foreign key
+        """
+        CREATE TABLE visit (
+           patient_id int primary key CONSTRAINT fk_patient REFERENCES patient(patient_id),
+           visit_date date
+        )
+        """,
+        "CREATE UNIQUE INDEX visit_idx ON visit (patient_id, visit_date)",
+    ]
+    for stm in stmts:
+        transaction.execute(stm)
+
+    schema = Schema()
+    schema.introspect_db()
+
+    patient = schema.get("patient")
+    assert list(patient.columns) == ["patient_id"]
+    assert patient.primary_key == "patient_id"
+
+    death = schema.get("death")
+    assert list(death.columns) == ["patient_id", "death_date"]
+    assert death.primary_key == "patient_id"
+    assert death.foreign_keys == {"patient_id": "patient"}
+
+    visit = schema.get("visit")
+    assert list(visit.columns) == ["patient_id", "visit_date"]
+    assert visit.primary_key == "patient_id"
+    assert visit.natural_key == ["patient_id", "visit_date"]
+    assert visit.foreign_keys == {"patient_id": "patient"}
 
 
 def test_suspend_fk(transaction):

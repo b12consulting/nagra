@@ -158,7 +158,7 @@ class Schema:
         return res
 
     @classmethod
-    def _db_unique(cls, trn=None, pg_schema="public"):
+    def _db_unique(cls, db_pk, trn=None, pg_schema="public"):
         trn = trn or Transaction.current()
         by_constraint = defaultdict(list)
 
@@ -189,8 +189,13 @@ class Schema:
         # each table
         res = {}
         for table, constraints in by_constraint.items():
-            first, *_ = sorted(constraints, key=lambda item: len(item))
-            res[table] = first
+            candidates = sorted(constraints, key=lambda item: len(item))
+            for candidate in candidates:
+                if len(candidate) == 1 and candidate[0] == db_pk.get(table):
+                    # unique key is the primary key, skip
+                    continue
+                res[table] = candidate
+                break
         return res
 
     def _create_views(self, trn):
@@ -353,7 +358,7 @@ class Schema:
         trn = trn or Transaction.current()
         db_fk = self._db_fk(*tables, trn=trn)
         db_pk = self._db_pk(trn=trn)
-        db_unique = self._db_unique(trn=trn)
+        db_unique = self._db_unique(db_pk, trn=trn)
         db_columns = self._db_columns(trn=trn)
         db_views = self._db_views(trn=trn)
 
