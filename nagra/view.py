@@ -28,8 +28,10 @@ class View:
         # Create underlying table
         if not columns:
             if not view_columns:
-                msg = f"Error on view '{name}': one of "\
+                msg = (
+                    f"Error on view '{name}': one of "
                     "`columns` or `view_columns` must be defined"
+                )
                 raise IncorrectSchema(msg)
 
             columns = {}
@@ -59,19 +61,17 @@ class View:
         if self.as_select:
             return self.as_select
         # generate a select from the referenced table
-        stm = self.schema.get(
-            self.view_select
-        ).select(
-            *self.view_columns.values()
-        ).aliases(
-            *self.view_columns.keys()
-        ).stm()
+        stm = (
+            self.schema.get(self.view_select)
+            .select(*self.view_columns.values())
+            .aliases(*self.view_columns.keys())
+            .stm()
+        )
         return stm.rstrip(";")
 
     @classmethod
-    def get(self, name:str, schema:Schema=Schema.default):
+    def get(self, name: str, schema: Schema = Schema.default):
         """
         Return view object for the given `name`
         """
         return schema.views.get(name)
-

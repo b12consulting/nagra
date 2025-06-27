@@ -176,9 +176,9 @@ class Select:
         joins = self.table.join(self.env)
 
         if self._aliases:
-            query_columns = [f"{c} AS {a}" for c, a in zip(
-                self.query_columns, self._aliases
-            )]
+            query_columns = [
+                f"{c} AS {a}" for c, a in zip(self.query_columns, self._aliases)
+            ]
         else:
             query_columns = self.query_columns
 

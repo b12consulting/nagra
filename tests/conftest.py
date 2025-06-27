@@ -153,7 +153,7 @@ max_pop_view = View(
     FROM country
     JOIN population on (population.country = country.id)
     GROUP BY country.name
-    """
+    """,
 )
 
 
@@ -165,7 +165,6 @@ min_pop_view = View(
     },
     view_select="country",
 )
-
 
 
 @pytest.fixture(scope="session")

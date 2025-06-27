@@ -131,7 +131,7 @@ def test_simple_agg(person, op):
 
 
 def test_count(person):
-    stm = person.select("(count)").stm()
+    stm = person.select("(count *)").stm()
     res = " ".join(strip_lines(stm))
     assert res == 'SELECT count(*) FROM "person" ;'
 
@@ -142,7 +142,7 @@ def test_count(person):
 
 def test_groupby(person):
     # Explicit
-    stm = person.select("name", "(count)").groupby("name").stm()
+    stm = person.select("name", "(count *)").groupby("name").stm()
     res = " ".join(strip_lines(stm))
     assert (
         res
@@ -150,7 +150,7 @@ def test_groupby(person):
     )
 
     # implicit
-    stm = person.select("name", "(count)").stm()
+    stm = person.select("name", "(count *)").stm()
     res = " ".join(strip_lines(stm))
     assert (
         res
