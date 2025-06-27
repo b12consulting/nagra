@@ -29,6 +29,7 @@ ValueError: Unexpected token: "x"
 """
 
 import shlex
+from functools import cached_property
 
 from nagra.exceptions import EvalTypeError
 
@@ -87,64 +88,71 @@ def scan(tokens, end_tk=")"):
 
 
 class AST:
+    # Litterals
+    literals = {
+        "true",
+        "false",
+        "null",
+        "*",
+    }
+
+    # Set of infix operators
+    infix = {
+        "and",
+        "not",
+        "is",
+        "isnot",
+        "in",
+        "+",
+        "-",
+        "*",
+        "/",
+        "||",
+        "=",
+        "!=",
+        "<",
+        "<=",
+        ">",
+        ">=",
+        "is"
+        "match",
+        "ilike",
+        "like"
+    }
+    # Declare special builtins  explicitly
     builtins = {
-        # Boolean
-        "!=": "{} != {}".format,
-        "<": "{} < {}".format,
-        "<=": "{} <= {}".format,
-        "=": "{} = {}".format,
-        ">": "{} > {}".format,
-        ">=": "{} >= {}".format,
-        "and": lambda *x: " AND ".join(x),
-        "or": lambda *x: "(%s)" % (" OR ".join(x)),
+        "-": (
+            lambda *xs: " - ".join(map(str, xs))
+            if len(xs) > 1 else f"-{xs[0]}"
+        ),
         "not": "NOT {}".format,
-        "is": "{} is {}".format,
+        "or": lambda *x: "(%s)" % (" OR ".join(x)),
         "isnot": "NOT {} IS {}".format,
-        # Arithmetic
-        "+": lambda *xs: " + ".join(map(str, xs)),
-        "-": (lambda *xs: " - ".join(map(str, xs)) if len(xs) > 1 else f"-{xs[0]}"),
-        "*": lambda *xs: " * ".join(map(str, xs)),
-        "/": lambda *xs: " / ".join(map(str, xs)),
-        # dates and time
-        "strftime": "strftime({}, {})".format,
         "extract": "EXTRACT({} FROM {})".format,
-        # Strings
-        "length": "LENGTH({})".format,
-        "like": "{} LIKE {}".format,
-        "lower": "LOWER({})".format,
-        "upper": "UPPER({})".format,
-        "match": "{} MATCH {}".format,
-        "ilike": "{} ILIKE {}".format,
-        "||": lambda *xs: " || ".join(map(str, xs)),
-        "substr": "substr({}, {}, {})".format,
-        # Others
         "in": lambda x, *ys: f"{x} in (%s)" % ", ".join(map(str, ys)),
     }
 
-    literals = {
-        "true": lambda: "true",
-        "false": lambda: "false",
-        "null": lambda: "NULL",
+    # Declare aggregate operators
+    agg_unary = {
+        "min",
+        "max",
+        "sum",
+        "avg",
+        "every",
+        "count",
+        "group_concat",
+        "string_agg",
+        "array_agg",
+        "json_agg",
+        "bool_or",
+        "bool_and",
+        "json_object_agg",
     }
-
-    aggregates = {
-        "min": "min({})".format,
-        "max": "max({})".format,
-        "sum": "sum({})".format,
-        "avg": "avg({})".format,
-        "every": "every({})".format,
-        "count": lambda x="*": f"count({x})",
-        # Sqlite specific
-        "group_concat": lambda *xs: ("group_concat(%s)")
-        % (", ".join("{}" for _ in xs)).format(*xs),
-        # Pg specific
-        "string_agg": "string_agg({}, {})".format,
-        "array_agg": "array_agg({})".format,
-        "json_agg": "json_agg({})".format,
-        "bool_or": "bool_or({})".format,
-        "bool_and": "bool_and({})".format,
-        "json_object_agg": "json_object_agg({}, {})".format,
+    agg_variadic = {
+        "group_concat",
+        "string_agg",
     }
+    aggregates = agg_unary | agg_variadic
 
     def __init__(self, tokens):
         # Auto-wrap sublist into AST
@@ -225,12 +233,12 @@ class Token:
 
         # First item should be an operator
         if isinstance(prev_tk, LParen):
-            if value in AST.builtins:
-                return BuiltinToken(value)
             if value in AST.literals:
                 return LiteralToken(value)
-            if value in AST.aggregates:
+            elif value in AST.aggregates:
                 return AggToken(value)
+            else:
+                return BuiltinToken(value)
 
         if (value[0], value[-1]) == ("{", "}"):
             return ParamToken(value)
@@ -337,13 +345,20 @@ class VarToken(Token):
 
 
 class OpToken(Token):
-    ops = AST.builtins | AST.literals
+
+    @cached_property
+    def op(self):
+        if self.value in AST.builtins:
+            return AST.builtins[self.value]
+        if self.value in AST.infix:
+            return lambda *xs: f" {self.value.upper()} ".join(map(str, xs))
+        return lambda *xs: f"{self.value}(%s)" % ", ".join(map(str, xs))
+
 
     def _eval(self, env, flavor, *args):
-        op = self.ops[self.value]
-        return op(*args)
-
-    # FIXME shoud return different _eval_type based on op ?!
+        if self.value in AST.literals:
+            return self.value
+        return self.op(*args)
 
 
 class BuiltinToken(OpToken):

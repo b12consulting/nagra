@@ -106,7 +106,7 @@ class WriterMixin:
             if not chunk:
                 return
             cond = self._where + [f"(in {pk} %s)" % (" {}" * len(chunk))]
-            select = self.table.select("(count)").where(*cond)
+            select = self.table.select("(count *)").where(*cond)
             (count,) = select.execute(*chunk).fetchone()
             if count != len(chunk):
                 msg = f"Validation failed! Condition is: {self._where} )"
