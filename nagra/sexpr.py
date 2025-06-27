@@ -114,17 +114,13 @@ class AST:
         "<=",
         ">",
         ">=",
-        "is"
-        "match",
+        "is" "match",
         "ilike",
-        "like"
+        "like",
     }
     # Declare special builtins  explicitly
     builtins = {
-        "-": (
-            lambda *xs: " - ".join(map(str, xs))
-            if len(xs) > 1 else f"-{xs[0]}"
-        ),
+        "-": (lambda *xs: " - ".join(map(str, xs)) if len(xs) > 1 else f"-{xs[0]}"),
         "not": "NOT {}".format,
         "or": lambda *x: "(%s)" % (" OR ".join(x)),
         "isnot": "NOT {} IS {}".format,
@@ -345,7 +341,6 @@ class VarToken(Token):
 
 
 class OpToken(Token):
-
     @cached_property
     def op(self):
         if self.value in AST.builtins:
@@ -353,7 +348,6 @@ class OpToken(Token):
         if self.value in AST.infix:
             return lambda *xs: f" {self.value.upper()} ".join(map(str, xs))
         return lambda *xs: f"{self.value}(%s)" % ", ".join(map(str, xs))
-
 
     def _eval(self, env, flavor, *args):
         if self.value in AST.literals:

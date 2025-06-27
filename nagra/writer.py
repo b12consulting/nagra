@@ -152,7 +152,5 @@ class WriterMixin:
         return self.executemany(rows)
 
     def from_dict(self, records):
-        rows = (
-            tuple(record[col] for col in self.columns) for record in records
-        )
+        rows = (tuple(record[col] for col in self.columns) for record in records)
         return self.executemany(rows)

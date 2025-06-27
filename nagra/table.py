@@ -288,7 +288,6 @@ class Table:
         trn = trn or Transaction.current()
         return copy_from(self, rows=rows, trn=trn, lenient=lenient)
 
-
     def drop(self, trn: Optional[Transaction] = None):
         trn = trn or Transaction.current()
         stmt = Statement("drop_table", trn.flavor, name=self.name)

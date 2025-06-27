@@ -2,6 +2,7 @@ from nagra.sexpr import AST
 from nagra.table import Table, Env
 from nagra.utils import strip_lines
 
+
 def test_sexpr():
     # Simple dot reference
     expr = "ham.spam"
@@ -94,17 +95,17 @@ def test_simple_eval():
     expr = "(and true true)"
     ast = AST.parse(expr)
     env = Env(table)
-    assert ast.eval(env) == 'true AND true'
+    assert ast.eval(env) == "true AND true"
 
     expr = "(or true true)"
     ast = AST.parse(expr)
     env = Env(table)
-    assert ast.eval(env) == '(true OR true)'
+    assert ast.eval(env) == "(true OR true)"
 
     expr = "(or (and true false) true)"
     ast = AST.parse(expr)
     env = Env(table)
-    assert ast.eval(env) == '((true AND false) OR true)'
+    assert ast.eval(env) == "((true AND false) OR true)"
 
 
 def test_join_eval(person):
@@ -154,16 +155,15 @@ def test_dynamic_builtins(kitchensink):
     operatore (function call-lile syntax).
     """
     select = kitchensink.select(
-        "(date_bin '5 days' timestamp '2025-01-01')",
-        "(avg value)"
+        "(date_bin '5 days' timestamp '2025-01-01')", "(avg value)"
     )
     res = strip_lines(select.stm())
     assert res == [
-        'SELECT',
-        'date_bin(\'5 days\', "kitchensink"."timestamp", \'2025-01-01\'), '
+        "SELECT",
+        "date_bin('5 days', \"kitchensink\".\"timestamp\", '2025-01-01'), "
         'avg("kitchensink"."value")',
         'FROM "kitchensink"',
-        'GROUP BY',
-        'date_bin(\'5 days\', "kitchensink"."timestamp", \'2025-01-01\')',
-        ';'
+        "GROUP BY",
+        "date_bin('5 days', \"kitchensink\".\"timestamp\", '2025-01-01')",
+        ";",
     ]
