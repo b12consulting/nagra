@@ -101,7 +101,6 @@ class AST:
         "and",
         "not",
         "is",
-        "isnot",
         "in",
         "+",
         "-",
@@ -114,9 +113,18 @@ class AST:
         "<=",
         ">",
         ">=",
-        "is" "match",
+        "is",
+        "match",
         "ilike",
         "like",
+        "||",
+        "&",
+        "|",
+        "#",
+        "~",
+        "<<",
+        ">>",
+
     }
     # Declare special builtins  explicitly
     builtins = {
