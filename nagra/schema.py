@@ -406,8 +406,12 @@ class Schema:
         called and the content of Schema is ignored, so the code may drop
         and re-add more foreign keys.
         """
-        msg = "suspend_fk is only supported with Postgresql"
-        assert Transaction.current().flavor == "postgresql", msg
+        trn = trn or Transaction.current()
+        if trn.flavor == "sqlite":
+            trn.execute("PRAGMA foreign_keys = 0")
+            yield
+            trn.execute("PRAGMA foreign_keys = 1")
+            return
 
         all_fks = list(
             chain.from_iterable(fks.values() for fks in self._db_fk(trn=trn).values())
