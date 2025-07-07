@@ -243,8 +243,7 @@ def test_schema_from_db(transaction):
 
 def test_suspend_fk(transaction):
     # Skip sqlite
-    if transaction.flavor == "sqlite":
-        return
+    is_sqlite = transaction.flavor == "sqlite"
 
     schema = Schema()
     whitelist = ["person", "skill"]
@@ -255,7 +254,10 @@ def test_suspend_fk(transaction):
         with_suspend = schema._db_fk(*whitelist)
     after = schema._db_fk(*whitelist)
 
-    assert len(with_suspend) == 0
+    if not is_sqlite:
+        # With sqlite, the foreign keys constraints are still there
+        # but not enforced
+        assert len(with_suspend) == 0
     assert sorted(before) == ["person", "skill"]
     assert sorted(after) == ["person", "skill"]
     assert sorted(before["person"]) == ["fk_parent"]

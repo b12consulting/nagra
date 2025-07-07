@@ -1,5 +1,5 @@
 SELECT
-  fk."from" || '_fk' AS fk_name,
+  'fk_' || fk."from" AS fk_name,
   m.tbl_name AS table_name,
   fk."from",
   fk."table",
