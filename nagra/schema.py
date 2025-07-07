@@ -9,7 +9,7 @@ from typing import Optional, TYPE_CHECKING
 import toml
 from nagra.statement import Statement
 from nagra.transaction import Transaction
-from nagra.utils import logger
+from nagra.utils import logger, snake_to_pascal
 
 
 if TYPE_CHECKING:
@@ -26,6 +26,27 @@ D2_TPL = """
 {%- for col, ftable in table.foreign_keys.items() %}
 {{table.name}}_.{{col}} -> {{ftable}}_.id : "{{col}}"
 {%- endfor -%}
+"""
+
+PYDANTIC_TPL = """
+class {{class_name}}Stub({{base_class}}):
+   {% for name in table.natural_key -%}
+   {%- set col = table.columns[name] -%}
+   {%- if name in table.foreign_keys -%}
+         {{name}}: {{snake_to_pascal(name)}}Stub
+   {%- else -%}
+         {{name}}: {{col.dtype}}
+   {%- endif -%}
+   {%- endfor %}
+
+class {{class_name}}({{base_class}}):
+    {% for name, col in table.columns.items() -%}
+    {% if name in table.foreign_keys -%}
+         {{name}}: {{snake_to_pascal(name)}}Stub
+    {% else -%}
+         {{name}}: {{col.dtype}}
+    {% endif -%}
+    {%- endfor -%}
 """
 
 
@@ -158,7 +179,7 @@ class Schema:
         return res
 
     @classmethod
-    def _db_unique(cls, db_pk, trn=None, pg_schema="public"):
+    def _db_unique(cls, db_pk, trn=None, pg_schema="public") -> dict[str, list[str]]:
         trn = trn or Transaction.current()
         by_constraint = defaultdict(list)
 
@@ -396,6 +417,20 @@ class Schema:
         tpl = Template(D2_TPL)
         tables = self.tables.values()
         res = "\n".join(tpl.render(table=t) for t in tables)
+        return res
+
+    def generate_pydantic_models(self, base_class:str="BaseModel"):
+        tpl = Template(PYDANTIC_TPL)
+        tables = self.tables.values()
+        res = "\n".join(
+            tpl.render(
+                table=t,
+                class_name=snake_to_pascal(t.name),
+                base_class=base_class,
+                snake_to_pascal=snake_to_pascal,
+            )
+            for t in tables
+        )
         return res
 
     @contextmanager
