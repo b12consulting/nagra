@@ -15,11 +15,12 @@ high-performance data ingestion. This can be used via the new
 of column to write to is not customisable, it is always on all the
 columns.
 
+**New feature:** The `suspend_fk` context manager now supports
+SQLite. Beware that contary to Postgresql, any foreign key violation
+made while foreign keys are suspended wont be spotted by Sqlite.
+
 
 **Fixes:**
-- The `suspend_fk` context manager now supports SQLite. Beware that
-  contary to Postgresql, any foreign key violation made while foreign
-  keys are suspended wont be spotted by Sqlite.
 - Fixed an issue where foreign key constraints were not correctly
   applied to tables using only natural keys.
 - Corrected a bug that occurred during table creation when a primary
