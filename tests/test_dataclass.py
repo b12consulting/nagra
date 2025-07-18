@@ -2,6 +2,8 @@ from dataclasses import fields, dataclass
 from datetime import datetime, date
 from typing import Optional
 
+from nagra.select import clean_col
+
 
 def equivalent_classes(A, B):
     A_fields = fields(A)
@@ -146,3 +148,9 @@ def test_aggregates(kitchensink):
         date: Optional[date]
 
     assert equivalent_classes(dclass, KitchenSink)
+
+
+def test_clean_col():
+    assert clean_col("name") == "name"
+    assert clean_col("table.name") == "table_name"
+    assert clean_col("(= col 1)") == "___col_1_"

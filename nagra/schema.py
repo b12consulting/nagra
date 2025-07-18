@@ -33,18 +33,19 @@ class {{class_name}}Stub({{base_class}}):
    {% for name in table.natural_key -%}
    {%- set col = table.columns[name] -%}
    {%- if name in table.foreign_keys -%}
-         {{name}}: {{snake_to_pascal(name)}}Stub
+
+         {{name}}: {{snake_to_pascal(name)}}Stub {% if table.nullable(name) -%} | None {% endif %}
    {%- else -%}
-         {{name}}: {{col.dtype}}
+         {{name}}: {{col.dtype}} {% if table.nullable(name) -%} | None {% endif %}
    {%- endif -%}
    {%- endfor %}
 
 class {{class_name}}({{base_class}}):
     {% for name, col in table.columns.items() -%}
     {% if name in table.foreign_keys -%}
-         {{name}}: {{snake_to_pascal(name)}}Stub
+         {{name}}: {{snake_to_pascal(name)}}Stub {% if table.nullable(name) -%} | None {% endif %}
     {% else -%}
-         {{name}}: {{col.dtype}}
+         {{name}}: {{col.dtype}} {% if table.nullable(name) -%} | None {% endif %}
     {% endif -%}
     {%- endfor -%}
 """
@@ -419,9 +420,13 @@ class Schema:
         res = "\n".join(tpl.render(table=t) for t in tables)
         return res
 
-    def generate_pydantic_models(self, base_class:str="BaseModel"):
+    def generate_pydantic_models(self, base_class:str="BaseModel", table_names:list[str] | None= None):
         tpl = Template(PYDANTIC_TPL)
-        tables = self.tables.values()
+        if not table_names:
+            tables = self.tables.values()
+        else:
+            tables = [self.tables[t] for t in table_names]
+
         res = "\n".join(
             tpl.render(
                 table=t,

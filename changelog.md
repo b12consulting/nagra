@@ -1,6 +1,37 @@
 
 # Changelog
 
+### 0.6
+
+**New feature:** Add `Schema.generate_pydantic_models` utility
+method. This allows for the automatic generation of Pydantic models
+based on database schema. It can also be used from the cli with:
+
+    nagra schema  --pydantic
+
+**New feature:** Support for PostgreSQL's `COPY FROM` for
+high-performance data ingestion. This can be used via the new
+`Table.copy_from` method. It behaves like an insert except the choice
+of column to write to is not customisable, it is always on all the
+columns.
+
+
+
+**Fixes:**
+- The `suspend_fk` context manager now supports SQLite. Beware that
+  contary to Postgresql, any foreign key violation made while foreign
+  keys are suspended wont be spotted by Sqlite.
+- Fixed an issue where foreign key constraints were not correctly
+  applied to tables using only natural keys.
+- Corrected a bug that occurred during table creation when a primary
+  key was also a foreign key.
+- Improve database introspection to correctly differentiate between
+  primary and natural keys.
+- Ensure the correct PostgreSQL schema is targeted when retrieving
+  constraints (removed hard-coded `public` schema).
+- Improve typing issues in the schema definition.
+
+
 ### 0.5 (released 2025-04-11)
 
 **New feature:** Add support for views, both creation and

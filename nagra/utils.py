@@ -1,3 +1,4 @@
+import csv
 import os
 import bisect
 import logging
@@ -6,7 +7,7 @@ import sys
 from contextlib import contextmanager
 from pathlib import Path
 from time import perf_counter
-
+from enum import StrEnum
 
 from jinja2 import FileSystemLoader, Environment
 from rich import box
@@ -74,10 +75,21 @@ def timeit(title=""):
     print(title, pretty_nb(delta) + "s", file=sys.stderr)
 
 
-def print_table(rows, headers, pivot=False):
+class TableFmt(StrEnum):
+    RICH = "rich"
+    CSV = "csv"
+
+
+def print_table(rows, headers, pivot=False, format:TableFmt = None):
+    if format == TableFmt.CSV:
+        writer = csv.writer(sys.stdout)
+        writer.writerow(headers)
+        for row in rows:
+            writer.writerow(row)
+        return
+
     console = Console()
     escstr = lambda s: escape(str(s))
-
     if pivot:
         for row in rows:
             table = rich.table.Table(box=box.SIMPLE)

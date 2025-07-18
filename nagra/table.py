@@ -288,11 +288,16 @@ class Table:
         trn = trn or Transaction.current()
         return copy_from(self, rows=rows, trn=trn, lenient=lenient)
 
-
     def drop(self, trn: Optional[Transaction] = None):
         trn = trn or Transaction.current()
         stmt = Statement("drop_table", trn.flavor, name=self.name)
         trn.execute(stmt())
+
+    def nullable(self, col_name):
+        not_natural_key = col_name not in self.natural_key
+        is_nullable = col_name not in self.not_null
+        not_pk = col_name != self.primary_key
+        return not_pk and not_natural_key and is_nullable
 
     def default_columns(self, nk_only: bool = False):
         """
