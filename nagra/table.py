@@ -293,11 +293,12 @@ class Table:
         stmt = Statement("drop_table", trn.flavor, name=self.name)
         trn.execute(stmt())
 
-    def nullable(self, col_name):
-        not_natural_key = col_name not in self.natural_key
-        is_nullable = col_name not in self.not_null
-        not_pk = col_name != self.primary_key
-        return not_pk and not_natural_key and is_nullable
+    def required(self, col_name):
+        return (
+            col_name in self.natural_key
+            or col_name in self.not_null
+            or col_name == self.primary_key
+        )
 
     def default_columns(self, nk_only: bool = False):
         """

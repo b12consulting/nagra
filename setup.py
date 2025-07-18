@@ -34,6 +34,7 @@ setup(
     extras_require={
         "dev": ["pytest", "pandas", "typeguard"],
         "pg": ["psycopg"],
+        "pydantic": ["pydantic"],
     },
     package_data={"nagra": ["template/*/*sql"]},
     entry_points={

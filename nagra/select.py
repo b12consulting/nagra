@@ -110,39 +110,42 @@ class Select:
         cln.order_directions += tuple(directions)
         return cln
 
-    def to_dataclass(self, *aliases: str):
+    def to_dataclass(self, *aliases: str, model_name=None):
         fields = []
         for name, dt in self.dtypes(*aliases):
-            field_def = (
-                clean_col(name), # Replace expression special characters with _
-                dt,
-            )
-            if self.table.nullable(name):
-                # TODO deal or ignore expressions ?
-                field_def += (dataclasses.field(default=None),)
+            if self.table.required(name):
+                field_def = (
+                    clean_col(name), # Replace expression special characters with _
+                    dt,
+                )
+            else:
+                field_def = (
+                    clean_col(name), # Replace expression special characters with _
+                    dt,
+                    dataclasses.field(default=None),
+                )
             fields.append(field_def)
 
         return dataclasses.make_dataclass(
-            self.table.name,
+            model_name or self.table.name,
             fields=fields
         )
 
-    def to_pydantic(self,  *aliases: str):
+    def to_pydantic(self, *aliases: str, model_name=None):
         from pydantic import create_model
 
         fields = {}
         for name, dt in self.dtypes(*aliases):
             cleaned = clean_col(name)
-            field_def = (
-                dt,
-            )
-            if self.table.nullable(name):
+            if self.table.required(name):
+                field_def = (dt, ...)
+            else:
                 # Add default value
-                field_def += (None,)
+                field_def = (dt, None)
             fields[cleaned] = field_def
 
         return create_model(
-            self.table.name,
+            model_name or self.table.name,
             **fields
         )
 
@@ -160,7 +163,7 @@ class Select:
             # Eval type
             col_type = col_ast.eval_type(self.env)
             # Eval nullable
-            if with_optional and self.table.nullable(col_name):
+            if with_optional and not self.table.required(col_name):
                 # Fixme Optional may depend on ast content
                 col_type = Optional[col_type]
             fields.append((alias, col_type))
