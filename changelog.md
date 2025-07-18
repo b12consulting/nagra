@@ -16,7 +16,6 @@ of column to write to is not customisable, it is always on all the
 columns.
 
 
-
 **Fixes:**
 - The `suspend_fk` context manager now supports SQLite. Beware that
   contary to Postgresql, any foreign key violation made while foreign

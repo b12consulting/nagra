@@ -111,9 +111,39 @@ class Select:
         return cln
 
     def to_dataclass(self, *aliases: str):
+        fields = []
+        for name, dt in self.dtypes(*aliases):
+            field_def = (
+                clean_col(name), # Replace expression special characters with _
+                dt,
+            )
+            if self.table.nullable(name):
+                # TODO deal or ignore expressions ?
+                field_def += (dataclasses.field(default=None),)
+            fields.append(field_def)
+
         return dataclasses.make_dataclass(
             self.table.name,
-            fields=[(clean_col(c), d) for c, d in self.dtypes(*aliases)],
+            fields=fields
+        )
+
+    def to_pydantic(self,  *aliases: str):
+        from pydantic import create_model
+
+        fields = {}
+        for name, dt in self.dtypes(*aliases):
+            cleaned = clean_col(name)
+            field_def = (
+                dt,
+            )
+            if self.table.nullable(name):
+                # Add default value
+                field_def += (None,)
+            fields[cleaned] = field_def
+
+        return create_model(
+            self.table.name,
+            **fields
         )
 
     def dtypes(self, *aliases: str, with_optional: bool = True):

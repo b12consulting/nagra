@@ -13,7 +13,6 @@ def equivalent_classes(A, B):
 
     for A_field, B_field in zip(A_fields, B_fields):
         if A_field.name != B_field.name:
-            breakpoint()
             return False
         if A_field.type != B_field.type:
             return False
