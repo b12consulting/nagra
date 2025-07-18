@@ -2,6 +2,7 @@ import csv
 import os
 import bisect
 import logging
+import re
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -22,9 +23,8 @@ logger = logging.getLogger("nagra")
 if os.environ.get("NAGRA_DEBUG"):
     logger.setLevel("DEBUG")
     logger.debug("Log level set to debug")
-
-
 UNSET = object()
+RE_SC_PC = re.compile(r"(?:^|_)(\w)")
 
 
 def autoquote(x):
@@ -36,6 +36,10 @@ def autoquote(x):
 # Setup jinja env
 jinja_env = Environment(loader=FileSystemLoader(HERE / "template"))
 jinja_env.filters["autoquote"] = autoquote
+
+
+def snake_to_pascal(name):
+    return RE_SC_PC.sub(lambda m: m.group(1).upper(), name)
 
 
 def template(name, ext="sql"):

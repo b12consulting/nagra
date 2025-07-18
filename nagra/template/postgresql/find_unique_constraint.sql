@@ -9,4 +9,4 @@ from pg_index pgi
   join pg_namespace tnsp on tnsp.oid = tbl.relnamespace
 where pgi.indisunique
   and not pgi.indisprimary
-  and tnsp.nspname = 'public'
+  and tnsp.nspname = '{{pg_schema}}'

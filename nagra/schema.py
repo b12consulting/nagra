@@ -9,7 +9,7 @@ from typing import Optional, TYPE_CHECKING
 import toml
 from nagra.statement import Statement
 from nagra.transaction import Transaction
-from nagra.utils import logger
+from nagra.utils import logger, snake_to_pascal
 
 
 if TYPE_CHECKING:
@@ -33,6 +33,7 @@ class {{class_name}}Stub({{base_class}}):
    {% for name in table.natural_key -%}
    {%- set col = table.columns[name] -%}
    {%- if name in table.foreign_keys -%}
+
          {{name}}: {{snake_to_pascal(name)}}Stub {% if table.nullable(name) -%} | None {% endif %}
    {%- else -%}
          {{name}}: {{col.dtype}} {% if table.nullable(name) -%} | None {% endif %}
@@ -49,7 +50,6 @@ class {{class_name}}({{base_class}}):
     {%- endfor -%}
 """
 
->>>>>>> Stashed changes
 
 class Schema:
 
@@ -180,7 +180,7 @@ class Schema:
         return res
 
     @classmethod
-    def _db_unique(cls, db_pk, trn=None, pg_schema="public"):
+    def _db_unique(cls, db_pk, trn=None, pg_schema="public") -> dict[str, list[str]]:
         trn = trn or Transaction.current()
         by_constraint = defaultdict(list)
 
@@ -446,8 +446,12 @@ class Schema:
         called and the content of Schema is ignored, so the code may drop
         and re-add more foreign keys.
         """
-        msg = "suspend_fk is only supported with Postgresql"
-        assert Transaction.current().flavor == "postgresql", msg
+        trn = trn or Transaction.current()
+        if trn.flavor == "sqlite":
+            trn.execute("PRAGMA foreign_keys = 0")
+            yield
+            trn.execute("PRAGMA foreign_keys = 1")
+            return
 
         all_fks = list(
             chain.from_iterable(fks.values() for fks in self._db_fk(trn=trn).values())
