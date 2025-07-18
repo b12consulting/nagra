@@ -1,5 +1,4 @@
 import argparse
-import csv
 import os
 import sys
 from itertools import chain
@@ -27,13 +26,8 @@ def select(args, schema):
         select = select.orderby(*orderby)
     rows = list(select.execute())
     headers = [d[0] for d in select.dtypes()]
-    if args.csv:
-        writer = csv.writer(sys.stdout)
-        writer.writerow(headers)
-        for row in rows:
-            writer.writerow(row)
-    else:
-        print_table(rows, headers, args.pivot)
+
+    print_table(rows, headers, args.pivot, format=args.table_fmt)
 
 
 def delete(args, schema):
@@ -49,6 +43,10 @@ def print_schema(args, schema):
         print(schema.generate_d2())
         return
 
+    if args.pydantic:
+        print(schema.generate_pydantic_models(table_names=args.tables))
+        return
+
     # If tables name are given, print details
     if args.tables:
         rows = []
@@ -56,13 +54,13 @@ def print_schema(args, schema):
         for table_name in args.tables:
             for col in schema.get(table_name).columns.values():
                 rows.append([table_name, col.name, col.dtype])
-        print_table(rows, headers, args.pivot)
+        print_table(rows, headers, args.pivot, format=args.table_fmt)
         return
 
     # List all tables
     rows = [(tbl.name, tbl.is_view) for tbl in schema.tables.values()]
     headers = ["table", "view"]
-    print_table(sorted(rows), headers, args.pivot)
+    print_table(sorted(rows), headers, args.pivot, format=args.table_fmt)
 
 
 def show_version():
@@ -102,6 +100,13 @@ def run():
         action="store_true",
         help="Show version",
     )
+    parser.add_argument(
+        "--csv",
+        action='store_const',
+        const="csv",
+        dest="table_fmt",
+        help="Format output as csv",
+    )
     subparsers = parser.add_subparsers(dest="command")
 
     parser_select = subparsers.add_parser("select")
@@ -117,11 +122,6 @@ def run():
         nargs="*",
         help="Order by given columns",
     )
-    parser_select.add_argument(
-        "--csv",
-        action="store_true",
-        help="Format output as csv",
-    )
     parser_select.set_defaults(func=select)
 
     parser_delete = subparsers.add_parser("delete")
@@ -132,6 +132,11 @@ def run():
     parser_schema = subparsers.add_parser("schema")
     parser_schema.add_argument("--d2", action="store_true", help="Generate d2 file")
     parser_schema.add_argument("tables", nargs="*")
+    parser_schema.add_argument(
+        "--pydantic",
+        action='store_true',
+        help="Generate pydantic models for the schema",
+    )
     parser_schema.set_defaults(func=print_schema)
 
     # Parse args

@@ -130,10 +130,7 @@ class Select:
             # Eval type
             col_type = col_ast.eval_type(self.env)
             # Eval nullable
-            not_natural_key = col_name not in self.table.natural_key
-            is_nullable = col_name not in self.table.not_null
-            not_pk = col_name != self.table.primary_key
-            if with_optional and not_pk and not_natural_key and is_nullable:
+            if with_optional and self.table.nullable(col_name):
                 # Fixme Optional may depend on ast content
                 col_type = Optional[col_type]
             fields.append((alias, col_type))

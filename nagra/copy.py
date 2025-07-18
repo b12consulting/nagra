@@ -19,7 +19,7 @@ def copy_from(
     """
 
     if trn.flavor == "sqlite":
-        raise NotImplementedError("COPY FROM not availabel for sqlite")
+        raise NotImplementedError("COPY FROM not available for sqlite")
 
     stm = f'COPY "{table.name}" FROM STDIN'
     cursor = trn.connection.cursor()
