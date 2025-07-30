@@ -222,6 +222,11 @@ class Table:
         slct = Select(self, *columns, trn=trn, env=Env(self))
         return slct
 
+    def __getitem__(self, *values):
+        conds = ['(= %s {})' % col for col in self.natural_key]
+        slct = self.select().where(*conds).execute(values)
+        return slct.fetchone()
+
     def delete(self, where=None, trn=None):
         trn = trn or Transaction.current()
         delete = Delete(self, trn=trn, env=Env(self))

@@ -119,6 +119,8 @@ class AST:
         "substr": "substr({}, {}, {})".format,
         # Others
         "in": lambda x, *ys: f"{x} in (%s)" % ", ".join(map(str, ys)),
+        "asc": "{} ASC".format,
+        "desc": "{} DESC".format,
     }
 
     literals = {
