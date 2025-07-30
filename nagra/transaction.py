@@ -1,9 +1,15 @@
+import json
 import sqlite3
 import threading
 from typing import Callable
 
 from nagra.utils import logger, UNSET
 from nagra.exceptions import NoActiveTransaction
+
+
+sqlite3.register_adapter(dict, json.dumps)
+sqlite3.register_adapter(list, json.dumps)
+sqlite3.register_converter("json", json.loads)
 
 
 class LRUGenerator:
@@ -84,10 +90,16 @@ class Transaction:
             # TODO use Connection Pool
             self.flavor = "postgresql"
             self.connection = psycopg.connect(dsn)
+            self.connection.adapters.register_dumper(dict, psycopg.types.json.JsonDumper)
+            self.connection.adapters.register_dumper(list, psycopg.types.json.JsonDumper)
+
         elif dsn.startswith("sqlite://"):
             self.flavor = "sqlite"
             filename = dsn[9:]
-            self.connection = sqlite3.connect(filename)
+            self.connection = sqlite3.connect(
+                filename,
+                detect_types=sqlite3.PARSE_DECLTYPES,
+            )
             self.connection.execute("PRAGMA foreign_keys = 1")
         elif dsn.startswith("duckdb://"):
             import duckdb
