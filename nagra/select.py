@@ -98,10 +98,7 @@ class Select:
                 direction = o[1]
             else:
                 expression = o
-                direction = "asc"
-
-            if isinstance(expression, int):
-                expression = self.columns[expression]
+                direction = ""
             expressions.append(expression)
             directions.append(direction)
 

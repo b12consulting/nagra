@@ -1,6 +1,8 @@
 from nagra import View
 
+
 def test_select_views(transaction, country, population, max_pop, min_pop):
+    # Prepare data in underlying tables
     country.upsert("name").executemany([
         ("Belgium",),
         ("Netherlands",),
@@ -39,5 +41,3 @@ def test_select_views(transaction, country, population, max_pop, min_pop):
 
 def test_get_view(min_pop):
     assert min_pop == View.get("min_pop")
-
-
