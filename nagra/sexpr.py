@@ -29,6 +29,7 @@ ValueError: Unexpected token: "x"
 """
 
 import shlex
+from datetime import date, datetime
 from functools import cached_property
 
 from nagra.exceptions import EvalTypeError
@@ -364,8 +365,8 @@ class OpToken(Token):
 
 
 class BuiltinToken(OpToken):
-    num_like = "+-*/"
-    bool_like = (
+    num_like = set(['+', '-', '*', '/'])
+    bool_like = set([
         "!=",
         "<",
         ">",
@@ -379,16 +380,49 @@ class BuiltinToken(OpToken):
         "isnot",
         "like",
         "ilike",
-    )
+        "isfinite",
+    ])
+    datetime_like = set([
+        "clock_timestamp",
+        "current_timestamp",
+        "date_add",
+        "date_bin",
+        "date_subtract",
+        "date_trunc",
+        "localtimestamp",
+        "make_timestamp",
+        "now",
+        "statement_timestamp",
+        "to_timestamp",
+        "transaction_timestamp",
+    ])
+    date_like = set([
+        "current_date",
+        "make_date",
+    ])
+    float_like = set([
+        "date_part",
+        "extract",
+    ])
 
     def _eval_type(self, env, *operands):
         # FIXME, probably too basic
         if self.value in self.num_like:
-            if any(op == float for op in operands):
+            if all(op == date for op in operands):
+                return int
+            elif any(op == date for op in operands):
+                return date
+            elif any(op == float for op in operands):
                 return float
             return int
         elif self.value in self.bool_like:
             return bool
+        elif self.value in self.float_like:
+            return float
+        elif self.value in self.datetime_like:
+            return datetime
+        elif self.value in self.date_like:
+            return date
         else:
             return str
 

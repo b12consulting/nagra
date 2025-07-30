@@ -14,6 +14,7 @@ def equivalent_classes(A, B):
             breakpoint()
             return False
         if A_field.type != B_field.type:
+            breakpoint()
             return False
     return True
 
@@ -116,7 +117,11 @@ def test_aggregates(kitchensink):
         "(avg float)",
         "(max int)",
         "(max timestamp)",
-        "(max timestamptz)",
+        "(date_bin '5 days' timestamptz)",
+        "(now)",
+        "(current_date)",
+        "(date_part timestamp)",
+        "(isfinite timestamp)",
         "(count)",
         "(every bool)",
         "(max date)",
@@ -128,6 +133,10 @@ def test_aggregates(kitchensink):
         "int",
         "timestamp",
         "timestamptz",
+        "now",
+        "current_date",
+        "date_part",
+        "isfinite",
         "count",
         "bool",
         "date",
@@ -141,6 +150,10 @@ def test_aggregates(kitchensink):
         int: Optional[int]
         timestamp: Optional[datetime]
         timestamptz: Optional[datetime]
+        now: Optional[datetime]
+        current_date: Optional[date]
+        date_part: Optional[float]
+        isfinite: Optional[bool]
         count: Optional[int]
         bool: Optional[bool]
         date: Optional[date]
