@@ -105,7 +105,7 @@ class WriterMixin:
             if not chunk:
                 return
             cond = self._where + [f"(in {pk} %s)" % (" {}" * len(chunk))]
-            select = self.table.select("(count)").where(*cond)
+            select = self.table.select("(count *)").where(*cond)
             (count,) = select.execute(*chunk).fetchone()
             if count != len(chunk):
                 msg = f"Validation failed! Condition is: {self._where} )"
@@ -151,7 +151,5 @@ class WriterMixin:
         return self.executemany(rows)
 
     def from_dict(self, records):
-        rows = (
-            tuple(record[col] for col in self.columns) for record in records
-        )
+        rows = (tuple(record[col] for col in self.columns) for record in records)
         return self.executemany(rows)

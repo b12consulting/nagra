@@ -52,7 +52,6 @@ class {{class_name}}({{base_class}}):
 
 
 class Schema:
-
     def __init__(self, tables=None, views=None):
         self.tables = tables or {}
         self.views = views or {}
@@ -259,12 +258,15 @@ class Schema:
                 nk_cols = [c for c in table.columns if c in table.natural_key]
 
                 # Create tuples of (name, type, foreign_table, default)
-                natural_key = [(
-                    c,
-                    ctypes[c],
-                    table.foreign_keys.get(c),
-                    table.default.get(c),
-                ) for c in nk_cols]
+                natural_key = [
+                    (
+                        c,
+                        ctypes[c],
+                        table.foreign_keys.get(c),
+                        table.default.get(c),
+                    )
+                    for c in nk_cols
+                ]
 
                 fk_tables = {}
                 for nk_col, *_ in natural_key:
@@ -343,7 +345,7 @@ class Schema:
         db_columns = self._db_columns(trn)
         db_indexes = self._db_indexes(trn)
 
-        yield from self._create_tables(db_columns,  trn)
+        yield from self._create_tables(db_columns, trn)
         yield from self._add_columns(db_columns, trn)
         yield from self._create_indexes(db_indexes, trn)
         yield from self._create_views(trn)

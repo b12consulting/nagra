@@ -1,5 +1,6 @@
 from nagra.sexpr import AST
 from nagra.table import Table, Env
+from nagra.utils import strip_lines
 
 
 def test_sexpr():
@@ -39,9 +40,9 @@ def test_sexpr():
     assert str(ast.tokens) == "[<AggToken count>]"
 
     # With an operator sign as variable
-    expr = "(1 + 1)"
+    expr = "(+ 1 1)"
     ast = AST.parse(expr)
-    assert str(ast.tokens) == "[<IntToken 1>, <VarToken +>, <IntToken 1>]"
+    assert str(ast.tokens) == "[<BuiltinToken +>, <IntToken 1>, <IntToken 1>]"
 
     # With litterals
     expr = "(is null true)"
@@ -94,17 +95,17 @@ def test_simple_eval():
     expr = "(and true true)"
     ast = AST.parse(expr)
     env = Env(table)
-    assert ast.eval(env) == 'true AND true'
+    assert ast.eval(env) == "true AND true"
 
     expr = "(or true true)"
     ast = AST.parse(expr)
     env = Env(table)
-    assert ast.eval(env) == '(true OR true)'
+    assert ast.eval(env) == "(true OR true)"
 
     expr = "(or (and true false) true)"
     ast = AST.parse(expr)
     env = Env(table)
-    assert ast.eval(env) == '((true AND false) OR true)'
+    assert ast.eval(env) == "((true AND false) OR true)"
 
 
 def test_join_eval(person):
@@ -146,3 +147,23 @@ def test_eval_dtype(kitchensink):
     ast = AST.parse(expr)
     res = ast.eval_type(env)
     assert res is bool
+
+
+def test_dynamic_builtins(kitchensink):
+    """
+    If an opetator is not known, it is considerer as a prefix
+    operatore (function call-lile syntax).
+    """
+    select = kitchensink.select(
+        "(date_bin '5 days' timestamp '2025-01-01')", "(avg value)"
+    )
+    res = strip_lines(select.stm())
+    assert res == [
+        "SELECT",
+        "date_bin('5 days', \"kitchensink\".\"timestamp\", '2025-01-01'), "
+        'avg("kitchensink"."value")',
+        'FROM "kitchensink"',
+        "GROUP BY",
+        "date_bin('5 days', \"kitchensink\".\"timestamp\", '2025-01-01')",
+        ";",
+    ]

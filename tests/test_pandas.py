@@ -88,6 +88,29 @@ def test_from_pandas(transaction, kitchensink):
             "blob",
         )
 
-    # SELECT
-    new_df = kitchensink.select().to_pandas()
-    pass
+    # SELECT with operator
+    if transaction.flavor == "postgresql":
+        new_df = kitchensink.select(
+            "(date_bin '5 days' timestamptz '1900-01-01')",
+        ).to_pandas()
+        new_df.columns = ["ts"]
+        assert str(new_df.ts.dtype) == 'datetime64[ns, Europe/Brussels]'
+        ts = new_df.ts[0]
+        assert ts.isoformat() == '1969-12-30T01:00:00+01:00'
+        # NOTE the above result expected:
+        # ```
+        # =# SELECT date_bin('5 days', TIMESTAMPTZ '1970-01-01 00:00:00+00', '1900-01-01');
+        #       date_bin
+        # ------------------------
+        #  1969-12-30 01:00:00+01
+        # (1 row)
+        # ```
+
+    if transaction.flavor == "sqlite":
+        new_df = kitchensink.select(
+            "(+ float float)",
+            "(- int int)",
+        ).to_pandas()
+        new_df.columns = ["float", "int"]
+        assert str(new_df.float.dtype) == 'float64'
+        assert str(new_df.int.dtype) == 'int64'
