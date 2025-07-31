@@ -93,7 +93,7 @@ class WriterMixin:
                             break
 
         # If conditions are present, enforce those
-        if self._where:
+        if self._check:
             self.validate(ids)
         return ids
 
@@ -104,11 +104,11 @@ class WriterMixin:
             chunk = list(islice(iter_ids, 1000))
             if not chunk:
                 return
-            cond = self._where + [f"(in {pk} %s)" % (" {}" * len(chunk))]
+            cond = self._check + [f"(in {pk} %s)" % (" {}" * len(chunk))]
             select = self.table.select("(count *)").where(*cond)
             (count,) = select.execute(*chunk).fetchone()
             if count != len(chunk):
-                msg = f"Validation failed! Condition is: {self._where} )"
+                msg = f"Validation failed! Condition is: {self._check} )"
                 raise ValidationError(msg)
 
     def _resolve(self, col, values):
