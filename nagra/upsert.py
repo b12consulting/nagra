@@ -23,13 +23,13 @@ class Upsert(WriterMixin):
         env: "Env",
         lenient: Union[bool, list[str], None] = None,
         insert_only: bool = False,
-        where: Iterable[str] = [],
+        check: Iterable[str] = [],
     ):
         self.table = table
         self.columns = [c.lstrip(".") for c in columns]
         self._insert_only = insert_only
         self.lenient = lenient or []
-        self._where = list(where)  # FIXME where is not used ?!
+        self._check = list(check)
         self.trn = trn
         self.env = env
         super().__init__()
@@ -38,14 +38,14 @@ class Upsert(WriterMixin):
         self,
         trn: Optional["Transaction"] = None,
         insert_only: Optional[bool] = None,
-        where: Iterable[str] = [],
+        check: Iterable[str] = [],
     ):
         """
         Return a copy of upsert with updated parameters
         """
         trn = trn or self.trn
         insert_only = self._insert_only if insert_only is None else insert_only
-        where = self._where + list(where)
+        check = self._check + list(check)
         cln = Upsert(
             self.table,
             *self.columns,
@@ -53,15 +53,15 @@ class Upsert(WriterMixin):
             env=self.env.clone(),
             lenient=self.lenient,
             insert_only=insert_only,
-            where=where,
+            check=check,
         )
         return cln
 
     def insert_only(self):
         return self.clone(insert_only=True)
 
-    def where(self, *conditions: str):
-        return self.clone(where=conditions)
+    def check(self, *conditions: str):
+        return self.clone(check=conditions)
 
     def stm(self):
         pk = self.table.primary_key
