@@ -131,6 +131,7 @@ class AST:
     builtins = {
         "-": (lambda *xs: " - ".join(map(str, xs)) if len(xs) > 1 else f"-{xs[0]}"),
         "not": "NOT {}".format,
+        # OR is explicitly declared because of operator precedence
         "or": lambda *x: "(%s)" % (" OR ".join(x)),
         "isnot": "NOT {} IS {}".format,
         "extract": "EXTRACT({} FROM {})".format,
