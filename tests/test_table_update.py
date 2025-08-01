@@ -145,13 +145,13 @@ def test_from_pandas(transaction, kitchensink):
 
 def test_where_cond(transaction, person):
     """
-    Shows that an exception is raised when a row infrige a where condition
+    Shows that an exception is raised when a row infrige a check condition
     """
     upsert = person.upsert("name")
     upsert.execute("Tango")
 
     cond = "(!= name parent.name)"  # Forbid self-reference
-    upsert = person.update("name", "parent.name").where(cond)
+    upsert = person.update("name", "parent.name").check(cond)
     with pytest.raises(ValidationError):
         upsert.execute("Tango", "Tango")
 

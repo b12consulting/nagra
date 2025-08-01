@@ -19,36 +19,36 @@ class Update(WriterMixin):
         *columns: str,
         trn: Transaction,
         lenient: Union[bool, list[str], None] = None,
-        where: Iterable[str] = [],
+        check: Iterable[str] = [],
     ):
         self.table = table
         self.columns = list(columns)
         self.lenient = lenient or []
-        self._where = list(where)
+        self._check = list(check)
         self.trn = trn
         super().__init__()
 
     def clone(
         self,
         trn: Optional["Transaction"] = None,
-        where: Iterable[str] = [],
+        check: Iterable[str] = [],
     ):
         """
         Return a copy of update with updated parameters
         """
         trn = trn or self.trn
-        where = self._where + list(where)
+        check = self._check + list(check)
         cln = Update(
             self.table,
             *self.columns,
             trn=trn,
             lenient=self.lenient,
-            where=where,
+            check=check,
         )
         return cln
 
-    def where(self, *conditions: str):
-        return self.clone(where=conditions)
+    def check(self, *conditions: str):
+        return self.clone(check=conditions)
 
     def stm(self):
         pk = self.table.primary_key
