@@ -118,12 +118,12 @@ class Schema:
         return res
 
     @classmethod
-    def _db_columns(cls, trn=None, pg_schema="public"):
+    def _db_columns(cls, trn=None):
         from nagra.table import _TYPE_ALIAS
 
         trn = trn or Transaction.current()
         res = defaultdict(dict)
-        stmt = Statement("find_columns", trn.flavor, pg_schema=pg_schema)
+        stmt = Statement("find_columns", trn.flavor, pg_schema=trn.pg_schema)
         for tbl, col_name, col_type, *hints in trn.execute(stmt()):
             if col_type.upper() == "ARRAY" and hints:
                 # Try to find type of elements, rely on the fact that
@@ -141,24 +141,24 @@ class Schema:
             res[tbl][col_name] = col_type
         return res
 
-    def _db_indexes(cls, trn=None, pg_schema="public"):
+    def _db_indexes(cls, trn=None):
         trn = trn or Transaction.current()
-        stmt = Statement("find_indexes", trn.flavor, pg_schema=pg_schema)
+        stmt = Statement("find_indexes", trn.flavor, pg_schema=trn.pg_schema)
         res = [n for n, in trn.execute(stmt())]
         return res
 
-    def _db_views(cls, trn=None, pg_schema="public") -> dict[str, str]:
+    def _db_views(cls, trn=None) -> dict[str, str]:
         trn = trn or Transaction.current()
-        stmt = Statement("find_views", trn.flavor, pg_schema=pg_schema)
+        stmt = Statement("find_views", trn.flavor, pg_schema=trn.pg_schema)
         # The statement returns tuples of (name, view_def)
         res = dict(trn.execute(stmt()))
         return res
 
     @classmethod
-    def _db_fk(cls, *whitelist, trn=None, pg_schema="public"):
+    def _db_fk(cls, *whitelist, trn=None):
         trn = trn or Transaction.current()
         res = defaultdict(dict)
-        stmt = Statement("find_foreign_keys", trn.flavor, pg_schema=pg_schema)
+        stmt = Statement("find_foreign_keys", trn.flavor, pg_schema=trn.pg_schema)
         for name, tbl, col, ftable, fcol in trn.execute(stmt()):
             if whitelist and tbl not in whitelist:
                 continue
@@ -168,10 +168,10 @@ class Schema:
         return res
 
     @classmethod
-    def _db_pk(cls, trn=None, pg_schema="public"):
+    def _db_pk(cls, trn=None):
         trn = trn or Transaction.current()
         res = {}
-        stmt = Statement("find_primary_keys", trn.flavor, pg_schema=pg_schema)
+        stmt = Statement("find_primary_keys", trn.flavor, pg_schema=trn.pg_schema)
         for tbl, pk_col in trn.execute(stmt()):
             if tbl in res:
                 raise RuntimeError("Unexpected multi-columns primary key")
@@ -179,7 +179,7 @@ class Schema:
         return res
 
     @classmethod
-    def _db_unique(cls, db_pk, trn=None, pg_schema="public") -> dict[str, list[str]]:
+    def _db_unique(cls, db_pk, trn=None) -> dict[str, list[str]]:
         trn = trn or Transaction.current()
         by_constraint = defaultdict(list)
 
@@ -191,13 +191,13 @@ class Schema:
                 by_constraint[tbl].append([col_name for _, _, col_name in rows])
 
         else:
-            stmt = Statement("find_unique_constraint", trn.flavor, pg_schema=pg_schema)
+            stmt = Statement("find_unique_constraint", trn.flavor, pg_schema=trn.pg_schema)
             constraints = trn.execute(stmt()).fetchall()
             for tbl, constraint_name in constraints:
                 col_stmt = Statement(
                     "find_index_columns",
                     trn.flavor,
-                    pg_schema=pg_schema,
+                    pg_schema=trn.pg_schema,
                     name=constraint_name,
                 )
                 columns = [c for c, in trn.execute(col_stmt())]

@@ -1,5 +1,7 @@
 import sqlite3
 import threading
+from urllib.parse import urlparse
+
 from typing import Callable
 
 from nagra.utils import logger, UNSET
@@ -77,13 +79,23 @@ class Transaction:
     def __init__(self, dsn, rollback=False, fk_cache=False):
         self.auto_rollback = rollback
         self._fk_cache = {} if fk_cache else None
+        self.pg_schema = "public"
 
-        if dsn.startswith("postgresql://"):
-            import psycopg
+        url_parts = urlparse(dsn)
 
+        if url_parts.scheme in ("postgresql", "postgres"):
             # TODO use Connection Pool
+            import psycopg
+            # Extract fragment as schema if present (non-standard part
+            # of PostgreSQL URL)
+            if url_parts.fragment:
+                self.pg_schema = url_parts.fragment
+                dsn = url_parts._replace(fragment="").geturl()
+
             self.flavor = "postgresql"
             self.connection = psycopg.connect(dsn)
+            self.connection.execute(f"SET search_path TO {self.pg_schema};")
+
         elif dsn.startswith("sqlite://"):
             self.flavor = "sqlite"
             filename = dsn[9:]
