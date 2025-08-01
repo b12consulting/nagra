@@ -125,7 +125,10 @@ class AST:
         "~",
         "<<",
         ">>",
-
+        "->",
+        "->>",
+        "#>",
+        "#>>",
     }
     # Declare special builtins  explicitly
     builtins = {
@@ -136,6 +139,11 @@ class AST:
         "isnot": "NOT {} IS {}".format,
         "extract": "EXTRACT({} FROM {})".format,
         "in": lambda x, *ys: f"{x} in (%s)" % ", ".join(map(str, ys)),
+        # Usefull for IN operation with large number of items (see
+        # https://postgres.cz/wiki/PostgreSQL_SQL_Tricks_I#Predicate_IN_optimalization)
+        "values": lambda *xs: ("(VALUES %s)" % (
+            ",".join("({})" for _ in xs)
+        )).format(*xs)
     }
 
     # Declare aggregate operators
