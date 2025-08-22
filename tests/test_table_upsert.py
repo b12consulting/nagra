@@ -380,3 +380,29 @@ def test_arrays(cacheable_transaction, parameter):
                 [6.0, 7.0],
             ),
         ]
+
+
+def test_from_dict(transaction, person):
+    # Prepare two lines in table
+    upsert = person.upsert("name", "parent.name")
+    upsert.execute("Big Bob", None)
+    upsert.execute("Bob", "Big Bob")
+    records = list(person.select().to_dict())
+    assert records == [
+        {"name": "Big Bob", "parent_name": None},
+        {"name": "Bob", "parent_name": "Big Bob"},
+    ]
+
+    # Upserting unchanged data is a noop
+    person.upsert("name", "parent.name").from_dict(records)
+    records_bis = list(person.select().to_dict())
+    assert records_bis == records
+
+    # Upserting will also support dotted notation
+    new_records = [
+        {"name": "Big Bob", "parent.name": None},
+        {"name": "Bob", "parent.name": "Big Bob"},
+    ]
+    person.upsert("name", "parent.name").from_dict(new_records)
+    records_bis = list(person.select().to_dict())
+    assert records_bis == records

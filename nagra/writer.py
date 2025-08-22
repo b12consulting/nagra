@@ -1,3 +1,4 @@
+import dataclasses
 from collections import defaultdict
 from collections.abc import Iterable
 from functools import partial
@@ -151,5 +152,23 @@ class WriterMixin:
         return self.executemany(rows)
 
     def from_dict(self, records):
-        rows = (tuple(record[col] for col in self.columns) for record in records)
+        # Create select object in order to generate the same column names
+        select = self.table.select(*self.columns)
+        field_names = [f.name for f in dataclasses.fields(select.to_dataclass())]
+
+        # Extract dict values - allows for field names or dotted column format
+        f_or_c = zip(field_names, self.columns)
+        rows = (tuple(getter(record, field, col) for col, field in f_or_c) for record in records)
         return self.executemany(rows)
+
+
+def getter(record, field, col):
+    """
+    Utility function to extract value as a column name (with
+    potentially dots) or a field name from record
+    """
+    if field in record:
+        return record[field]
+    if col in record:
+        return record[col]
+    raise KeyError(f"KeyError: neither {field} or {col} found")
