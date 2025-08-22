@@ -129,6 +129,12 @@ class AST:
         "->>",
         "#>",
         "#>>",
+        "<->",
+        "<#>",
+        "<=>",
+        "<+>",
+        "<~>",
+        "<%>",
     }
     # Declare special builtins  explicitly
     builtins = {
@@ -453,7 +459,7 @@ class AggToken(OpToken):
         if self.value == "count":
             return int
         if self.value in self.num_like:
-            assert operands[0] in (float, int)
+            assert operands[0] in (float, int, list[float], list[int])
             return operands[0]
         if self.value in self.bool_like:
             assert operands[0] == bool

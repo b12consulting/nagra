@@ -36,6 +36,7 @@ temperature = Table(
 
 """
 
+import warnings
 from datetime import date, datetime
 from functools import lru_cache
 from typing import Iterable, Optional, Union, TYPE_CHECKING
@@ -70,11 +71,15 @@ _TYPE_ALIAS = {
     "numeric": "float",
     "varchar": "str",
     "bigint": "bigint",
+    "vector": "float []",
     "bytea": "blob",
     "bytes": "blob",
     "float": "float",
-    "real": "float",
+    "jsonb": "json",
     "blob": "blob",
+    "cidr": "str",
+    "inet": "str",
+    "real": "float",
     "bool": "bool",
     "date": "date",
     "json": "json",
@@ -130,7 +135,8 @@ class Column:
         try:
             self.dtype = _TYPE_ALIAS[dtype.strip().lower()]
         except KeyError:
-            raise ValueError(f"Type '{dtype}' not supported (for column '{name}')")
+            self.dtype = "str"
+            warnings.warn(f"Type '{dtype}' not supported (for column '{name}'), falling back to string type.")
 
     def python_type(self):
         res = None
@@ -336,6 +342,7 @@ class Table:
         which is a foreign key to another table.
 
         Returns the next table to join and the column to join on.
+
         """
         if len(path) == 1:
             head = path[0]

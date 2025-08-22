@@ -82,7 +82,7 @@ class Schema:
         tables = toml.loads(content)
         # Instanciate tables
         for name, info in tables.items():
-            logger.debug("Instanciate %s from toml", name)
+            logger.debug("Instanciate '%s' table from toml", name)
             if "primary_key" in info:
                 if info["primary_key"].strip() == "":
                     info["primary_key"] = None
@@ -125,6 +125,7 @@ class Schema:
         res = defaultdict(dict)
         stmt = Statement("find_columns", trn.flavor, pg_schema=pg_schema)
         for tbl, col_name, col_type, *hints in trn.execute(stmt()):
+            # handle array types
             if col_type.upper() == "ARRAY" and hints:
                 # Try to find type of elements, rely on the fact that
                 # _TYPE_ALIAS keys are sorted by reverse length.
@@ -138,6 +139,15 @@ class Schema:
                 else:
                     msg = f"Unable to detect type of column: {col_name} in table {tbl}"
                     raise RuntimeError(msg)
+            # handle pg extension types
+            if col_type.upper() == "USER-DEFINED" and hints:
+                for name in hints:
+                    if col_type := _TYPE_ALIAS.get(name.lower()):
+                        break
+                else:
+                    msg = f"Unable to detect type of column: {col_name} in table {tbl}"
+                    raise RuntimeError(msg)
+
             res[tbl][col_name] = col_type
         return res
 
