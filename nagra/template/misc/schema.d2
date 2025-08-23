@@ -1,0 +1,9 @@
+{{table.name}}_: "{{table.name}}" {
+  shape: sql_table
+  {%- for name, col in table.columns.items() %}
+  {{name}}: {{col.dtype}}
+  {%- endfor %}
+}
+{%- for col, ftable in table.foreign_keys.items() %}
+{{table.name}}_.{{col}} -> {{ftable}}_.id : "{{col}}"
+{%- endfor -%}

@@ -1,7 +1,6 @@
 from itertools import chain, groupby
 from contextlib import contextmanager
 from collections import defaultdict
-from jinja2 import Template
 from pathlib import Path
 from io import IOBase
 from typing import Optional, TYPE_CHECKING
@@ -9,46 +8,11 @@ from typing import Optional, TYPE_CHECKING
 import toml
 from nagra.statement import Statement
 from nagra.transaction import Transaction
-from nagra.utils import logger, snake_to_pascal
+from nagra.utils import logger, snake_to_pascal, template
 
 
 if TYPE_CHECKING:
     from nagra.table import Table, View
-
-
-D2_TPL = """
-{{table.name}}_: "{{table.name}}" {
-  shape: sql_table
-  {%- for name, col in table.columns.items() %}
-  {{name}}: {{col.dtype}}
-  {%- endfor %}
-}
-{%- for col, ftable in table.foreign_keys.items() %}
-{{table.name}}_.{{col}} -> {{ftable}}_.id : "{{col}}"
-{%- endfor -%}
-"""
-
-PYDANTIC_TPL = """
-class {{class_name}}Stub({{base_class}}):
-   {% for name in table.natural_key -%}
-   {%- set col = table.columns[name] -%}
-   {%- if name in table.foreign_keys -%}
-
-         {{name}}: {{snake_to_pascal(name)}}Stub {% if table.nullable(name) -%} | None {% endif %}
-   {%- else -%}
-         {{name}}: {{col.dtype}} {% if table.nullable(name) -%} | None {% endif %}
-   {%- endif -%}
-   {%- endfor %}
-
-class {{class_name}}({{base_class}}):
-    {% for name, col in table.columns.items() -%}
-    {% if name in table.foreign_keys -%}
-         {{name}}: {{snake_to_pascal(name)}}Stub {% if table.nullable(name) -%} | None {% endif %}
-    {% else -%}
-         {{name}}: {{col.dtype}} {% if table.nullable(name) -%} | None {% endif %}
-    {% endif -%}
-    {%- endfor -%}
-"""
 
 
 class Schema:
@@ -427,13 +391,13 @@ class Schema:
             table.drop(trn)
 
     def generate_d2(self):
-        tpl = Template(D2_TPL)
+        tpl = template("misc/schema.d2")
         tables = self.tables.values()
         res = "\n".join(tpl.render(table=t) for t in tables)
         return res
 
     def generate_pydantic_models(self, base_class:str="BaseModel", table_names:list[str] | None= None):
-        tpl = Template(PYDANTIC_TPL)
+        tpl = template("misc/pydantic-schema.py")
         if not table_names:
             tables = self.tables.values()
         else:
@@ -448,6 +412,12 @@ class Schema:
             )
             for t in tables
         )
+        return res
+
+    def generate_toml(self):
+        tpl = template("misc/schema.toml")
+        tables = self.tables.values()
+        res = "\n".join(tpl.render(table=t) for t in tables)
         return res
 
     @contextmanager

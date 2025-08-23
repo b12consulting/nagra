@@ -39,11 +39,15 @@ def delete(args, schema):
 
 
 def print_schema(args, schema):
-    if args.d2:
+    if args.fmt == "d2":
         print(schema.generate_d2())
         return
 
-    if args.pydantic:
+    elif args.fmt == "toml":
+        print(schema.generate_toml())
+        return
+
+    elif args.pydantic:
         print(schema.generate_pydantic_models(table_names=args.tables))
         return
 
@@ -102,7 +106,7 @@ def run():
     )
     parser.add_argument(
         "--csv",
-        action='store_const',
+        action="store_const",
         const="csv",
         dest="table_fmt",
         help="Format output as csv",
@@ -130,11 +134,29 @@ def run():
     parser_delete.set_defaults(func=delete)
 
     parser_schema = subparsers.add_parser("schema")
-    parser_schema.add_argument("--d2", action="store_true", help="Generate d2 file")
+    parser_schema.add_argument(
+        "--d2",
+        help="Generate d2 file",
+        dest="fmt",
+        action="store_const",
+        const="d2",
+        default=None,
+    )
+    parser_schema.add_argument(
+        "--toml",
+        help="Generate toml file",
+        dest="fmt",
+        action="store_const",
+        const="toml",
+        default=None,
+    )
     parser_schema.add_argument("tables", nargs="*")
     parser_schema.add_argument(
         "--pydantic",
-        action='store_true',
+        dest="fmt",
+        action="store_const",
+        const="toml",
+        default=None,
         help="Generate pydantic models for the schema",
     )
     parser_schema.set_defaults(func=print_schema)

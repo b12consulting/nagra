@@ -42,8 +42,8 @@ def snake_to_pascal(name):
     return RE_SC_PC.sub(lambda m: m.group(1).upper(), name)
 
 
-def template(name, ext="sql"):
-    return jinja_env.get_template(f"{name}.{ext}")
+def template(name):
+    return jinja_env.get_template(name)
 
 
 def strip_lines(stmt):

@@ -11,7 +11,7 @@ class Statement:
         self._flavor = flavor or dummy_transaction.flavor
 
     def __call__(self):
-        path = f"{self._flavor}/{self._template}"
+        path = f"{self._flavor}/{self._template}.sql"
         return template(path).render(**self._params, _all_params=self._params)
 
     def __getattr__(self, name):

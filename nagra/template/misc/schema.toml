@@ -1,0 +1,12 @@
+[{{table.name}}]
+natural_key = [{{ table.natural_key | map('autoquote') |join(', ') }}]
+[{{table.name}}.columns]
+{% for col_name, col in table.columns.items() -%}
+{{col_name}} = {{col.dtype}}
+{% endfor -%}
+{% if table.foreign_keys -%}
+[{{table.name}}.foreign_keys]
+{% for col, ftable in table.foreign_keys.items() -%}
+{{col}} = "{{ftable}}"
+{% endfor %}
+{% endif %}
