@@ -158,12 +158,11 @@ class Select:
 
         # Construct fields
         for alias, col_name, col_ast in zip(aliases, self.columns, self.columns_ast):
-            # Keep first part of dotted chains
-            col_name = col_name.split(".", 1)[0]
-            # Eval type
+            # Eval type and nullable
             col_type = col_ast.eval_type(self.env)
+            nullable = col_ast.is_nullable(self.env)
             # Eval nullable
-            if with_optional and not self.table.required(col_name):
+            if with_optional and nullable:
                 # Fixme Optional may depend on ast content
                 col_type = Optional[col_type]
             fields.append((alias, col_type))

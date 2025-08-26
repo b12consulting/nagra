@@ -167,3 +167,17 @@ def test_dynamic_builtins(kitchensink):
         "date_bin('5 days', \"kitchensink\".\"timestamp\", '2025-01-01')",
         ";",
     ]
+
+
+def test_is_nullable(person):
+    env = Env(table=person)
+
+    # Aggregates are nullable (on empty tables)
+    expr = "(max id)"
+    ast = AST.parse(expr)
+    assert ast.is_nullable(env)
+
+    # required column are not
+    expr = "name"
+    ast = AST.parse(expr)
+    assert not ast.is_nullable(env)

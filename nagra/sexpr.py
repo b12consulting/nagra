@@ -208,6 +208,7 @@ class AST:
                 yield tk.value
 
     def _eval_type(self, env):
+        # head is always a token
         head, tail = self.tokens[0], self.tokens[1:]
         args = [tk._eval_type(env) for tk in tail]
         res = head._eval_type(env, *args)
@@ -215,6 +216,13 @@ class AST:
 
     def eval_type(self, env):
         return self._eval_type(env)
+
+    def is_nullable(self, env):
+        return any(
+            tk._is_nullable(env)
+            for tk in self.chain()
+            if not isinstance(tk, (BuiltinToken, ))
+        )
 
     def get_args(self):
         """
@@ -294,44 +302,13 @@ class ParamToken(Token):
     def __init__(self, value):
         # Remove braces
         self.value = value[1:-1]
+        # TODO self.value placeholder name we should use it to apply
+        # param, for example when we do:
+        # select.where('(= col {my_input})').execute(my_input=42)
 
     def _eval(self, env, flavor, *args):
         placeholder = "%s" if flavor == "postgresql" else "?"
         return placeholder
-
-
-class LitToken(Token):
-    "Litteral Token"
-
-    def _eval_type(self, env):
-        return self._type
-
-    def _eval(self, env, flavor, *args):
-        return self.value
-
-
-class FloatToken(LitToken):
-    "Float Token"
-    _type = float
-
-
-class IntToken(LitToken):
-    "Integer Token"
-    _type = int
-
-
-class StrToken(LitToken):
-    "String Token"
-
-    def __init__(self, value):
-        # Remove quotes
-        self.value = value[1:-1]
-
-    def _eval_type(self, env):
-        return str
-
-    def _eval(self, env, flavor, *args):
-        return f"'{self.value}'"
 
 
 class VarToken(Token):
@@ -362,6 +339,20 @@ class VarToken(Token):
             return int
         else:
             raise EvalTypeError(f"Unable to eval type of '{self.value}'")
+
+    def _is_nullable(self, env):
+        if self.is_relation():
+            value = self.value
+            table = env.table
+            while "." in value:
+                # If any item in the chain is nullable, the all chain is
+                head, value = value.split(".", 1)
+                if head not in table.not_null:
+                    return True
+                table = table.schema.get(table.foreign_keys[head])
+            # No nullable column in the dotted chain
+            return False
+        return self.value not in env.table.not_null
 
 
 class OpToken(Token):
@@ -442,11 +433,54 @@ class BuiltinToken(OpToken):
             return str
 
 
+class LitToken(Token):
+    "Litteral Token"
+
+    def _eval_type(self, env):
+        return self._type
+
+    def _eval(self, env, flavor, *args):
+        return self.value
+
+    def _is_nullable(self, env):
+        return False
+
+
+class FloatToken(LitToken):
+    "Float Token"
+    _type = float
+
+
+class IntToken(LitToken):
+    "Integer Token"
+    _type = int
+
+
+class StrToken(LitToken):
+    "String Token"
+
+    def __init__(self, value):
+        # Remove quotes
+        self.value = value[1:-1]
+
+    def _eval_type(self, env):
+        return str
+
+    def _eval(self, env, flavor, *args):
+        return f"'{self.value}'"
+
+
 class LiteralToken(OpToken):
+    """
+    Class for hard-coded litteral token, one of `AST.literals`
+    """
     def _eval_type(self, env, *operands):
         if self.value == "null":
             return None
         return bool
+
+    def _is_nullable(self, env, *operands):
+        return self.value == "null"
 
 
 class AggToken(OpToken):
@@ -466,3 +500,6 @@ class AggToken(OpToken):
             return bool
         else:
             return operands[0]
+
+    def _is_nullable(self, env, *operands):
+        return True

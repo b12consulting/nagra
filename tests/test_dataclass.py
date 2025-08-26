@@ -80,9 +80,9 @@ def test_select_with_sexp(person):
     @dataclass
     class Expected:
         str_like: str
-        bool_like: Optional[bool]
-        float_like: Optional[float]
-        int_like: Optional[int]
+        bool_like: bool
+        float_like: float
+        int_like: int
 
     assert equivalent_classes(dclass, Expected)
 
@@ -145,14 +145,14 @@ def test_aggregates(kitchensink):
 
     @dataclass
     class KitchenSink:
-        varchar: Optional[str]  # FIXME should no be nullable
+        varchar: Optional[str]  # Aggregates can be null
         bigint: Optional[int]
         float: Optional[float]
         int: Optional[int]
         timestamp: Optional[datetime]
         timestamptz: Optional[datetime]
-        now: Optional[datetime]
-        current_date: Optional[date]
+        now: datetime
+        current_date: date
         date_part: Optional[float]
         isfinite: Optional[bool]
         count: Optional[int]

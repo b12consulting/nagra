@@ -187,7 +187,11 @@ class Table:
         self.columns = {name: Column(name, dtype) for name, dtype in columns.items()}
         self.natural_key = natural_key or list(columns)
         self.foreign_keys = foreign_keys or {}
-        self.not_null = set(self.natural_key) | set(not_null or [])
+        self.not_null = (
+            set(self.natural_key)
+            | set(not_null or [])
+            | set([primary_key])
+        )
         self.one2many = one2many or {}
         self.default = default or {}
         self.primary_key = primary_key
@@ -336,7 +340,7 @@ class Table:
             yield (ftable.name, alias, prev_table, alias_col, join_col)
 
     @lru_cache
-    def join_on(self, path: tuple[str, ...], env: "Env"):
+    def join_on(self, path: tuple[str, ...], env: "Env") -> tuple["Table", str, str]:
         """
         `path` is a tuple containing names of column, each of
         which is a foreign key to another table.
