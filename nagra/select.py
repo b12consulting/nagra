@@ -6,6 +6,7 @@ from itertools import islice, repeat, takewhile
 from typing import Optional, Union, TYPE_CHECKING
 
 from nagra import Statement
+from nagra.exceptions import ValidationError
 from nagra.sexpr import AST, AggToken
 
 if TYPE_CHECKING:
@@ -110,25 +111,48 @@ class Select:
         cln.order_directions += tuple(directions)
         return cln
 
-    def to_dataclass(self, *aliases: str, model_name=None):
-        fields = []
-        for name, dt in self.dtypes(*aliases):
-            if self.table.required(name):
+    def to_dataclass(self, *aliases: str, model_name=None, nest=False):
+        fields = {}
+        for col, (name, dt) in zip(self.columns, self.dtypes(*aliases)):
+            # Handle nested models
+            if nest and "." in col:
+                head, _ = col.split(".", 1)
+                if head in fields:
+                    # Fields for this fk already managed
+                    continue
+                # Create nested fields
+                fname = self.table.foreign_keys[head]
+                ftable = self.table.schema.get(fname)
+                tails = []
+                for sub_col in self.columns:
+                    prefix = f"{head}."
+                    if sub_col.startswith(prefix):
+                        tails.append(sub_col.removeprefix(prefix))
+                # trigger a select on foreign table and generate dataclass
+                sub_class = ftable.select(*tails).to_dataclass(nest=True)
+                nullable = not self.table.required(head)
+                if nullable:
+                    sub_class = sub_class | None
                 field_def = (
-                    clean_col(name), # Replace expression special characters with _
-                    dt,
+                    head,
+                    sub_class,
                 )
+                if nullable:
+                    field_def += (None,)
+                fields[head] = field_def
+
+            # Handle required/optional fields
             else:
                 field_def = (
-                    clean_col(name), # Replace expression special characters with _
+                    clean_col(name),
                     dt,
-                    dataclasses.field(default=None),
                 )
-            fields.append(field_def)
+                if not self.table.required(name):
+                    field_def += (None,)
+                fields[name] = field_def
 
         return dataclasses.make_dataclass(
-            model_name or self.table.name,
-            fields=fields
+            model_name or self.table.name, fields=fields.values()
         )
 
     def to_pydantic(self, *aliases: str, model_name=None):
@@ -144,10 +168,7 @@ class Select:
                 field_def = (dt, None)
             fields[cleaned] = field_def
 
-        return create_model(
-            model_name or self.table.name,
-            **fields
-        )
+        return create_model(model_name or self.table.name, **fields)
 
     def dtypes(self, *aliases: str, with_optional: bool = True):
         fields = []
@@ -164,7 +185,7 @@ class Select:
             # Eval nullable
             if with_optional and nullable:
                 # Fixme Optional may depend on ast content
-                col_type = Optional[col_type]
+                col_type = col_type | None
             fields.append((alias, col_type))
         return fields
 
@@ -276,10 +297,22 @@ class Select:
 
         return df
 
-    def to_dict(self, *args) -> Iterable[dict]:
-        columns = [f.name for f in dataclasses.fields(self.to_dataclass())]
-        for record in self.execute(*args):
-            yield dict(zip(columns, record))
+    def to_dict(self, *args, nest=False) -> Iterable[dict]:
+        if nest:
+            if self._aliases:
+                msg = "Nesting and fields aliases can not be combined"
+                raise ValidationError(msg)
+            return self.to_nested_dict(*args)
+
+        columns = [f.name for f in dataclasses.fields(self.to_dataclass(*self._aliases))]
+        for row in self.execute(*args):
+            yield dict(zip(columns, row))
+
+    def to_nested_dict(self, *args) -> Iterable[dict]:
+        for row in self.execute(*args):
+            record = dict(zip(self.columns, row))
+            yield autonest(record)
+
 
     def execute(self, *args):
         return self.trn.execute(self.stm(), args)
@@ -289,3 +322,24 @@ class Select:
 
     def __iter__(self):
         return iter(self.execute())
+
+
+def autonest(record: dict) -> dict:
+    clone = {}
+    for key, value in record.items():
+        if "." not in key:
+            clone[key] = value
+            continue
+        head, _ = key.split(".", 1)
+        prefix = f"{head}."
+        sub_dict = {
+            k.removeprefix(prefix): v
+            for k, v in record.items()
+            if k.startswith(prefix)
+        }
+        if all(v is None for v in sub_dict.values()):
+            # We only collect sub_dict if not fully null
+            clone[head] = None
+            continue
+        clone[head] = autonest(sub_dict)
+    return clone

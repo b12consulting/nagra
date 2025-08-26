@@ -1,22 +1,38 @@
-from dataclasses import fields, dataclass
+from dataclasses import dataclass
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, get_args
 
 from nagra.select import clean_col
 
 
 def equivalent_classes(A, B):
-    A_fields = fields(A)
-    B_fields = fields(B)
-    if not len(A_fields) == len(B_fields):
-        return False
+    # Quickwin !
+    if A == B:
+        return True
 
-    for A_field, B_field in zip(A_fields, B_fields):
-        if A_field.name != B_field.name:
-            return False
-        if A_field.type != B_field.type:
+    A_fields = vars(A)["__annotations__"]
+    B_fields = vars(B)["__annotations__"]
+
+    for A_name, B_name in zip(A_fields, B_fields):
+        # Compare field names
+        if A_name != B_name:
             breakpoint()
             return False
+
+        # Compare field types
+        A_type = A_fields[A_name]
+        B_type = B_fields[B_name]
+        if "__annotations__" in dir(A_type):
+            return equivalent_classes(A_type, B_type)
+        # We recurse on union types
+        if get_args(A_type):
+            for a_subtype, b_subtype in zip(get_args(A_type), get_args(B_type)):
+                if not equivalent_classes(a_subtype, b_subtype):
+                    return False
+        elif A_type != B_type:
+            breakpoint()
+            return False
+
     return True
 
 
@@ -102,7 +118,7 @@ def test_kitchensink(kitchensink):
         timestamptz: Optional[datetime]
         bool: Optional[bool]
         date: Optional[date]
-        json: Optional[dict | list]
+        json: Optional[list | dict]
         uuid: Optional[str]
         max: Optional[str]
         true: Optional[str]
@@ -166,3 +182,35 @@ def test_clean_col():
     assert clean_col("name") == "name"
     assert clean_col("table.name") == "table_name"
     assert clean_col("(= col 1)") == "___col_1_"
+
+
+def test_nested_dataclasses(person):
+    select = person.select("id", "parent.name")
+    dclass = select.to_dataclass(nest=True)
+
+    @dataclass
+    class Parent:
+        name: str
+
+    @dataclass
+    class Person:
+        id: int
+        parent: Parent | None
+
+    assert equivalent_classes(dclass, Person)
+
+    # Multiple fields for a fk
+    select = person.select("id", "parent.name", "parent.id")
+    dclass = select.to_dataclass(nest=True)
+
+    @dataclass
+    class Parent:
+        name: str
+        id: int
+
+    @dataclass
+    class Person:
+        id: int
+        parent: Parent | None
+
+    assert equivalent_classes(dclass, Person)

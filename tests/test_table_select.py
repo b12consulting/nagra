@@ -388,3 +388,37 @@ def test_to_dict(transaction, temperature):
         "city": "London",
         "value": 12.0,
     }
+
+
+def test_to_nested_dict(transaction, person):
+    # Upsert
+    person.upsert("name", "parent.name").execute("Alice", None)
+    person.upsert("name", "parent.name").execute("Bob", "Alice")
+    person.upsert("name", "parent.name").execute("Charly", "Bob")
+
+    # Read data
+    records = list(
+        person.select("name", "parent.name", "parent.parent.name").to_nested_dict()
+    )
+    assert records == [
+        {
+            "name": "Alice",
+            "parent": None,
+        },
+        {
+            "name": "Bob",
+            "parent": {
+                "name": "Alice",
+                "parent": None,
+            },
+        },
+        {
+            "name": "Charly",
+            "parent": {
+                "name": "Bob",
+                "parent": {
+                    "name": "Alice",
+                },
+            },
+        },
+    ]

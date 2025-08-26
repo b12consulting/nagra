@@ -330,6 +330,10 @@ class VarToken(Token):
         if self.is_relation():
             *head, tail = self.value.split(".")
             ftable, _, _ = env.table.join_on(tuple(head), env=env)
+            if tail not in ftable.columns and tail == ftable.primary_key:
+                # implicit type for pk is int
+                # FIXME this would be simpler with id in columns
+                return int
             col = ftable.columns[tail]
             return col.python_type()
         elif col := env.table.columns.get(self.value):
