@@ -302,7 +302,7 @@ class Select:
             if self._aliases:
                 msg = "Nesting and fields aliases can not be combined"
                 raise ValidationError(msg)
-            return self.to_nested_dict(*args)
+            yield from self.to_nested_dict(*args)
 
         columns = [f.name for f in dataclasses.fields(self.to_dataclass(*self._aliases))]
         for row in self.execute(*args):
