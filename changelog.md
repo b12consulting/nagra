@@ -1,6 +1,9 @@
 
 # Changelog
 
+
+### 0.7 (to be released)
+
 ### 0.6 (released 2025-07-18)
 
 **New feature:** Add `Schema.generate_pydantic_models` utility

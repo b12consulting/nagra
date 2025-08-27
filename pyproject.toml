@@ -1,0 +1,27 @@
+
+[project]
+name = "nagra"
+description = "Nagra is a Python database toolkit"
+readme = "README.md"
+requires-python = ">=3.10"
+version = "0.7rc1"
+dependencies = [
+ "jinja2",
+ "rich",
+ "toml",
+]
+
+[tool.setuptools]
+packages = ["nagra"]
+
+[tool.setuptools.package-data]
+nagra = ["template/*/*sql"]
+
+[project.scripts]
+nagra = "nagra.cli:run"
+
+[project.optional-dependencies]
+dev = ["pytest", "typeguard", "pandas"]
+
+[project.urls]
+Homepage = "https://github.com/b12consulting/nagra"
