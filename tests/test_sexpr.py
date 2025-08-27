@@ -181,3 +181,28 @@ def test_is_nullable(person):
     expr = "name"
     ast = AST.parse(expr)
     assert not ast.is_nullable(env)
+
+
+def test_single_token(person):
+    """
+    Check AST behavour with single token expressions (no
+    parenthesis)
+    """
+    env = Env(table=person)
+
+    expr = "'Alice'"
+    ast = AST.parse(expr)
+    res = ast.eval(env)
+    assert res == "'Alice'"
+
+    expr = "0.0"
+    ast = AST.parse(expr)
+    res = ast.eval(env)
+    assert res == 0
+    assert ast.eval_type(env) is float
+
+    expr = "parent"
+    ast = AST.parse(expr)
+    res = ast.eval(env)
+    assert res == '"person"."parent"'
+    assert ast.eval_type(env) is int
