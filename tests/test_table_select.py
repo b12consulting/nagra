@@ -389,17 +389,20 @@ def test_to_dict(transaction, temperature):
         "value": 12.0,
     }
 
-
-def test_to_nested_dict(transaction, person):
+@pytest.mark.parametrize("nest_with_param", [False, True])
+def test_to_nested_dict(transaction, person, nest_with_param):
     # Upsert
     person.upsert("name", "parent.name").execute("Alice", None)
     person.upsert("name", "parent.name").execute("Bob", "Alice")
     person.upsert("name", "parent.name").execute("Charly", "Bob")
 
     # Read data
-    records = list(
-        person.select("name", "parent.name", "parent.parent.name").to_nested_dict()
-    )
+    select = person.select("name", "parent.name", "parent.parent.name")
+    if nest_with_param:
+        records = list(select.to_dict(nest=True))
+    else:
+        records = list(select.to_nested_dict())
+
     assert records == [
         {
             "name": "Alice",

@@ -303,10 +303,12 @@ class Select:
                 msg = "Nesting and fields aliases can not be combined"
                 raise ValidationError(msg)
             yield from self.to_nested_dict(*args)
-
-        columns = [f.name for f in dataclasses.fields(self.to_dataclass(*self._aliases))]
-        for row in self.execute(*args):
-            yield dict(zip(columns, row))
+        else:
+            columns = [f.name for f in dataclasses.fields(
+                self.to_dataclass(*self._aliases)
+            )]
+            for row in self.execute(*args):
+                yield dict(zip(columns, row))
 
     def to_nested_dict(self, *args) -> Iterable[dict]:
         for row in self.execute(*args):
