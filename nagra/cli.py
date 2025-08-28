@@ -47,7 +47,7 @@ def print_schema(args, schema):
         print(schema.generate_toml())
         return
 
-    elif args.pydantic:
+    elif args.fmt == "pydantic":
         print(schema.generate_pydantic_models(table_names=args.tables))
         return
 
@@ -155,7 +155,7 @@ def run():
         "--pydantic",
         dest="fmt",
         action="store_const",
-        const="toml",
+        const="pydantic",
         default=None,
         help="Generate pydantic models for the schema",
     )
