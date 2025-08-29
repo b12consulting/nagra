@@ -153,7 +153,7 @@ class Transaction:
     def current(cls):
         try:
             return cls._local.stack[-1]
-        except IndexError:
+        except (IndexError, AttributeError):
             return dummy_transaction
 
     def __repr__(self):
