@@ -111,7 +111,7 @@ class Select:
         cln.order_directions += tuple(directions)
         return cln
 
-    def to_dataclass(self, *aliases: str, model_name=None, nest=False):
+    def to_dataclass(self, *aliases: str, model_name=None, nest=False) -> dataclasses.dataclass:
         fields = {}
         for col, (name, dt) in zip(self.columns, self.dtypes(*aliases)):
             # Handle nested models
