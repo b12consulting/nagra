@@ -4,6 +4,25 @@
 
 ### 0.7 (to be released)
 
+**Operators support** S-expression module now infer operator signature
+for all infix operators, only infix ones must be explicitly
+declared. This change make a large range of operator automatically
+available
+
+**Nested models** Add support for nested models on both
+`Select.to_dataclass` and `Select.to_dict`.
+
+**PG Vector** Add partial support for `vector` datatype: Nagra can now
+properly detect `vector` column (treated has float arrays) when
+introspecing existing tables.
+
+**Misc**
+- Fixed bug when accessing Transaction in multi-threaded context.
+- Fix pydantic schema generation (cli usag)
+- ` Upsert.from_dict` now support dotted notation when receiving
+  records.
+
+
 ### 0.6 (released 2025-07-18)
 
 **New feature:** Add `Schema.generate_pydantic_models` utility
