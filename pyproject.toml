@@ -24,9 +24,11 @@ nagra = "nagra.cli:run"
 pandas = ["pandas"]
 polars = ["polars", "connectorx"]
 pg = ["psycopg"]
-sqlite = ["sqlite3"]
 duckdb = ["duckdb"]
-test = ["pytest", "typeguard"]
+all = ["nagra[pandas,polars,pg,duckdb]"]
+
+[dependency-groups]
+dev = ["pytest", "typeguard", "ruff"]
 
 [project.urls]
 Homepage = "https://github.com/b12consulting/nagra"
