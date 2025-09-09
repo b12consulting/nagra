@@ -1,12 +1,21 @@
 
 # Install
 
+Nagra is available on [PyPI](https://pypi.org/project/nagra/) and can be installed using `pip`, `uv`, ...:
+
     pip install nagra
 
-Optionally, to work with Postgresql:
+Optional dependencies:
 
-    pip install "nagra[pg]"
+- pandas support: `pandas`
+- polars support: `polars`
+- PostreSQL: `pg`
+- DuckDB: `duckdb`
+- For running the tests: `test`
 
+For example:
+
+    pip install nagra[polars,test]
 
 # Crash course
 

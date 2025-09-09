@@ -21,7 +21,12 @@ nagra = ["template/*/*sql"]
 nagra = "nagra.cli:run"
 
 [project.optional-dependencies]
-dev = ["pytest", "typeguard", "pandas"]
+pandas = ["pandas"]
+polars = ["polars", "connectorx"]
+pg = ["psycopg"]
+sqlite = ["sqlite3"]
+duckdb = ["duckdb"]
+test = ["pytest", "typeguard"]
 
 [project.urls]
 Homepage = "https://github.com/b12consulting/nagra"
