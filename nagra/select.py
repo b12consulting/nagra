@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from nagra.table import Env
     from nagra.transaction import Transaction
     from pandas import DataFrame
+    from polars import LazyFrame
 
 RE_VALID_IDENTIFIER = re.compile(r"\W|^(?=\d)")
 
@@ -249,6 +250,15 @@ class Select:
             orderby=orderby,
         )
         return stm()
+
+    def to_polars(self, *args) -> "LazyFrame":
+        assert self.trn.flavor != "sqlite", "Polars is only supported with Postgresql"
+        import polars
+
+        schema = self.dtypes(with_optional=False)
+        cursor = self.execute(*args)
+        df = polars.LazyFrame(cursor, schema=schema)
+        return df
 
     def to_pandas(
         self, *args, chunked: int = 0

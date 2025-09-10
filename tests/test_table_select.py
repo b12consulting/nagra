@@ -211,6 +211,7 @@ def test_o2m_stm(person, org):
         "orgs.country",
         "skills.name",
     )
+    breakpoint()
     stm = select.stm()
     res = strip_lines(stm)
     expected = [

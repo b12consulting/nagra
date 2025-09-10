@@ -22,6 +22,9 @@ introspecing existing tables.
 - ` Upsert.from_dict` now support dotted notation when receiving
   records.
 
+**Breaking change** 
+- `Table.get` raise an exception when the table is
+not found (instead of returning `None`)
 
 ### 0.6 (released 2025-07-18)
 

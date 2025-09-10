@@ -10,6 +10,7 @@ from nagra.transaction import ExecMany
 
 try:
     from pandas import DataFrame
+    from polars import LazyFrame
 except ImportError:
     DataFrame = None
 
@@ -50,7 +51,7 @@ class WriterMixin:
         if ids:
             return ids[0]
 
-    def executemany(self, records: Iterable[tuple]):
+    def executemany(self, records: Iterable[tuple]) -> list[int | None]:
         # Transform list of records into a dataframe-like dict
         value_df = dict(zip(self.columns, zip(*records)))
         if not value_df:
@@ -151,6 +152,26 @@ class WriterMixin:
         rows = df[self.columns].values
         return self.executemany(rows)
 
+    def from_polars(self, df: "LazyFrame"):
+        from polars import Struct, col
+
+        # Ignore extra columns
+        df.select(self.columns)
+        schema = df.collect_schema()
+        # Convert non-basic types to string
+        for name, dtype in schema.items():
+            if dtype == Struct:
+                df = df.with_columns(col("json").struct.json_encode())
+
+        res = []
+        for start, stop in _slicer():
+            chunk = df.slice(start, stop).collect()
+            if chunk.is_empty():
+                break
+            rows = chunk.iter_rows()
+            res += self.executemany(rows)
+        return res
+
     def from_dict(self, records):
         # Create select object in order to generate the same column names
         select = self.table.select(*self.columns)
@@ -172,3 +193,10 @@ def getter(record, field, col):
     if col in record:
         return record[col]
     raise KeyError(f"KeyError: neither {field} or {col} found")
+
+def _slicer(chunk_size=10_000):
+    start = 0
+    while True:
+        stop = start + chunk_size
+        yield start, stop
+        start = stop
