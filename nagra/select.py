@@ -8,6 +8,7 @@ from typing import Optional, Union, TYPE_CHECKING
 from nagra import Statement
 from nagra.exceptions import ValidationError
 from nagra.sexpr import AST, AggToken
+from nagra.utils import snake_to_pascal
 
 if TYPE_CHECKING:
     from nagra.table import Env
@@ -113,6 +114,7 @@ class Select:
 
     def to_dataclass(self, *aliases: str, model_name=None, nest=False) -> dataclasses.dataclass:
         fields = {}
+        model_name = model_name or snake_to_pascal(self.table.name)
         for col, (name, dt) in zip(self.columns, self.dtypes(*aliases)):
             # Handle nested models
             if nest and "." in col:
@@ -129,7 +131,10 @@ class Select:
                     if sub_col.startswith(prefix):
                         tails.append(sub_col.removeprefix(prefix))
                 # trigger a select on foreign table and generate dataclass
-                sub_class = ftable.select(*tails).to_dataclass(nest=True)
+                sub_class = ftable.select(*tails).to_dataclass(
+                    nest=True,
+                    model_name=model_name + snake_to_pascal(head)
+                )
                 nullable = not self.table.required(head)
                 if nullable:
                     sub_class = sub_class | None
@@ -152,7 +157,7 @@ class Select:
                 fields[name] = field_def
 
         return dataclasses.make_dataclass(
-            model_name or self.table.name, fields=fields.values()
+            model_name, fields=fields.values()
         )
 
     def to_pydantic(self, *aliases: str, model_name=None):
@@ -321,6 +326,9 @@ class Select:
 
     def executemany(self, args):
         return self.trn.executemany(self.stm(), args)
+
+    def one(self, *args):
+        return self.trn.execute(self.stm(), args).fetchone()
 
     def __iter__(self):
         return iter(self.execute())
