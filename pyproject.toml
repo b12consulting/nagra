@@ -24,8 +24,7 @@ nagra = "nagra.cli:run"
 pandas = ["pandas"]
 polars = ["polars", "connectorx"]
 pg = ["psycopg"]
-duckdb = ["duckdb"]
-all = ["nagra[pandas,polars,pg,duckdb]"]
+all = ["nagra[pandas,polars,pg]"]
 
 [dependency-groups]
 dev = ["pytest", "typeguard", "ruff"]

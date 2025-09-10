@@ -9,8 +9,7 @@ Optional dependency targets:
 
 - pandas support: `pandas`
 - polars support: `polars`
-- PostreSQL: `pg`
-- DuckDB: `duckdb`
+- PostgreSQL: `pg`
 - to install all optional dependencies: `all`
 
 For example:
