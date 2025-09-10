@@ -21,6 +21,7 @@ introspecing existing tables.
 - Fix pydantic schema generation (cli usag)
 - ` Upsert.from_dict` now support dotted notation when receiving
   records.
+- Fixed bug in schema introspection for PostgreSQL for non-lowercase names
 
 
 ### 0.6 (released 2025-07-18)
