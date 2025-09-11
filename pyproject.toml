@@ -15,7 +15,7 @@ dependencies = [
 packages = ["nagra"]
 
 [tool.setuptools.package-data]
-nagra = ["template/*/*sql"]
+nagra = ["template/*/*"]
 
 [project.scripts]
 nagra = "nagra.cli:run"
