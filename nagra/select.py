@@ -258,6 +258,9 @@ class Select:
         schema = self.dtypes(with_optional=False)
         cursor = self.execute(*args)
         df = polars.LazyFrame(cursor, schema=schema)
+        if self._aliases:
+            mapping = dict(zip((n for n, _ in schema), self._aliases))
+            df = df.rename(mapping)
         return df
 
     def to_pandas(
@@ -280,8 +283,7 @@ class Select:
             self.create_df(chunk, names, dtypes) for chunk in takewhile(bool, chunkify)
         )
 
-    @classmethod
-    def create_df(cls, cursor: Iterable[tuple], names: tuple[str, ...], dtypes: tuple):
+    def create_df(self, cursor: Iterable[tuple], names: tuple[str, ...], dtypes: tuple):
         """
         Create a Dataframe, whose columns name are `names` and
         types `dtypes`.
@@ -308,8 +310,9 @@ class Select:
 
         if df.columns.empty:
             # No records were returned by the cursor
-            return DataFrame(columns=names)
-
+            df = DataFrame(columns=names)
+        if self._aliases:
+            df.columns = self._aliases
         return df
 
     def to_dict(self, *args, nest=False) -> Iterable[dict]:
@@ -329,7 +332,6 @@ class Select:
         for row in self.execute(*args):
             record = dict(zip(self.columns, row))
             yield autonest(record)
-
 
     def execute(self, *args):
         return self.trn.execute(self.stm(), args)

@@ -354,6 +354,7 @@ class Table:
             head = path[0]
             if alias := self.one2many.get(head):
                 # An alias is a string containing "table_name.fk_name"
+                # that points to current table
                 table_name, alias_col = alias.split(".")
                 ftable = self.schema.get(table_name)
                 join_col = ftable.primary_key
@@ -370,39 +371,6 @@ class Table:
         prev_table, *_ = self.join_on(path[:-1], env)
         # Resolve last step
         return prev_table.join_on(path[-1:], env)
-
-
-    # @lru_cache
-    # def join_on(self, path: tuple[str, ...], env: "Env") -> tuple["Table", str, str]:
-    #     """
-    #     `path` is a tuple containing names of column, each of
-    #     which is a foreign key to another table.
-
-    #     Returns the next table to join and the column to join on.
-    #     """
-
-    #     print(f"{self =} {path =}")
-    #     head = path[0]
-    #     if alias := self.one2many.get(head):
-    #         breakpoint()
-    #         # An alias is a string containing "table_name.fk_name"
-    #         table_name, *alias_cols = alias.split(".", 1)
-    #         ftable = self.schema.get(table_name)
-    #         return ftable.join_on(tuple(alias_cols), env)
-
-    #     if len(path) == 1:
-    #         # not an alias we implictly join on self, based on the
-    #         # given column
-    #         join_col = head
-    #         fname = self.foreign_keys[join_col]
-    #         ftable = self.schema.get(fname)
-    #         alias_col = ftable.primary_key
-    #         return ftable, alias_col, join_col
-
-    #     # Recurse to find the previous table in the chain
-    #     prev_table, *_ = self.join_on(path[:-1], env)
-    #     # Resolve last step
-    #     return prev_table.join_on(path[-1:], env)
 
     def ctypes(self, flavor: str, column_names: Iterable[str]):
         # detect arrays

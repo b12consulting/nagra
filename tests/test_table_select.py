@@ -211,7 +211,6 @@ def test_o2m_stm(person, org):
         "orgs.country",
         "skills.name",
     )
-    breakpoint()
     stm = select.stm()
     res = strip_lines(stm)
     expected = [
@@ -389,6 +388,35 @@ def test_to_dict(transaction, temperature):
         "city": "London",
         "value": 12.0,
     }
+
+
+def test_select_alias(transaction, temperature):
+    # Upsert
+    temperature.upsert("timestamp", "city", "value").executemany(
+        [
+            ("1970-01-02", "Berlin", 10),
+            ("1970-01-02", "London", 12),
+        ]
+    )
+    select = (
+        temperature.select()
+        .orderby("city")
+        .aliases("t", "c", "v")
+    )
+
+    # Check record keys
+    records = list(select.to_dict())
+    assert sorted(records[0]) == ["c", "t", "v"]
+
+    # Check pandas df columns
+    df = select.to_pandas()
+    assert sorted(df) == ["c", "t", "v"]
+
+    # Check polars df columns
+    if transaction.flavor == "postgresql":
+        df = select.to_polars().collect()
+        assert sorted(df.columns) == ["c", "t", "v"]
+
 
 @pytest.mark.parametrize("nest_with_param", [False, True])
 def test_to_nested_dict(transaction, person, nest_with_param):

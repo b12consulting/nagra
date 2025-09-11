@@ -51,7 +51,7 @@ class WriterMixin:
         if ids:
             return ids[0]
 
-    def executemany(self, records: Iterable[tuple]) -> list[int | None]:
+    def executemany(self, records: Iterable[tuple]) -> list:
         # Transform list of records into a dataframe-like dict
         value_df = dict(zip(self.columns, zip(*records)))
         if not value_df:
