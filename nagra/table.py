@@ -339,8 +339,6 @@ class Table:
             ftable, alias_col, join_col = self.join_on(prefix, env)
             yield (ftable.name, alias, prev_table, alias_col, join_col)
 
-
-
     @lru_cache
     def join_on(self, path: tuple[str, ...], env: "Env") -> tuple["Table", str, str]:
         """

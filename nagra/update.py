@@ -1,11 +1,14 @@
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Union, Optional, TYPE_CHECKING
 
 
-from nagra import Statement
+from nagra import Statement, Schema
 from nagra.exceptions import ValidationError
 from nagra.transaction import Transaction
+from nagra.upsert import Upsert
 from nagra.writer import WriterMixin
+from nagra.utils import snake_to_pascal, get_table_from_dataclass, iter_dataclass_cols
 
 
 if TYPE_CHECKING:
@@ -78,3 +81,10 @@ class Update(WriterMixin):
         sorted_groups = set_cols + condition_key
         args = zip(*(arg_df[c] for c in sorted_groups))
         return args
+
+    @staticmethod
+    def from_dataclass(cls: dataclass, schema: Schema = Schema.default) -> "Upsert":
+        # TODO add from_pydantic
+        table = get_table_from_dataclass(cls, schema)
+        cols = list(iter_dataclass_cols(cls))
+        return table.upsert(*cols)

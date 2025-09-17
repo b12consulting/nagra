@@ -1,17 +1,17 @@
 import re
 from collections.abc import Iterable
-import dataclasses
+from dataclasses import dataclass, make_dataclass, fields as dataclass_fields
 from datetime import datetime, date
 from itertools import islice, repeat, takewhile
 from typing import Optional, Union, TYPE_CHECKING
 
-from nagra import Statement
+from nagra import Statement, Schema
 from nagra.exceptions import ValidationError
 from nagra.sexpr import AST, AggToken
-from nagra.utils import snake_to_pascal
+from nagra.utils import snake_to_pascal, get_table_from_dataclass, iter_dataclass_cols
 
 if TYPE_CHECKING:
-    from nagra.table import Env
+    from nagra.table import Env, Table
     from nagra.transaction import Transaction
     from pandas import DataFrame
     from polars import LazyFrame
@@ -24,7 +24,7 @@ def clean_col(name):
 
 
 class Select:
-    def __init__(self, table, *columns: str, trn: "Transaction", env: "Env"):
+    def __init__(self, table: "Table", *columns: str, trn: "Transaction", env: "Env"):
         self.table = table
         self.env = env
         self.where_asts = tuple()
@@ -113,7 +113,7 @@ class Select:
         cln.order_directions += tuple(directions)
         return cln
 
-    def to_dataclass(self, *aliases: str, model_name=None, nest=False) -> dataclasses.dataclass:
+    def to_dataclass(self, *aliases: str, model_name=None, nest=False) -> dataclass:
         fields = {}
         model_name = model_name or snake_to_pascal(self.table.name)
         for col, (name, dt) in zip(self.columns, self.dtypes(*aliases)):
@@ -157,9 +157,16 @@ class Select:
                     field_def += (None,)
                 fields[name] = field_def
 
-        return dataclasses.make_dataclass(
+        return make_dataclass(
             model_name, fields=fields.values()
         )
+
+    @staticmethod
+    def from_dataclass(cls: dataclass, schema: Schema = Schema.default) -> "Select":
+        # TODO add from_pydantic
+        table = get_table_from_dataclass(cls, schema)
+        cols = list(iter_dataclass_cols(cls))
+        return table.select(*cols)
 
     def to_pydantic(self, *aliases: str, model_name=None):
         from pydantic import create_model
@@ -322,7 +329,7 @@ class Select:
                 raise ValidationError(msg)
             yield from self.to_nested_dict(*args)
         else:
-            columns = [f.name for f in dataclasses.fields(
+            columns = [f.name for f in dataclass_fields(
                 self.to_dataclass(*self._aliases)
             )]
             for row in self.execute(*args):
