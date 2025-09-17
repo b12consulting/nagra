@@ -161,7 +161,7 @@ class Select:
                 fields[name] = field_def
 
         return dataclasses.make_dataclass(
-            model_name, fields=fields.values()
+            model_name, fields=fields.values(), kw_only=True
         )
 
     def to_pydantic(self, *aliases: str, model_name=None):

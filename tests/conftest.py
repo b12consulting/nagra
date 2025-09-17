@@ -103,6 +103,7 @@ kitchensink_table = Table(
         "blob": "blob",
     },
     natural_key=["varchar"],
+    not_null=["int"],
 )
 
 
