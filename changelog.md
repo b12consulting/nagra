@@ -22,6 +22,8 @@ introspecing existing tables.
 - ` Upsert.from_dict` now support dotted notation when receiving
   records.
 - Fixed bug in schema introspection for PostgreSQL for non-lowercase names
+- Fixed bug in dataclass generation in the presence of a mix
+  of required and nullable fields.
 
 
 ### 0.6 (released 2025-07-18)
