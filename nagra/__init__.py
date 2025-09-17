@@ -1,9 +1,9 @@
 from importlib.metadata import version
 
 from .statement import Statement
+from .schema import Schema
 from .table import Table
 from .view import View
-from .schema import Schema
 from .transaction import Transaction
 
 

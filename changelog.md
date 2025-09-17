@@ -23,6 +23,9 @@ introspecing existing tables.
   records.
 - Fixed bug in schema introspection for PostgreSQL for non-lowercase names
 
+**Breaking change**
+- `Table.get` raise an exception when the table is
+not found (instead of returning `None`)
 
 ### 0.6 (released 2025-07-18)
 

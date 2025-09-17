@@ -219,11 +219,11 @@ class Table:
         self.schema.add_table(self.name, self)
 
     @classmethod
-    def get(self, name, schema=Schema.default):
+    def get(self, name, schema=Schema.default) -> "Table":
         """
         Shortcut method to Schema.default().get()
         """
-        return schema.tables.get(name)
+        return schema.tables[name]
 
     def select(self, *columns, trn=None):
         trn = trn or Transaction.current()
@@ -352,6 +352,7 @@ class Table:
             head = path[0]
             if alias := self.one2many.get(head):
                 # An alias is a string containing "table_name.fk_name"
+                # that points to current table
                 table_name, alias_col = alias.split(".")
                 ftable = self.schema.get(table_name)
                 join_col = ftable.primary_key

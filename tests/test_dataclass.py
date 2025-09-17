@@ -2,7 +2,10 @@ from dataclasses import dataclass
 from datetime import datetime, date
 from typing import Optional, get_args
 
-from nagra.select import clean_col
+from nagra.select import clean_col, Select
+from nagra.upsert import Upsert
+from nagra.update import Update
+
 
 
 def equivalent_classes(A, B):
@@ -214,3 +217,33 @@ def test_nested_dataclasses(person):
         parent: Parent | None
 
     assert equivalent_classes(dclass, Person)
+
+def test_from_dataclass(person):
+    @dataclass
+    class PersonLikeModel:
+        __table__ = "person"
+        name: str
+        parent: str | None
+
+    select = Select.from_dataclass(PersonLikeModel)
+    assert list(select.columns) == ["name", "parent"]
+
+
+    @dataclass
+    class PersonStub:
+        __table__ = "person"
+        name: str
+
+    @dataclass
+    class Person:
+        name: str
+        parent: PersonStub
+
+    select = Select.from_dataclass(Person)
+    assert list(select.columns) == ["name", "parent.name"]
+    assert select.table.name == "person"
+
+    for cls in [Upsert, Update]:
+        obj = cls.from_dataclass(Person)
+        assert list(obj.columns) == ["name", "parent.name"]
+        assert obj.table.name == "person"

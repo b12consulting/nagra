@@ -5,8 +5,10 @@ import logging
 import re
 import sys
 from contextlib import contextmanager
+from dataclasses import dataclass, fields, is_dataclass
 from pathlib import Path
 from time import perf_counter
+from typing import Iterator, TYPE_CHECKING, get_args
 from enum import StrEnum
 
 from jinja2 import FileSystemLoader, Environment
@@ -15,6 +17,8 @@ from rich.console import Console
 from rich.markup import escape
 import rich.table
 
+if TYPE_CHECKING:
+    from nagra.schema import Schema
 
 HERE = Path(__file__).parent
 fmt = "%(levelname)s:%(asctime).19s: %(message)s"
@@ -25,6 +29,7 @@ if os.environ.get("NAGRA_DEBUG"):
     logger.debug("Log level set to debug")
 UNSET = object()
 RE_SC_PC = re.compile(r"(?:^|_)(\w)")
+RE_PC_SC = re.compile(r"(?<!^)(?=[A-Z])")
 
 
 def autoquote(x):
@@ -38,8 +43,13 @@ jinja_env = Environment(loader=FileSystemLoader(HERE / "template"))
 jinja_env.filters["autoquote"] = autoquote
 
 
-def snake_to_pascal(name):
+def snake_to_pascal(name: str) -> str:
     return RE_SC_PC.sub(lambda m: m.group(1).upper(), name)
+
+
+def pascal_to_snake(name: str) -> str:
+    # PascalCase to snake_case
+    return RE_PC_SC.sub("_", name).lower()
 
 
 def template(name):
@@ -102,3 +112,33 @@ def print_table(rows, headers, pivot=False, format:TableFmt = None):
     for row in rows:
         table.add_row(*map(escstr, row))
     console.print(table)
+
+
+def iter_dataclass_cols(cls: dataclass, prefix: str = "") -> Iterator[str]:
+    """
+    Return columns corresponding to the dataclass, including
+    nested dataclasses (using dotted notation).
+    """
+    for field in fields(cls):
+        name = field.name
+        type = field.type
+        column = f"{prefix}.{name}" if prefix else name
+        sub_types = get_args(type)
+        # Handle optional dataclasses
+        for sub_type in sub_types:
+            if is_dataclass(sub_type):
+                yield from iter_dataclass_cols(sub_type, prefix=column)
+                break
+        else:
+            # Handle other types
+            if is_dataclass(type):
+                yield from iter_dataclass_cols(type, prefix=column)
+            else:
+                yield column
+
+
+def get_table_from_dataclass(cls: dataclass, schema: "Schema"):
+    assert is_dataclass(cls)
+    cls_name = getattr(cls, "__table__", cls.__name__)
+    table = schema.get(pascal_to_snake(cls_name))
+    return table

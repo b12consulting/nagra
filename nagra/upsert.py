@@ -1,14 +1,16 @@
 from typing import Union, Optional, TYPE_CHECKING
 from collections.abc import Iterable
+from dataclasses import dataclass
 
 try:
     from pandas import DataFrame
 except ImportError:
     DataFrame = None
 
-from nagra import Statement
+from nagra import Statement, Schema
 from nagra.transaction import Transaction
 from nagra.writer import WriterMixin
+from nagra.utils import snake_to_pascal, get_table_from_dataclass, iter_dataclass_cols
 
 if TYPE_CHECKING:
     from nagra.table import Table, Env
@@ -86,3 +88,10 @@ class Upsert(WriterMixin):
     def resolve(self, column: str, *values: list[any]):
         rows = list(zip(*values))
         yield from self._resolve(column, rows)
+
+    @staticmethod
+    def from_dataclass(cls: dataclass, schema: Schema = Schema.default) -> "Upsert":
+        # TODO add from_pydantic
+        table = get_table_from_dataclass(cls, schema)
+        cols = list(iter_dataclass_cols(cls))
+        return table.upsert(*cols)

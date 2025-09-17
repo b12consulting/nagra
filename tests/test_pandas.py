@@ -97,7 +97,7 @@ def test_from_pandas(transaction, kitchensink):
         assert str(new_df.ts.dtype) == 'datetime64[ns, Europe/Brussels]'
         ts = new_df.ts[0]
         assert ts.isoformat() == '1969-12-30T01:00:00+01:00'
-        # NOTE the above result expected:
+        # NOTE the above result is expected:
         # ```
         # =# SELECT date_bin('5 days', TIMESTAMPTZ '1970-01-01 00:00:00+00', '1900-01-01');
         #       date_bin
