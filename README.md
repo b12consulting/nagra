@@ -244,11 +244,17 @@ To install the project in editable mode along with all the optional dependencies
 as well as the dependencies needed for development (testing, linting, ...),
 clone the project and run:
 
-    [uv ] pip install --group dev -e '.[all]'
+    [uv] pip install --group dev -e .
 
 Or, to use stock uv functionalities:
 
-    uv sync --extra all
+    uv sync
+
+To run the tests, you will need a local PostgreSQL cluster running (install it e.g. with `brew install postgresql`),
+containing a database `nagra`. You can create it using the command `createdb nagra`. 
+Then, simply run
+
+    [uv run] pytest
 
 # Miscellaneous
 
