@@ -124,7 +124,11 @@ class Select:
                     # Fields for this fk already managed
                     continue
                 # Create nested fields
-                fname = self.table.foreign_keys[head]
+                if head in self.table.foreign_keys:
+                    fname = self.table.foreign_keys[head]
+                else:
+                    alias = self.table.one2many[head]
+                    fname, _ = alias.split(".")
                 ftable = self.table.schema.get(fname)
                 tails = []
                 for sub_col in self.columns:
@@ -133,8 +137,7 @@ class Select:
                         tails.append(sub_col.removeprefix(prefix))
                 # trigger a select on foreign table and generate dataclass
                 sub_class = ftable.select(*tails).to_dataclass(
-                    nest=True,
-                    model_name=model_name + snake_to_pascal(head)
+                    nest=True, model_name=model_name + snake_to_pascal(head)
                 )
                 nullable = not self.table.required(head)
                 if nullable:
@@ -157,9 +160,7 @@ class Select:
                     field_def += (None,)
                 fields[name] = field_def
 
-        return make_dataclass(
-            model_name, fields=fields.values()
-        )
+        return make_dataclass(model_name, fields=fields.values(), kw_only=True)
 
     @staticmethod
     def from_dataclass(cls: dataclass, schema: Schema = Schema.default) -> "Select":
@@ -330,9 +331,9 @@ class Select:
                 raise ValidationError(msg)
             yield from self.to_nested_dict(*args)
         else:
-            columns = [f.name for f in dataclass_fields(
-                self.to_dataclass(*self._aliases)
-            )]
+            columns = [
+                f.name for f in dataclass_fields(self.to_dataclass(*self._aliases))
+            ]
             for row in self.execute(*args):
                 yield dict(zip(columns, row))
 
@@ -363,9 +364,7 @@ def autonest(record: dict) -> dict:
         head, _ = key.split(".", 1)
         prefix = f"{head}."
         sub_dict = {
-            k.removeprefix(prefix): v
-            for k, v in record.items()
-            if k.startswith(prefix)
+            k.removeprefix(prefix): v for k, v in record.items() if k.startswith(prefix)
         }
         if all(v is None for v in sub_dict.values()):
             # We only collect sub_dict if not fully null

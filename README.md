@@ -1,12 +1,20 @@
 
 # Install
 
+Nagra is available on [PyPI](https://pypi.org/project/nagra/) and can be installed using `pip`, `uv`, ...e.g.:
+
     pip install nagra
 
-Optionally, to work with Postgresql:
+Optional dependency targets:
 
-    pip install "nagra[pg]"
+- pandas support: `pandas`
+- polars support: `polars`
+- PostgreSQL: `pg`
+- to install all optional dependencies: `all`
 
+For example:
+
+    pip install nagra[polars,pg]
 
 # Crash course
 
@@ -229,6 +237,18 @@ If pandas is installed you can use `Select.to_pandas` and
     row, = temperature.select("value").where("(= timestamp '2023-11-28T02:00')")
     assert row == (13,)
 ```
+
+# Development
+
+To install the project in editable mode along with all the optional dependencies
+as well as the dependencies needed for development (testing, linting, ...),
+clone the project and run:
+
+    [uv ] pip install --group dev -e '.[all]'
+
+Or, to use stock uv functionalities:
+
+    uv sync --extra all
 
 # Miscellaneous
 
