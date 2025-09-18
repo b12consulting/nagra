@@ -74,20 +74,12 @@ def test_from_polars(transaction, kitchensink):
     )
 
     # SELECT with operator
-    # Note that contrary to pandas, polars return tz-naive datetimes
     new_df = kitchensink.select(
         "(date_bin '5 days' timestamptz '1900-01-01')",
     ).to_polars().collect()
+
     new_df.columns = ["ts"]
     ts = new_df['ts']
-    assert str(ts.dtype) == "Datetime(time_unit='us', time_zone=None)"
+    assert str(ts.dtype) == "Datetime(time_unit='us', time_zone='Europe/Brussels')"
 
-    assert ts[0].isoformat() == '1969-12-30T00:00:00'
-    # NOTE the above result expected:
-    # ```
-    # =# SELECT date_bin('5 days', TIMESTAMPTZ '1970-01-01 00:00:00+00', '1900-01-01');
-    #       date_bin
-    # ------------------------
-    #  1969-12-30 01:00:00+01
-    # (1 row)
-    # ```
+    assert ts[0].isoformat() == '1969-12-30T01:00:00+01:00'
