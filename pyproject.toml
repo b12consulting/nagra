@@ -22,7 +22,7 @@ nagra = "nagra.cli:run"
 
 [project.optional-dependencies]
 pandas = ["pandas"]
-polars = ["polars", "connectorx"]
+polars = ["polars"]
 pg = ["psycopg"]
 all = ["nagra[pandas,polars,pg]"]
 
