@@ -1,5 +1,6 @@
 import sqlite3
 import threading
+from contextvars import ContextVar
 from typing import Callable
 
 from nagra.utils import logger, UNSET
@@ -71,6 +72,8 @@ class LRUGenerator:
 
 class Transaction:
 
+    _stack_lock = threading.Lock()
+    # _local_stack: ContextVar[list["Transaction"]] = ContextVar('_local_stack', default=[])
     _local = threading.local()
     _local.stack = []
 
@@ -140,19 +143,31 @@ class Transaction:
 
     @classmethod
     def push(cls, transaction):
-        if not hasattr(cls._local, "stack"):
-            cls._local.stack = []
-        cls._local.stack.append(transaction)
+        with cls._stack_lock:
+            if not hasattr(cls._local, "stack"):
+                cls._local.stack = []
+            cls._local.stack.append(transaction)
+            # stack = cls._local_stack.get()
+            # stack.append(transaction)
+            # cls._local_stack.set(stack)
 
     @classmethod
     def pop(cls, expected_trn):
-        trn = cls._local.stack.pop()
-        assert trn is expected_trn, "Unexpected Transaction when leaving context"
+        with cls._stack_lock:
+            trn = cls._local.stack.pop()
+            assert trn is expected_trn, "Unexpected Transaction when leaving context"
+
+            # stack = cls._local_stack.get()
+            # trn = stack.pop()
+            # cls._local_stack.set(stack)
+            # assert id(trn) == id(expected_trn), "Unexpected Transaction when leaving context"
 
     @classmethod
     def current(cls):
         try:
-            return cls._local.stack[-1]
+            with cls._stack_lock:
+                return cls._local.stack[-1]
+                # return cls._local_stack.get()[-1]
         except (IndexError, AttributeError):
             return dummy_transaction
 

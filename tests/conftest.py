@@ -21,6 +21,7 @@ person_table = Table(
     one2many={
         "orgs": "org.person",
         "skills": "skill.person",
+        "grand_parent": "person.parent.parent",
     },
 )
 

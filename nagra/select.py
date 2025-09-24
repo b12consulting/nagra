@@ -1,19 +1,20 @@
 import re
 from collections.abc import Iterable
-import dataclasses
+from dataclasses import dataclass, make_dataclass, fields as dataclass_fields
 from datetime import datetime, date
 from itertools import islice, repeat, takewhile
 from typing import Optional, Union, TYPE_CHECKING
 
-from nagra import Statement
+from nagra import Statement, Schema
 from nagra.exceptions import ValidationError
 from nagra.sexpr import AST, AggToken
-from nagra.utils import snake_to_pascal
+from nagra.utils import snake_to_pascal, get_table_from_dataclass, iter_dataclass_cols
 
 if TYPE_CHECKING:
-    from nagra.table import Env
+    from nagra.table import Env, Table
     from nagra.transaction import Transaction
     from pandas import DataFrame
+    from polars import LazyFrame
 
 RE_VALID_IDENTIFIER = re.compile(r"\W|^(?=\d)")
 
@@ -23,7 +24,7 @@ def clean_col(name):
 
 
 class Select:
-    def __init__(self, table, *columns: str, trn: "Transaction", env: "Env"):
+    def __init__(self, table: "Table", *columns: str, trn: "Transaction", env: "Env"):
         self.table = table
         self.env = env
         self.where_asts = tuple()
@@ -112,7 +113,7 @@ class Select:
         cln.order_directions += tuple(directions)
         return cln
 
-    def to_dataclass(self, *aliases: str, model_name=None, nest=False) -> dataclasses.dataclass:
+    def to_dataclass(self, *aliases: str, model_name=None, nest=False) -> dataclass:
         fields = {}
         model_name = model_name or snake_to_pascal(self.table.name)
         for col, (name, dt) in zip(self.columns, self.dtypes(*aliases)):
@@ -160,9 +161,16 @@ class Select:
                     field_def += (None,)
                 fields[name] = field_def
 
-        return dataclasses.make_dataclass(
+        return make_dataclass(
             model_name, fields=fields.values(), kw_only=True
         )
+
+    @staticmethod
+    def from_dataclass(cls: dataclass, schema: Schema = Schema.default) -> "Select":
+        # TODO add from_pydantic
+        table = get_table_from_dataclass(cls, schema)
+        cols = list(iter_dataclass_cols(cls))
+        return table.select(*cols)
 
     def to_pydantic(self, *aliases: str, model_name=None):
         from pydantic import create_model
@@ -254,6 +262,19 @@ class Select:
         )
         return stm()
 
+    def to_polars(self, *args) -> "LazyFrame":
+        assert self.trn.flavor != "sqlite", "Polars is only supported with Postgresql"
+        import polars
+
+        schema = self.dtypes(with_optional=False)
+        cursor = self.execute(*args)
+        columns = [c for c, _ in schema]
+        df = polars.LazyFrame(cursor, schema=columns)
+        if self._aliases:
+            mapping = dict(zip((n for n, _ in schema), self._aliases))
+            df = df.rename(mapping)
+        return df
+
     def to_pandas(
         self, *args, chunked: int = 0
     ) -> Union["DataFrame", Iterable["DataFrame"]]:
@@ -274,8 +295,7 @@ class Select:
             self.create_df(chunk, names, dtypes) for chunk in takewhile(bool, chunkify)
         )
 
-    @classmethod
-    def create_df(cls, cursor: Iterable[tuple], names: tuple[str, ...], dtypes: tuple):
+    def create_df(self, cursor: Iterable[tuple], names: tuple[str, ...], dtypes: tuple):
         """
         Create a Dataframe, whose columns name are `names` and
         types `dtypes`.
@@ -302,8 +322,9 @@ class Select:
 
         if df.columns.empty:
             # No records were returned by the cursor
-            return DataFrame(columns=names)
-
+            df = DataFrame(columns=names)
+        if self._aliases:
+            df.columns = self._aliases
         return df
 
     def to_dict(self, *args, nest=False) -> Iterable[dict]:
@@ -313,7 +334,7 @@ class Select:
                 raise ValidationError(msg)
             yield from self.to_nested_dict(*args)
         else:
-            columns = [f.name for f in dataclasses.fields(
+            columns = [f.name for f in dataclass_fields(
                 self.to_dataclass(*self._aliases)
             )]
             for row in self.execute(*args):
@@ -323,7 +344,6 @@ class Select:
         for row in self.execute(*args):
             record = dict(zip(self.columns, row))
             yield autonest(record)
-
 
     def execute(self, *args):
         return self.trn.execute(self.stm(), args)

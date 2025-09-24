@@ -25,6 +25,9 @@ introspecing existing tables.
 - Fixed bug in dataclass generation in the presence of a mix
   of required and nullable fields.
 
+**Breaking change**
+- `Table.get` raise an exception when the table is
+not found (instead of returning `None`)
 
 ### 0.6 (released 2025-07-18)
 

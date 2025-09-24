@@ -18,9 +18,12 @@ You can also do :
     ╰──────────╯
 """
 
+from dataclasses import dataclass
 from typing import List
 
 from nagra import Transaction, Schema
+from nagra.select import Select
+
 from fastapi import FastAPI
 
 schema_toml = """
@@ -46,34 +49,57 @@ city = "city"
 
 app = FastAPI()
 DB = "sqlite://example.db"
-sch = Schema.from_toml(schema_toml)
+schema = Schema.default
+schema.load_toml(schema_toml)
 
 
-def endpoint(app, name, select):
-    dclass = select.to_dataclass()
+# Define models
 
-    @app.get(f"/{name}", response_model=List[dclass])
-    def getter():
-        with Transaction(DB) as trn:
-            records = list(select.clone(trn).to_dict())
-        return records
+@dataclass
+class City:
+    name: str
+    lat: str | None = None
+    long: str | None = None
+
+@dataclass
+class CityTemperatures:
+    __table__ = "city"
+    name: str
+    temperature: float
+
+
+@dataclass
+class Temperature:
+    city: City
+    timestamp: str
+
+
+# Define endpoints
+@app.get("/temperatures/", response_model=List[Temperature])
+def temperatures():
+    with Transaction(DB):
+        select = Select.from_dataclass(Temperature)
+        return list(select.to_dict(nest=True))
+
+
+# Custom endpoint
+@app.get("/city/{name}/temperatures", response_model=List[CityTemperatures])
+def city_temperatures(name: str):
+    with Transaction(DB):
+        city = schema.get("city")
+        select = city.select(
+            "name",
+            "temperatures.value"
+        ).aliases("name", "temperature")
+        return list(select.where("(= name {})").to_dict(name))
 
 
 # Init create db tables and automate the creation of GET endpoint for
 # every table
 def init():
     with Transaction(DB):
-        sch.create_tables()
+        schema.create_tables()
 
-    for name, table in sch.tables.items():
-        select = table.select()
-        endpoint(app, name, select)
-
-
-# Custom endpoint
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
 
 init()
 
@@ -81,15 +107,15 @@ if __name__ == "__main__":
     print("LOAD DATA")
 
     with Transaction(DB):
-        sch.create_tables()
-        city = sch.get("city")
+        schema.create_tables()
+        city = schema.get("city")
         city.upsert("name").executemany([
             ("Brussels",),
             ("London",),
             ("Berlin",),
         ])
 
-        temp = sch.get("temperature")
+        temp = schema.get("temperature")
         temp.upsert("city.name", "timestamp", "value").executemany([
             ("Brussels", "2000-01-01T00:00", 0),
             ("London", "2000-01-01T00:00", 1),
