@@ -21,6 +21,9 @@ introspecing existing tables.
 - Fix pydantic schema generation (cli usag)
 - ` Upsert.from_dict` now support dotted notation when receiving
   records.
+- Fixed bug in schema introspection for PostgreSQL for non-lowercase names
+- Fixed bug in dataclass generation in the presence of a mix
+  of required and nullable fields.
 
 **Breaking change**
 - `Table.get` raise an exception when the table is

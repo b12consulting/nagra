@@ -116,7 +116,7 @@ def test_kitchensink(kitchensink):
         varchar: str
         bigint: Optional[int]
         float: Optional[float]
-        int: Optional[int]
+        int: int
         timestamp: Optional[datetime]
         timestamptz: Optional[datetime]
         bool: Optional[bool]

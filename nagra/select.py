@@ -124,7 +124,11 @@ class Select:
                     # Fields for this fk already managed
                     continue
                 # Create nested fields
-                fname = self.table.foreign_keys[head]
+                if head in self.table.foreign_keys:
+                    fname = self.table.foreign_keys[head]
+                else:
+                    alias = self.table.one2many[head]
+                    fname, _ = alias.split(".")
                 ftable = self.table.schema.get(fname)
                 tails = []
                 for sub_col in self.columns:
@@ -158,7 +162,7 @@ class Select:
                 fields[name] = field_def
 
         return make_dataclass(
-            model_name, fields=fields.values()
+            model_name, fields=fields.values(), kw_only=True
         )
 
     @staticmethod
