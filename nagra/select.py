@@ -114,6 +114,7 @@ class Select:
         return cln
 
     def to_dataclass(self, *aliases: str, model_name=None, nest=False) -> dataclass:
+        aliases = aliases or self._aliases
         fields = {}
         model_name = model_name or snake_to_pascal(self.table.name)
         for col, (name, dt) in zip(self.columns, self.dtypes(*aliases)):

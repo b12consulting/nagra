@@ -108,25 +108,28 @@ def test_select_with_sexp(person):
 
 def test_kitchensink(kitchensink):
     select = kitchensink.select()
-    aliases = kitchensink.columns
+    aliases = [c.upper() for c in kitchensink.columns]
     dclass = select.to_dataclass(*aliases)
 
     @dataclass
     class KitchenSink:
-        varchar: str
-        bigint: Optional[int]
-        float: Optional[float]
-        int: int
-        timestamp: Optional[datetime]
-        timestamptz: Optional[datetime]
-        bool: Optional[bool]
-        date: Optional[date]
-        json: Optional[list | dict]
-        uuid: Optional[str]
-        max: Optional[str]
-        true: Optional[str]
-        blob: Optional[bytes]
+        VARCHAR: str
+        BIGINT: Optional[int]
+        FLOAT: Optional[float]
+        INT: int
+        TIMESTAMP: Optional[datetime]
+        TIMESTAMPTZ: Optional[datetime]
+        BOOL: Optional[bool]
+        DATE: Optional[date]
+        JSON: Optional[list | dict]
+        UUID: Optional[str]
+        MAX: Optional[str]
+        TRUE: Optional[str]
+        BLOB: Optional[bytes]
 
+    assert equivalent_classes(dclass, KitchenSink)
+
+    dclass = select.aliases(*aliases).to_dataclass()
     assert equivalent_classes(dclass, KitchenSink)
 
 

@@ -19,6 +19,7 @@ You can also do :
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import List
 
 from nagra import Transaction, Schema
@@ -30,9 +31,9 @@ schema_toml = """
 [city]
 natural_key = ["name"]
 [city.columns]
-name = "varchar"
-lat = "varchar"
-long = "varchar"
+name = "str"
+lat = "str"
+long = "str"
 [city.one2many]
 temperatures = "temperature.city"
 
@@ -49,12 +50,14 @@ city = "city"
 
 app = FastAPI()
 DB = "sqlite://example.db"
+# or
+#DB = "postgresql:///demo"
+
 schema = Schema.default
 schema.load_toml(schema_toml)
 
 
 # Define models
-
 @dataclass
 class City:
     name: str
@@ -71,10 +74,10 @@ class CityTemperatures:
 @dataclass
 class Temperature:
     city: City
-    timestamp: str
+    timestamp: datetime
 
 
-# Define endpoints
+# Model based endpoint
 @app.get("/temperatures/", response_model=List[Temperature])
 def temperatures():
     with Transaction(DB):
@@ -82,7 +85,7 @@ def temperatures():
         return list(select.to_dict(nest=True))
 
 
-# Custom endpoint
+# Custom select endpoint
 @app.get("/city/{name}/temperatures", response_model=List[CityTemperatures])
 def city_temperatures(name: str):
     with Transaction(DB):
@@ -94,7 +97,26 @@ def city_temperatures(name: str):
         return list(select.where("(= name {})").to_dict(name))
 
 
-# Init create db tables and automate the creation of GET endpoint for
+# Rely on select to generate response model
+avg_select = schema.get("temperature").select(
+    "city.name",
+    "(avg value)",
+).aliases("city", "avg")
+avg_class = avg_select.to_dataclass()
+
+
+@app.get("/avg/{name}/temperatures", response_model=List[avg_class])
+def avg_temperature(name: str):
+    with Transaction(DB) as trn:
+        return list(
+            avg_select
+            .clone(trn=trn)
+            .where("(= city.name {})")
+            .to_dict(name)
+        )
+
+
+# Init creates db tables and automate the creation of GET endpoint for
 # every table
 def init():
     with Transaction(DB):
@@ -109,10 +131,10 @@ if __name__ == "__main__":
     with Transaction(DB):
         schema.create_tables()
         city = schema.get("city")
-        city.upsert("name").executemany([
-            ("Brussels",),
-            ("London",),
-            ("Berlin",),
+        city.upsert("name" ,"lat", "long").executemany([
+            ("Brussels", "50.85045", "4.34878"),
+            ("London", "51.51279", "-0.09184"),
+            ("Berlin", "52.52437", "13.41053"),
         ])
 
         temp = schema.get("temperature")
