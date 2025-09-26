@@ -149,7 +149,8 @@ class AST:
         # https://postgres.cz/wiki/PostgreSQL_SQL_Tricks_I#Predicate_IN_optimalization)
         "values": lambda *xs: ("(VALUES %s)" % (
             ",".join("({})" for _ in xs)
-        )).format(*xs)
+        )).format(*xs),
+
     }
 
     # Declare aggregate operators
@@ -197,7 +198,10 @@ class AST:
         head, tail = self.tokens[0], self.tokens[1:]
         args = [tk._eval(env, flavor) for tk in tail]
         res = head._eval(env, flavor, *args)
-        return res if top else "({})".format(res)
+        # id = (ANY(%s)) is invalid syntax, it only works a without
+        # the external parenthesis
+        no_parent = top or head.value == "any"
+        return res if no_parent else "({})".format(res)
 
     def eval(self, env, flavor=DEFAULT_FLAVOR):
         return self._eval(env, flavor, top=True)

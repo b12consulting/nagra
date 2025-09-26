@@ -454,3 +454,16 @@ def test_to_nested_dict(transaction, person, nest_with_param):
             },
         },
     ]
+
+
+def test_any_and_values(transaction, person):
+    person.insert("id", "name").execute(1, "one")
+    select = person.select("id").where("(in id (values {} {}))")
+    res = list(select.execute(1, 2))
+    assert res == [(1,)]
+
+    if transaction.flavor != "sqlite":
+        # ANY is not supported by sqlite
+        select = person.select("id").where("(= id (any {}))")
+        res = list(select.execute([1, 2]))
+        assert res == [(1,)]
