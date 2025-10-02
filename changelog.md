@@ -6,6 +6,8 @@
 
 **Misc**:
 - Fixed bug in select when joining with foreign key that is not lowercase.
+- Fix support for introspectin on smallint columns
+
 
 ### 0.8 (released 2025-09-24)
 

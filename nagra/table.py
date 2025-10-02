@@ -66,7 +66,7 @@ _TYPE_ALIAS = {
     "timestamptz": "timestamptz",
     "timestamp": "timestamp",
     "datetime": "timestamp",
-    "smallint": "smalint",
+    "smallint": "smallint",
     "boolean": "bool",
     "integer": "int",
     "numeric": "float",
