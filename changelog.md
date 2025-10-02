@@ -4,8 +4,13 @@
 
 ### 0.9 (to be released)
 
+**New features**
+- Add support for simple filter in the cli. Now `nagra select user -W
+  '(=id 42)'` can now be written `nagra select user id=42`.
+
 **Misc**:
 - Fixed bug in select when joining with foreign key that is not lowercase.
+
 
 ### 0.8 (released 2025-09-24)
 
