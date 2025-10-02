@@ -6,6 +6,7 @@
 
 **Misc**:
 - Fixed bug in select when joining with foreign key that is not lowercase.
+- Fixed TOML schema generation: column types should be quoted.
 
 ### 0.8 (released 2025-09-24)
 
