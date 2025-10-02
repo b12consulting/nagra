@@ -2,7 +2,12 @@
 # Changelog
 
 
-### 0.7 (to be released)
+### 0.9 (to be released)
+
+**Misc**:
+- Fixed bug in select when joining with foreign key that is not lowercase.
+
+### 0.8 (released 2025-09-24)
 
 **Operators support** S-expression module now infer operator signature
 for all infix operators, only infix ones must be explicitly
