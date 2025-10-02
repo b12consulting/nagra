@@ -30,6 +30,7 @@ class Select:
         self.where_asts = tuple()
         self._offset = None
         self._limit = None
+        self.distinct_on_ast = tuple()
         self._aliases = tuple()
         self.groupby_ast = tuple()
         self.order_ast = tuple()
@@ -60,6 +61,7 @@ class Select:
         cln._limit = self._limit
         cln._offset = self._offset
         cln._aliases = self._aliases
+        cln.distinct_on_ast = self.distinct_on_ast
         return cln
 
     def where(self, *conditions: str):
@@ -70,6 +72,13 @@ class Select:
     def aliases(self, *names: str):
         cln = self.clone()
         cln._aliases += names
+        return cln
+
+    def distinct_on(self, *names: str):
+        assert self.trn.flavor == "postgresql", "distinct_on is only supported with Postgresql"
+
+        cln = self.clone()
+        cln.distinct_on_ast += tuple(AST.parse(n) for n in names)
         return cln
 
     def select(self, *columns: str):
@@ -229,6 +238,10 @@ class Select:
         where_conditions = [
             ast.eval(self.env, self.trn.flavor) for ast in self.where_asts
         ]
+        # Eval distinct on
+        distinct_on = [
+            ast.eval(self.env, self.trn.flavor) for ast in self.distinct_on_ast
+        ]
         # Eval Groupby
         groupby_ast = self.groupby_ast or self.infer_groupby()
         groupby = [a.eval(self.env, self.trn.flavor) for a in groupby_ast]
@@ -260,6 +273,7 @@ class Select:
             offset=self._offset,
             groupby=groupby,
             orderby=orderby,
+            distinct_on=distinct_on,
         )
         return stm()
 
