@@ -7,13 +7,13 @@ explore databases (created by nagra or by other system).
 
 The examples hereunder make the assumption that you have ran the
 [Fastapi](https://github.com/b12consulting/nagra/blob/master/examples/fastapi-example.py)
-example, and to have a file `example.db` in the curret folder. In
+example, and you have a file `example.db` in the current folder. In
 order to do so, you can simply run `python fastapi-example.py`.
 
 
 ## Setup & schema
-first define the `NAGRA_DB` environment variable. One can also pass
-the `--db` argument, if you have frequently switch from one db to the
+First define the `NAGRA_DB` environment variable. One can also pass
+the `--db` argument, if you have to frequently switch from one db to the
 other.
 
 ``` sh
@@ -74,7 +74,7 @@ $ nagra select temperature timestamp value city.name=Brussels  # .. except if it
 ╰──────────────────┴───────╯
 ```
 
-Advanced filters can be given wth the `-W` argument, order by with `-O`:
+Advanced filters can be given wth the `-W` argument, and order-by with `-O`:
 
 ``` sh
 $ nagra select temperature timestamp value  -W'(>= value 2)' -O value
@@ -86,7 +86,7 @@ $ nagra select temperature timestamp value  -W'(>= value 2)' -O value
 ╰──────────────────┴───────╯
 ```
 
-Expression can be used as selected column too (Sqlite returns boolean values as 1/0):
+Expressions can be used as selected columns too (Sqlite returns boolean values as 1/0):
 
 ``` sh
 $ nagra select temperature '(= value 2)'
@@ -143,6 +143,8 @@ Brussels,0.0
 London,1.0
 ```
 
+
+**TODO:** Add `schema.toml` to repo and explain advanced usage.
 
 ## Delete
 
