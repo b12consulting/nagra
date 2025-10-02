@@ -1,17 +1,15 @@
 import argparse
 import os
-import sys
 from itertools import chain
 
-from nagra import Transaction, Schema, View, __version__
+from nagra import Transaction, Schema, __version__
 from nagra.utils import print_table
 
 
 def select(args, schema):
     table = schema.get(args.table)
-    if args.columns:
-        cols = args.columns
-    else:
+    cols = [c for c in args.columns if "=" not in c]
+    if not cols:
         # Ignore blob col by default
         cols = [n for n, c in table.columns.items() if c.dtype != "blob"]
 
@@ -19,12 +17,20 @@ def select(args, schema):
     if args.where:
         where = chain.from_iterable(args.where)
         select = select.where(*where)
+
+    # Add inlined conditions
+    extra_conds = [c.split("=", 1) for c in args.columns if "=" in c]
+    extra_values = []
+    for name, value in extra_conds:
+        select = select.where("(= %s {})" % name)
+        extra_values.append(value)
+
     if args.limit:
         select = select.limit(args.limit)
     if args.orderby:
         orderby = chain.from_iterable(args.orderby)
         select = select.orderby(*orderby)
-    rows = list(select.execute())
+    rows = list(select.execute(*extra_values))
     headers = [d[0] for d in select.dtypes()]
 
     print_table(rows, headers, args.pivot, format=args.table_fmt)
