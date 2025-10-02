@@ -6,9 +6,12 @@ from nagra import Transaction, Schema, __version__
 from nagra.utils import print_table
 
 
+def is_compact_filter(col):
+    return "=" in col and not col.strip().startswith("(")
+
 def select(args, schema):
     table = schema.get(args.table)
-    cols = [c for c in args.columns if "=" not in c]
+    cols = [c for c in args.columns if not is_compact_filter(c)]
     if not cols:
         # Ignore blob col by default
         cols = [n for n, c in table.columns.items() if c.dtype != "blob"]
@@ -19,7 +22,7 @@ def select(args, schema):
         select = select.where(*where)
 
     # Add inlined conditions
-    extra_conds = [c.split("=", 1) for c in args.columns if "=" in c]
+    extra_conds = [c.split("=", 1) for c in args.columns if is_compact_filter(c)]
     extra_values = []
     for name, value in extra_conds:
         select = select.where("(= %s {})" % name)
