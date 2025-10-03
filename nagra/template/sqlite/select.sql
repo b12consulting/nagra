@@ -1,4 +1,4 @@
-SELECT
+SELECT {%- if distinct %} DISTINCT {% endif -%}
   {{ columns | join(', ') }}
 FROM "{{table}}"
 

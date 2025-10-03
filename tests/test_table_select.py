@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import pytest
 
 from nagra import Transaction
@@ -369,7 +369,7 @@ def test_to_dict(transaction, temperature):
         ]
     )
     # Read data
-    expected_date = datetime.datetime(1970, 1, 2, 0, 0)
+    expected_date = datetime(1970, 1, 2, 0, 0)
     if transaction.flavor == "sqlite":
         expected_date = str(expected_date.date())
 
@@ -472,7 +472,7 @@ def test_any_and_values(transaction, person):
 
 def test_distinct_on(transaction, person):
     if transaction.flavor != "postgresql":
-        pytest.skip()
+        pytest.skip("Disctinct on is only supported by PostgreSQL")
 
     person.insert("name").execute("one")
     person.insert("name", "parent.name").executemany([
@@ -491,3 +491,17 @@ def test_distinct_on(transaction, person):
         "(isnot parent null)",
     )
     assert list(select) == [("three",)]
+
+
+def test_distinct_on(transaction, temperature):
+    temperature.insert("city", "timestamp", "value").executemany([
+        ("Brussels", "2025-10-03", 11),
+        ("Amsterdam", "2025-10-03", 11),
+    ])
+
+    select = temperature.select_distinct(
+        "timestamp",
+        "value",
+    )
+    dt = datetime(2025, 10, 3) if transaction.flavor == "postgresql" else "2025-10-03"
+    assert list(select) == [(dt, 11)]

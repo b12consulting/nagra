@@ -24,7 +24,7 @@ def clean_col(name):
 
 
 class Select:
-    def __init__(self, table: "Table", *columns: str, trn: "Transaction", env: "Env"):
+    def __init__(self, table: "Table", *columns: str, distinct: bool=False, trn: "Transaction", env: "Env"):
         self.table = table
         self.env = env
         self.where_asts = tuple()
@@ -38,6 +38,7 @@ class Select:
         self.columns = tuple()
         self.columns_ast = tuple()
         self.query_columns = tuple()
+        self.distinct = distinct
         self.trn = trn
         self._add_columns(columns)
 
@@ -62,6 +63,7 @@ class Select:
         cln._offset = self._offset
         cln._aliases = self._aliases
         cln.distinct_on_ast = self.distinct_on_ast
+        cln.distinct = self.distinct
         return cln
 
     def where(self, *conditions: str):
@@ -76,7 +78,7 @@ class Select:
 
     def distinct_on(self, *names: str):
         assert self.trn.flavor == "postgresql", "distinct_on is only supported with Postgresql"
-
+        assert not self.distinct, "distinct and distinct_on can not be combined"
         cln = self.clone()
         cln.distinct_on_ast += tuple(AST.parse(n) for n in names)
         return cln
@@ -274,6 +276,7 @@ class Select:
             groupby=groupby,
             orderby=orderby,
             distinct_on=distinct_on,
+            distinct=self.distinct,
         )
         return stm()
 

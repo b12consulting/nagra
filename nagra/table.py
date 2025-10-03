@@ -225,12 +225,15 @@ class Table:
         """
         return schema.tables[name]
 
-    def select(self, *columns, trn=None):
+    def select(self, *columns, distinct:bool=False, trn=None):
         trn = trn or Transaction.current()
         if not columns:
             columns = self.default_columns()
-        slct = Select(self, *columns, trn=trn, env=Env(self))
+        slct = Select(self, *columns, distinct=distinct, trn=trn, env=Env(self))
         return slct
+
+    def select_distinct(self, *columns, trn=None):
+        return self.select(*columns, distinct=True, trn=trn)
 
     def delete(self, where=None, trn=None):
         trn = trn or Transaction.current()
