@@ -24,7 +24,14 @@ def clean_col(name):
 
 
 class Select:
-    def __init__(self, table: "Table", *columns: str, distinct: bool=False, trn: "Transaction", env: "Env"):
+    def __init__(
+        self,
+        table: "Table",
+        *columns: str,
+        distinct: bool = False,
+        trn: "Transaction",
+        env: "Env",
+    ):
         self.table = table
         self.env = env
         self.where_asts = tuple()
@@ -77,7 +84,9 @@ class Select:
         return cln
 
     def distinct_on(self, *names: str):
-        assert self.trn.flavor == "postgresql", "distinct_on is only supported with Postgresql"
+        assert (
+            self.trn.flavor == "postgresql"
+        ), "distinct_on is only supported with Postgresql"
         assert not self.distinct, "distinct and distinct_on can not be combined"
         cln = self.clone()
         cln.distinct_on_ast += tuple(AST.parse(n) for n in names)
@@ -149,8 +158,7 @@ class Select:
                         tails.append(sub_col.removeprefix(prefix))
                 # trigger a select on foreign table and generate dataclass
                 sub_class = ftable.select(*tails).to_dataclass(
-                    nest=True,
-                    model_name=model_name + snake_to_pascal(head)
+                    nest=True, model_name=model_name + snake_to_pascal(head)
                 )
                 nullable = not self.table.required(head)
                 if nullable:
@@ -173,9 +181,7 @@ class Select:
                     field_def += (None,)
                 fields[name] = field_def
 
-        return make_dataclass(
-            model_name, fields=fields.values(), kw_only=True
-        )
+        return make_dataclass(model_name, fields=fields.values(), kw_only=True)
 
     @staticmethod
     def from_dataclass(cls: dataclass, schema: Schema = Schema.default) -> "Select":
@@ -352,9 +358,9 @@ class Select:
                 raise ValidationError(msg)
             yield from self.to_nested_dict(*args)
         else:
-            columns = [f.name for f in dataclass_fields(
-                self.to_dataclass(*self._aliases)
-            )]
+            columns = [
+                f.name for f in dataclass_fields(self.to_dataclass(*self._aliases))
+            ]
             for row in self.execute(*args):
                 yield dict(zip(columns, row))
 
@@ -385,9 +391,7 @@ def autonest(record: dict) -> dict:
         head, _ = key.split(".", 1)
         prefix = f"{head}."
         sub_dict = {
-            k.removeprefix(prefix): v
-            for k, v in record.items()
-            if k.startswith(prefix)
+            k.removeprefix(prefix): v for k, v in record.items() if k.startswith(prefix)
         }
         if all(v is None for v in sub_dict.values()):
             # We only collect sub_dict if not fully null
