@@ -1,4 +1,6 @@
 
+Nagra is a Python database toolkit targeting Postgresql and Sqlite.
+
 # Install
 
 Nagra is available on [PyPI](https://pypi.org/project/nagra/) and can be installed using `pip`, `uv`, ...e.g.:
@@ -20,51 +22,18 @@ For example:
 
 ## Define tables
 
-Tables can be defined with classes like this:
+The simplest way to define a database schema is to define the tables
+in a toml string
 
 ``` python
-from nagra import Table
-
-city = Table(
-    "city",
-    columns={
-        "name": "varchar",
-        "lat": "varchar",
-        "long": "varchar",
-    },
-    natural_key=["name"],
-    one2many={
-        "temperatures": "temperature.city",
-    }
-)
-
-temperature = Table(
-    "temperature",
-    columns={
-        "timestamp": "timestamp",
-        "city": "int",
-        "value": "float",
-    },
-    natural_key=["city", "timestamp"],
-    foreign_keys={
-        "city": "city",
-    },
-
-)
-```
-
-
-Or based on a toml string:
-
-``` python
-from nagra import load_schema
+from nagra import Schema
 
 schema_toml = """
 [city]
 natural_key = ["name"]
 [city.columns]
-name = "varchar"
-lat = "varchar"
+name = "str"
+lat = "str"
 long = "date"
 [city.one2many]
 temperatures = "temperature.city"
@@ -77,9 +46,24 @@ timestamp = "timestamp"
 value = "float"
 """
 
-load_schema(schema_toml)
+schema = Schema.from_toml(schema_toml)
 ```
 
+You can then use `schema.get(table_name)` to get a table by name:
+
+``` python
+city = schema.get('city')
+```
+
+It's often handy to maintain the schema in its own file (in the
+example here in `schema.toml`), and use `from_toml` with a file handle
+of a `Path`instance:
+
+```python
+schema = Schema.from_toml(open('schema.toml'))
+# or
+schema = Schema.from_toml(Path('schema.toml'))
+```
 
 ## Generate SQL Statements
 
@@ -105,7 +89,7 @@ print(stm)
 # LEFT JOIN "city" as city_0 ON (city_0.id = "temperature"."city")
 ```
 
-One can explicitly ask for foreign key, with a dotted field
+One can explicitly ask for foreign key, with a dotted expression
 
 ``` python
 stm = temperature.select("city.lat", "timestamp").stm()
@@ -117,10 +101,40 @@ print(stm)
 # LEFT JOIN "city" as city_0 ON (city_0.id = "temperature"."city")
 ```
 
+So in the above example, `city`, a column of the `temperature` table, is
+a foreign key to the `city` table. By prefixing the expression with
+the column name we can easily access the linked table, without having
+to express a join condition.
+
+This works implicitly because `nagra` enforce both a primary key
+(unsurprisingly named `id`) on every table and will base every foreign
+key on those primary keys.
+
+### Python definition
+
+Similarly one table can be defined directly in Python, like this:
+
+``` python
+from nagra import Table
+
+city = Table(
+    "city",
+    columns={
+        "name": "str",
+        "lat": "str",
+        "long": "str",
+    },
+    natural_key=["name"],
+    one2many={
+        "temperatures": "temperature.city",
+    }
+)
+```
+
 
 ## Add Data and Query Database
 
-A `with Transaction ...` statemant defines a transaction block, with
+A `with Transaction ...` statement defines a transaction block, with
 an atomic semantic (either all statement are successful and the
 changes are commited or the transaction is rollbacked).
 
@@ -131,7 +145,7 @@ We first add cities:
 
 ``` python
 with Transaction("sqlite://"):
-    Schema.default.setup()  # Create tables
+    schema.create_tables()  # Emit all the "CREATE TABLE ..." in the database
 
     cities = [
         ("Brussels","50.8476° N", "4.3572° E"),
@@ -149,6 +163,17 @@ with Transaction("sqlite://"):
 
     upsert.executemany(cities) # Execute upsert
 ```
+
+We see that the upsert statement will automatically rely on the
+natural key in order to express the `ON CONFLICT` pragma. Here again,
+this implicit behaviour comes from a design choice of the table
+class. In `nagra` it's not possible to define a table without a
+natural key. When the table is created, a unique index is defined on
+the table based on the natural key definition.
+
+The enforcement of natural keys greatly simplifies the `upsert`
+operations, but it's also a good practice to have at least one unicity
+constraint on each table.
 
 We can then add temperatures
 
@@ -213,10 +238,10 @@ The complete code for this crashcourse is in
 [crashcourse.py](https://github.com/b12consulting/nagra/tree/master/examples/crashcourse.py)
 
 
-## Pandas support
+## Dataframe support
 
-If pandas is installed you can use `Select.to_pandas` and
-`Upsert.from_pandas`, like this:
+If pandas or polars is installed you can use `Select.to_pandas` (or `to_polars`) and
+`Upsert.from_pandas` (`from_polars`), like this:
 
 ``` python
     # Generate df from select
@@ -238,6 +263,7 @@ If pandas is installed you can use `Select.to_pandas` and
     assert row == (13,)
 ```
 
+
 # Development
 
 To install the project in editable mode along with all the optional dependencies
@@ -250,6 +276,7 @@ Or, to use stock uv functionalities:
 
     uv sync --extra all
 
+
 # Miscellaneous
 
 ## Changelog and roadmap
@@ -259,6 +286,8 @@ The project changelog is available here:
 
 Future ideas:
 - Support for other DBMS (SQL Server)
+- CTE support
+- Database migrations
 
 
 ## Similar solutions / inspirations
@@ -269,7 +298,6 @@ https://github.com/malloydata/malloy/tree/main
 
 https://github.com/jeremyevans/sequel
 :  Sequel: The Database Toolkit for Ruby
-
 
 https://orm.drizzle.team/
 : Headless TypeScript ORM with a head.

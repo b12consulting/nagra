@@ -27,7 +27,7 @@ pg = ["psycopg"]
 all = ["nagra[pandas,polars,pg]"]
 
 [dependency-groups]
-dev = ["pytest", "typeguard", "ruff"]
+dev = ["pytest", "typeguard", "ruff", "pdoc"]
 
 [project.urls]
 Homepage = "https://github.com/b12consulting/nagra"
