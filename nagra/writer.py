@@ -178,7 +178,7 @@ class WriterMixin:
         field_names = [f.name for f in dataclasses.fields(select.to_dataclass())]
 
         # Extract dict values - allows for field names or dotted column format
-        f_or_c = zip(field_names, self.columns)
+        f_or_c = list(zip(field_names, self.columns))
         rows = (tuple(getter(record, field, col) for col, field in f_or_c) for record in records)
         return self.executemany(rows)
 

@@ -401,8 +401,12 @@ def test_from_dict(transaction, person):
     # Upserting will also support dotted notation
     new_records = [
         {"name": "Big Bob", "parent.name": None},
-        {"name": "Bob", "parent.name": "Big Bob"},
+        {"name": "Other Bob", "parent.name": "Big Bob"},
     ]
     person.upsert("name", "parent.name").from_dict(new_records)
-    records_bis = list(person.select().to_dict())
-    assert records_bis == records
+    records_bis = list(person.select().orderby("id").to_dict())
+    assert records_bis == [
+        {"name": "Big Bob", "parent_name": None},
+        {"name": "Bob", "parent_name": "Big Bob"},
+        {"name": "Other Bob", "parent_name": "Big Bob"},
+    ]
