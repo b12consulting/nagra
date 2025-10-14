@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import pytest
 
 from nagra import Transaction
@@ -18,11 +18,11 @@ def test_select_with_join(person):
         "SELECT",
         '"person"."name", "parent_1"."name"',
         'FROM "person"',
-        'LEFT JOIN "person" as parent_0 ON (',
-        'parent_0."id" = "person"."parent"',
+        'LEFT JOIN "person" as "parent_0" ON (',
+        '"parent_0"."id" = "person"."parent"',
         ")",
-        'LEFT JOIN "person" as parent_1 ON (',
-        'parent_1."id" = "parent_0"."parent"',
+        'LEFT JOIN "person" as "parent_1" ON (',
+        '"parent_1"."id" = "parent_0"."parent"',
         ")",
         ";",
     ]
@@ -113,8 +113,8 @@ def test_select_where_and_join(person):
         "SELECT",
         '"person"."name"',
         'FROM "person"',
-        'LEFT JOIN "person" as parent_0 ON (',
-        'parent_0."id" = "person"."parent"',
+        'LEFT JOIN "person" as "parent_0" ON (',
+        '"parent_0"."id" = "person"."parent"',
         ")",
         "WHERE",
         '"parent_0"."name" = \'foo\'',
@@ -173,8 +173,8 @@ def test_orderby(person):
     stm = person.select("name").orderby("parent.name").stm()
     res = " ".join(strip_lines(stm))
     assert res == (
-        'SELECT "person"."name" FROM "person" LEFT JOIN "person" as parent_0 ON ( '
-        'parent_0."id" = "person"."parent" ) ORDER BY "parent_0"."name" asc ;'
+        'SELECT "person"."name" FROM "person" LEFT JOIN "person" as "parent_0" ON ( '
+        '"parent_0"."id" = "person"."parent" ) ORDER BY "parent_0"."name" asc ;'
     )
 
 
@@ -192,14 +192,14 @@ def test_o2m_stm(person, org):
         "SELECT",
         '"person"."name", "orgs_0"."name", "parent_1"."name", ' '"parent_2"."name"',
         'FROM "person"',
-        'LEFT JOIN "org" as orgs_0 ON (',
-        'orgs_0."person" = "person"."id"',
+        'LEFT JOIN "org" as "orgs_0" ON (',
+        '"orgs_0"."person" = "person"."id"',
         ")",
-        'LEFT JOIN "person" as parent_1 ON (',
-        'parent_1."id" = "person"."parent"',
+        'LEFT JOIN "person" as "parent_1" ON (',
+        '"parent_1"."id" = "person"."parent"',
         ")",
-        'LEFT JOIN "person" as parent_2 ON (',
-        'parent_2."id" = "parent_1"."parent"',
+        'LEFT JOIN "person" as "parent_2" ON (',
+        '"parent_2"."id" = "parent_1"."parent"',
         ")",
         ";",
     ]
@@ -217,11 +217,11 @@ def test_o2m_stm(person, org):
         "SELECT",
         '"person"."name", "orgs_0"."country", "skills_1"."name"',
         'FROM "person"',
-        'LEFT JOIN "org" as orgs_0 ON (',
-        'orgs_0."person" = "person"."id"',
+        'LEFT JOIN "org" as "orgs_0" ON (',
+        '"orgs_0"."person" = "person"."id"',
         ")",
-        'LEFT JOIN "skill" as skills_1 ON (',
-        'skills_1."person" = "person"."id"',
+        'LEFT JOIN "skill" as "skills_1" ON (',
+        '"skills_1"."person" = "person"."id"',
         ")",
         ";",
     ]
@@ -239,11 +239,11 @@ def test_o2m_stm(person, org):
         "SELECT",
         '"org"."name", "person_0"."name", "skills_1"."name"',
         'FROM "org"',
-        'LEFT JOIN "person" as person_0 ON (',
-        'person_0."id" = "org"."person"',
+        'LEFT JOIN "person" as "person_0" ON (',
+        '"person_0"."id" = "org"."person"',
         ")",
-        'LEFT JOIN "skill" as skills_1 ON (',
-        'skills_1."person" = "person_0"."id"',
+        'LEFT JOIN "skill" as "skills_1" ON (',
+        '"skills_1"."person" = "person_0"."id"',
         ")",
         ";",
     ]
@@ -257,11 +257,11 @@ def test_o2m_stm(person, org):
         "SELECT",
         '"person"."name", "addresses_1"."city"',
         'FROM "person"',
-        'LEFT JOIN "org" as orgs_0 ON (',
-        'orgs_0."person" = "person"."id"',
+        'LEFT JOIN "org" as "orgs_0" ON (',
+        '"orgs_0"."person" = "person"."id"',
         ")",
-        'LEFT JOIN "address" as addresses_1 ON (',
-        'addresses_1."org" = "orgs_0"."id"',
+        'LEFT JOIN "address" as "addresses_1" ON (',
+        '"addresses_1"."org" = "orgs_0"."id"',
         ")",
         ";",
     ]
@@ -369,7 +369,7 @@ def test_to_dict(transaction, temperature):
         ]
     )
     # Read data
-    expected_date = datetime.datetime(1970, 1, 2, 0, 0)
+    expected_date = datetime(1970, 1, 2, 0, 0)
     if transaction.flavor == "sqlite":
         expected_date = str(expected_date.date())
 
@@ -467,3 +467,41 @@ def test_any_and_values(transaction, person):
         select = person.select("id").where("(= id (any {}))")
         res = list(select.execute([1, 2]))
         assert res == [(1,)]
+
+
+
+def test_distinct_on(transaction, person):
+    if transaction.flavor != "postgresql":
+        pytest.skip("Disctinct on is only supported by PostgreSQL")
+
+    person.insert("name").execute("one")
+    person.insert("name", "parent.name").executemany([
+        ("two", "one"),
+        ("three", "one"),
+    ])
+
+    select = person.select(
+        "name"
+    ).distinct_on(
+        "parent.name"
+    ).orderby(
+        "parent.name",
+        "name",
+    ).where(
+        "(isnot parent null)",
+    )
+    assert list(select) == [("three",)]
+
+
+def test_distinct_on(transaction, temperature):
+    temperature.insert("city", "timestamp", "value").executemany([
+        ("Brussels", "2025-10-03", 11),
+        ("Amsterdam", "2025-10-03", 11),
+    ])
+
+    select = temperature.select_distinct(
+        "timestamp",
+        "value",
+    )
+    dt = datetime(2025, 10, 3) if transaction.flavor == "postgresql" else "2025-10-03"
+    assert list(select) == [(dt, 11)]
