@@ -12,7 +12,8 @@ from nagra.utils import logger, snake_to_pascal, template
 
 
 if TYPE_CHECKING:
-    from nagra.table import Table, View
+    from nagra.table import Table
+    from nagra.view import View
 
 
 class Schema:

@@ -3,16 +3,16 @@ from collections import defaultdict
 from collections.abc import Iterable
 from functools import partial
 from itertools import islice
+from typing import TYPE_CHECKING
 
 from nagra.exceptions import UnresolvedFK, ValidationError
 from nagra.utils import logger
 from nagra.transaction import ExecMany
 
-try:
+
+if TYPE_CHECKING:
     from pandas import DataFrame
     from polars import LazyFrame
-except ImportError:
-    DataFrame = None
 
 
 class WriterMixin:
