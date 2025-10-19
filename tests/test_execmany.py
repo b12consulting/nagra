@@ -2,7 +2,7 @@ from nagra.transaction import ExecMany
 
 
 def test_resolver(transaction, person):
-    placeholder = "?" if transaction.flavor == "sqlite" else "%s"
+    placeholder = "?" if transaction.flavor in ("sqlite", "mssql") else "%s"
     values = [(i,) for i in range(5)]
     rsv = ExecMany(
         f"SELECT {placeholder}",

@@ -33,6 +33,7 @@ from datetime import date, datetime
 from functools import cached_property
 
 from nagra.exceptions import EvalTypeError
+from nagra.utils import quote_identifier
 
 
 DEFAULT_FLAVOR = "postgresql"
@@ -325,9 +326,11 @@ class VarToken(Token):
 
     def _eval(self, env, flavor, *args):
         if self.is_relation():
-            self.join_alias = env.add_ref(self.value.split("."))
+            self.join_alias = env.add_ref(self.value.split("."), flavor)
             return self.join_alias
-        return '"{}"."{}"'.format(env.table.name, self.value)
+        table_name = quote_identifier(env.table.name, flavor)
+        column_name = quote_identifier(self.value, flavor)
+        return f"{table_name}.{column_name}"
 
     def _eval_type(self, env):
         # TODO handle paramtoken here?

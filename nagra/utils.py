@@ -32,6 +32,22 @@ RE_SC_PC = re.compile(r"(?:^|_)(\w)")
 RE_PC_SC = re.compile(r"(?<!^)(?=[A-Z])")
 
 
+def quote_identifier(name: str, flavor: str | None = None) -> str:
+    """
+    Quote an identifier according to the given database flavor.
+    Defaults to ANSI double quotes when flavor is not specified.
+    """
+    left, right = ('[', ']') if flavor == "mssql" else ('"', '"')
+
+    if name.startswith(left) and name.endswith(right):
+        return name
+
+    if "." in name:
+        return ".".join(quote_identifier(part, flavor) for part in name.split("."))
+
+    return f"{left}{name}{right}"
+
+
 def autoquote(x):
     if x.startswith('"'):
         return x

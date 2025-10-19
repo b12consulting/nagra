@@ -7,6 +7,6 @@ ALTER TABLE {{ q(table) }}
 ;
 {% if fk_table %}
 ALTER TABLE {{ q(table) }}
- ADD CONSTRAINT fk_{{ column }} FOREIGN KEY ({{ q(column) }})
+ ADD CONSTRAINT fk_{{table}}_{{ column }} FOREIGN KEY ({{ q(column) }})
  REFERENCES {{ q(fk_table.name) }} ({{ q(fk_table.primary_key) }});
 {% endif %}

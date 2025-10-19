@@ -283,6 +283,7 @@ def test_o2m_select(transaction, person, org, address):
     rows = list(
         person.select("name", "orgs.addresses.city").orderby("orgs.addresses.city")
     )
+    print(type(rows[0]))
     assert rows == [("Charly", "Ankara"), ("Charly", "Athens"), ("Charly", "Beirut")]
 
 

@@ -2,7 +2,7 @@
 MERGE INTO {{ q(table) }} AS target
 USING (
   SELECT
-  {%- for col in columns -%}
+  {% for col in columns -%}
     ? AS {{ q(col) }}{{ ", " if not loop.last else "" }}
   {%- endfor %}
 ) AS source

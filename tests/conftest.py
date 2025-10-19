@@ -1,4 +1,5 @@
 from itertools import product
+import os
 
 import pytest
 from typeguard import install_import_hook
@@ -12,7 +13,7 @@ person_table = Table(
     "person",
     columns={
         "name": "varchar",
-        "parent": "int",
+        "parent": "bigint",
     },
     foreign_keys={
         "parent": "person",
@@ -30,7 +31,7 @@ org_table = Table(
     "org",
     columns={
         "name": "varchar",
-        "person": "int",
+        "person": "bigint",
         "status": "varchar",
     },
     foreign_keys={
@@ -50,7 +51,7 @@ address_table = Table(
     "address",
     columns={
         "city": "varchar",
-        "org": "int",
+        "org": "bigint",
         "country": "int",
     },
     foreign_keys={
@@ -76,7 +77,7 @@ skill_table = Table(
     "skill",
     columns={
         "name": "varchar",
-        "person": "int",
+        "person": "bigint",
     },
     natural_key=["name"],
     not_null=["person"],
@@ -119,15 +120,15 @@ temperature_table = Table(
 )
 
 
-parameter_table = Table(
-    "parameter",
-    columns={
-        "name": "str",
-        "timestamps": "timestamp []",
-        "values": "float []",
-    },
-    natural_key=["name"],
-)
+# parameter_table = Table(
+#     "parameter",
+#     columns={
+#         "name": "str",
+#         "timestamps": "timestamp []",
+#         "values": "float []",
+#     },
+#     natural_key=["name"],
+# )
 
 
 population_table = Table(
@@ -227,6 +228,7 @@ def parameter():
 DSN = [
     "postgresql:///nagra",
     "sqlite://",
+    "mssql://sa:p4ssw0rD@localhost/nagra",
     # "postgresql://yugabyte:yugabyte@localhost:5433/nagra"
     # "duckdb://",
 ]

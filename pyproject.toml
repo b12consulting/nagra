@@ -24,7 +24,8 @@ nagra = "nagra.cli:run"
 pandas = ["pandas"]
 polars = ["polars"]
 pg = ["psycopg"]
-all = ["nagra[pandas,polars,pg]"]
+mssql = ["pyodbc"]
+all = ["nagra[pandas,polars,pg,mssql]"]
 
 [dependency-groups]
 dev = ["pytest", "typeguard", "ruff"]

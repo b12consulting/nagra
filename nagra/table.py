@@ -51,6 +51,7 @@ from nagra.transaction import Transaction
 from nagra.update import Update
 from nagra.copy import copy_from
 from nagra.upsert import Upsert
+from nagra.utils import quote_identifier
 
 if TYPE_CHECKING:
     from pandas import DataFrame
@@ -65,10 +66,15 @@ _TYPE_ALIAS = {
     "double precision": "float",
     "timestamptz": "timestamptz",
     "timestamp": "timestamp",
+    "varbinary": "blob",
     "datetime": "timestamp",
+    "nvarchar": "str",
+    "smallint": "int",
     "boolean": "bool",
+    "decimal": "float",
     "integer": "int",
     "numeric": "float",
+    "tinyint": "int",
     "varchar": "str",
     "bigint": "bigint",
     "vector": "float []",
@@ -76,6 +82,9 @@ _TYPE_ALIAS = {
     "bytes": "blob",
     "float": "float",
     "jsonb": "json",
+    "money": "float",
+    "nchar": "str",
+    "char": "str",
     "blob": "blob",
     "cidr": "str",
     "inet": "str",
@@ -86,6 +95,12 @@ _TYPE_ALIAS = {
     "text": "str",
     "uuid": "uuid",
     "int": "int",
+    "bit": "bool",
+
+    "uniqueidentifier": "uuid",
+    "datetime2": "timestamp",
+    "smalldatetime": "timestamp",
+    "datetimeoffset": "timestamptz",
     "str": "str",
     "": "str",
 }
@@ -116,6 +131,19 @@ _DB_TYPE = {
         "uuid": "TEXT",
         "json": "JSON",
         "blob": "BLOB",
+    },
+    "mssql": {
+        "str": "NVARCHAR(200)", # proper limit ?
+        "int": "INT",
+        "bigint": "BIGINT",
+        "float": "FLOAT",
+        "timestamp": "DATETIME2",
+        "timestamptz": "DATETIMEOFFSET",
+        "date": "DATE",
+        "bool": "BIT",
+        "uuid": "UNIQUEIDENTIFIER",
+        "json": "NVARCHAR(MAX)",
+        "blob": "VARBINARY(MAX)",
     },
 }
 
@@ -396,16 +424,18 @@ class Env:
         self.table = table
         self.refs = refs or {}
 
-    def add_ref(self, path):
+    def add_ref(self, path, flavor):
         *head, name, tail = path
         prefix = tuple([*head, name])
         table_alias = self.refs.get(prefix)
         if not table_alias:
             if len(prefix) >= 2:
-                self.add_ref(prefix)
+                self.add_ref(prefix, flavor)
             table_alias = f"{name}_{len(self.refs)}"
             self.refs[prefix] = table_alias
-        return f'"{table_alias}"."{tail}"'
+        alias = quote_identifier(table_alias, flavor)
+        column = quote_identifier(tail, flavor)
+        return f"{alias}.{column}"
 
     def __repr__(self):
         content = repr(self.refs)
