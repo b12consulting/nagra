@@ -260,13 +260,13 @@ class Select:
         )
         return stm()
 
-    def to_polars(self, *args) -> "LazyFrame":
+    def to_polars(self, *args, schema_overrides: dict | None = None) -> "LazyFrame":
         assert self.trn.flavor != "sqlite", "Polars is only supported with Postgresql"
         import polars
 
         schema = self.dtypes(with_optional=False)
         cursor = self.execute(*args)
-        df = polars.LazyFrame(cursor, schema=schema)
+        df = polars.LazyFrame(cursor, schema=schema, schema_overrides=schema_overrides)
         if self._aliases:
             mapping = dict(zip((n for n, _ in schema), self._aliases))
             df = df.rename(mapping)
