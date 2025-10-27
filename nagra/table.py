@@ -136,9 +136,7 @@ class Column:
             self.dtype = _TYPE_ALIAS[dtype.strip().lower()]
         except KeyError:
             self.dtype = "str"
-            warnings.warn(
-                f"Type '{dtype}' not supported (for column '{name}'), falling back to string type."
-            )
+            warnings.warn(f"Type '{dtype}' not supported (for column '{name}'), falling back to string type.")
 
     def python_type(self):
         res = None
@@ -154,7 +152,7 @@ class Column:
             case "bool":
                 res = bool
             case "json":
-                res = dict
+                res = list | dict
             case "date":
                 res = date
             case "uuid":
@@ -189,7 +187,11 @@ class Table:
         self.columns = {name: Column(name, dtype) for name, dtype in columns.items()}
         self.natural_key = natural_key or list(columns)
         self.foreign_keys = foreign_keys or {}
-        self.not_null = set(self.natural_key) | set(not_null or []) | set([primary_key])
+        self.not_null = (
+            set(self.natural_key)
+            | set(not_null or [])
+            | set([primary_key])
+        )
         self.one2many = one2many or {}
         self.default = default or {}
         self.primary_key = primary_key
