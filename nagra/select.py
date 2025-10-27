@@ -266,7 +266,10 @@ class Select:
 
         schema = self.dtypes(with_optional=False)
         cursor = self.execute(*args)
-        df = polars.LazyFrame(cursor, schema=schema, schema_overrides=schema_overrides)
+        pl_schema = dict(schema)
+        if schema_overrides:
+            pl_schema.update(schema_overrides)
+        df = polars.LazyFrame(cursor, schema=pl_schema)
         if self._aliases:
             mapping = dict(zip((n for n, _ in schema), self._aliases))
             df = df.rename(mapping)
