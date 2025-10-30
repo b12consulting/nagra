@@ -280,6 +280,8 @@ def test_o2m_select(transaction, person, org, address):
             ("Beirut", "Beta"),
         ]
     )
+    # if transaction.flavor == "mssql":
+    #     breakpoint()
     rows = list(
         person.select("name", "orgs.addresses.city").orderby("orgs.addresses.city")
     )

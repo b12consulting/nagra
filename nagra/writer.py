@@ -88,11 +88,10 @@ class WriterMixin:
                 returning = self.table.primary_key is not None
                 cursor = self.trn.executemany(stm, chunk, returning)
                 if returning:
-                    while True:
-                        new_id = cursor.fetchone()
+                    for new_id in cursor:
                         ids.append(new_id[0] if new_id else None)
-                        if not cursor.nextset():
-                            break
+                        # if not cursor.nextset():
+                        #     break
 
         # If conditions are present, enforce those
         if self._check:
@@ -121,6 +120,7 @@ class WriterMixin:
         exm = ExecMany(stm, values, trn=self.trn)
         for res, vals in zip(exm, values):
             if res is not None:
+                print(res)
                 yield res[0]
             elif any(v is None for v in vals):
                 # One of the values is not given

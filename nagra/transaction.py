@@ -188,7 +188,7 @@ class Transaction:
             return yield_from_cursor(cursor)
 
         if self.flavor == "mssql":
-            # cursor.executemany(stmt, args)
+            cursor.executemany(stmt, args)
             # return cursor
             return self._executemany_mssql(cursor, stmt, args, returning)
 
@@ -197,27 +197,27 @@ class Transaction:
 
     def _executemany_mssql(self, cursor, stmt, args, returning):
         import pyodbc  # Local import to keep optional dependency scoped
-        print(f"{returning=}", f"{args=}", stmt)
 
-        sequence = list(args)
-        if not sequence:
-            return SequenceCursor([]) if returning else cursor
+        # sequence = list(args)
+        # if not sequence:
+        #     return SequenceCursor([]) if returning else cursor
         if returning:
             rows = []
-            for params in sequence:
+            for params in args:
                 cursor.execute(stmt, params)
                 try:
                     row = cursor.fetchone()
                 except pyodbc.Error:  # pragma: no cover - driver specific
                     row = None
-                rows.append(tuple(row))
-            return SequenceCursor(rows)
+                yield row
+            #     rows.append(tuple(row))
+            # return SequenceCursor(rows)
 
         try:
             cursor.fast_executemany = True
         except AttributeError:
             pass
-        cursor.executemany(stmt, sequence)
+        cursor.executemany(stmt, args)
         return (tuple(r) for r in cursor)
 
     def rollback(self):
@@ -334,15 +334,13 @@ class ExecMany:
             for vals in self.values:
                 logger.debug(self.stm)
                 cursor.execute(self.stm, vals)
-                res = cursor.fetchone()
+                res = next(cursor)
+                print(vals, res)
                 yield res
         else:
             cursor = self.trn.executemany(self.stm, self.values, returning=True)
-            while True:
-                vals = cursor.fetchone()
+            for vals in cursor.fetchone():
                 yield vals
-                if not cursor.nextset():
-                    break
 
 
 class DummyTransaction(Transaction):
