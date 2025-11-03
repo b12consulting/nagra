@@ -242,7 +242,7 @@ class Select:
 
         if self._aliases:
             query_columns = [
-                f'"{c}" AS "{a}"' for c, a in zip(self.query_columns, self._aliases)
+                f'{c} AS "{a}"' for c, a in zip(self.query_columns, self._aliases)
             ]
         else:
             query_columns = self.query_columns
@@ -269,7 +269,7 @@ class Select:
         pl_schema = dict(schema)
         if schema_overrides:
             pl_schema.update(schema_overrides)
-        df = polars.LazyFrame(cursor, schema=pl_schema)
+        df = polars.LazyFrame(cursor, schema=schema, schema_overrides=schema_overrides)
         if self._aliases:
             mapping = dict(zip((n for n, _ in schema), self._aliases))
             df = df.rename(mapping)
