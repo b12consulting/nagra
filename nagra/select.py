@@ -301,12 +301,13 @@ class Select:
         schema = self.dtypes(with_optional=False)
         cursor = self.execute(*args)
         pl_schema = dict(schema)
+        if self._aliases:
+            mapping = dict(zip((n for n, _ in schema), self._aliases))
+            for old, new in mapping.items():
+                pl_schema[new] = pl_schema.pop(old)
         if schema_overrides:
             pl_schema.update(schema_overrides)
         df = polars.LazyFrame(cursor, schema=pl_schema)
-        if self._aliases:
-            mapping = dict(zip((n for n, _ in schema), self._aliases))
-            df = df.rename(mapping)
         return df
 
     def to_pandas(

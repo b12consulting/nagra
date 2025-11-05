@@ -3,6 +3,7 @@ from datetime import datetime, date
 from uuid import UUID
 
 import polars
+import polars.datatypes
 import pytest
 
 
@@ -23,13 +24,13 @@ def test_to_polars(transaction, temperature):
     assert columns == ["timestamp", "city", "value"]
     # to_polars return a LazyFrame, we matertialize it
     df = df.collect()
-    assert sorted(df['city']) == ["Berlin", "London"]
+    assert sorted(df["city"]) == ["Berlin", "London"]
 
     # Read with custom arg
     cond = "(= value {})"
     df = temperature.select().where(cond).to_polars(12).collect()
     assert list(df.columns) == ["timestamp", "city", "value"]
-    assert sorted(df['city']) == ["London"]
+    assert sorted(df["city"]) == ["London"]
 
 
 def test_from_polars(transaction, kitchensink):
@@ -73,13 +74,21 @@ def test_from_polars(transaction, kitchensink):
         b"blob",
     )
 
-    # SELECT with operator
-    new_df = kitchensink.select(
-        "(date_bin '5 days' timestamptz '1900-01-01')",
-    ).to_polars().collect()
+    # SELECT with operator and schema override
+    new_df = (
+        kitchensink.select(
+            "(date_bin '5 days' timestamptz '1900-01-01')",
+        )
+        .aliases("ts")
+        .to_polars(
+            schema_overrides={
+                "ts": polars.datatypes.Datetime(time_zone="Europe/Brussels")
+            }
+        )
+        .collect()
+    )
 
-    new_df.columns = ["ts"]
-    ts = new_df['ts']
+    ts = new_df["ts"]
     assert str(ts.dtype) == "Datetime(time_unit='us', time_zone='Europe/Brussels')"
 
-    assert ts[0].isoformat() == '1969-12-30T01:00:00+01:00'
+    assert ts[0].isoformat() == "1969-12-30T01:00:00+01:00"
