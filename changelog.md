@@ -6,6 +6,7 @@
 
 **Misc**:
 - Fixed bug in select when joining with foreign key that is not lowercase.
+- Fix string escape of field aliases
 
 ### 0.8 (released 2025-09-24)
 
