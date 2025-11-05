@@ -41,7 +41,8 @@ class Schema:
             case IOBase():
                 content = toml_src.read()
             case Path():
-                content = toml_src.open().read()
+                with toml_src.open() as toml_src:
+                    content = toml_src.read()
             case _:
                 content = toml_src
         tables = toml.loads(content)
@@ -119,7 +120,7 @@ class Schema:
     def _db_indexes(cls, trn=None, pg_schema="public"):
         trn = trn or Transaction.current()
         stmt = Statement("find_indexes", trn.flavor, pg_schema=pg_schema)
-        res = [n for n, in trn.execute(stmt())]
+        res = [n for (n,) in trn.execute(stmt())]
         return res
 
     def _db_views(cls, trn=None, pg_schema="public") -> dict[str, str]:
@@ -175,7 +176,7 @@ class Schema:
                     pg_schema=pg_schema,
                     name=constraint_name,
                 )
-                columns = [c for c, in trn.execute(col_stmt())]
+                columns = [c for (c,) in trn.execute(col_stmt())]
                 # Postgresql will wrap columns names with quotes for
                 # reserved words
                 columns = [c.strip('"') for c in columns]
@@ -397,7 +398,9 @@ class Schema:
         res = "\n".join(tpl.render(table=t) for t in tables)
         return res
 
-    def generate_pydantic_models(self, base_class:str="BaseModel", table_names:list[str] | None= None):
+    def generate_pydantic_models(
+        self, base_class: str = "BaseModel", table_names: list[str] | None = None
+    ):
         tpl = template("misc/pydantic-schema.py")
         if not table_names:
             tables = self.tables.values()
