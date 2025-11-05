@@ -84,9 +84,9 @@ class Select:
         return cln
 
     def distinct_on(self, *names: str):
-        assert (
-            self.trn.flavor == "postgresql"
-        ), "distinct_on is only supported with Postgresql"
+        assert self.trn.flavor == "postgresql", (
+            "distinct_on is only supported with Postgresql"
+        )
         assert not self.distinct, "distinct and distinct_on can not be combined"
         cln = self.clone()
         cln.distinct_on_ast += tuple(AST.parse(n) for n in names)

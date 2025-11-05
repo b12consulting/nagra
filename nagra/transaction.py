@@ -71,7 +71,6 @@ class LRUGenerator:
 
 
 class Transaction:
-
     _stack_lock = threading.Lock()
     # _local_stack: ContextVar[list["Transaction"]] = ContextVar('_local_stack', default=[])
     _local = threading.local()

@@ -42,24 +42,23 @@ with Transaction("sqlite://"):
     upsert = temperature.upsert("city.name", "timestamp", "value")
 
     upsert.execute("Louvain-la-Neuve", "2023-11-27 16:00:00", 6)
-    upsert.executemany([
-        ("Brussels", "2023-11-27 17:00:00", 7),
-        ("Brussels", "2023-11-27 20:00:00", 8),
-        ("Brussels", "2023-11-27 23:00:00", 5),
-        ("Brussels", "2023-11-28 02:00:00", 3),
-    ])
+    upsert.executemany(
+        [
+            ("Brussels", "2023-11-27 17:00:00", 7),
+            ("Brussels", "2023-11-27 20:00:00", 8),
+            ("Brussels", "2023-11-27 23:00:00", 5),
+            ("Brussels", "2023-11-28 02:00:00", 3),
+        ]
+    )
 
     # Read data back
     select = temperature.select("city.lat", "(avg value)").groupby("city.lat")
     print(select.stm())
-    assert sorted(select) == [('50.6681° N', 6.0), ('50.8476° N', 5.75)]
+    assert sorted(select) == [("50.6681° N", 6.0), ("50.8476° N", 5.75)]
 
     # Use the one2many
-    select = city.select(
-        "name",
-        "(avg temperatures.value)"
-    ).orderby("name")
-    assert dict(select) == {'Brussels': 5.75, 'Louvain-la-Neuve': 6.0}
+    select = city.select("name", "(avg temperatures.value)").orderby("name")
+    assert dict(select) == {"Brussels": 5.75, "Louvain-la-Neuve": 6.0}
 
     # Pandas example: generate df from table
     df = temperature.select().to_pandas()
@@ -69,5 +68,5 @@ with Transaction("sqlite://"):
     df["value"] += 10
 
     temperature.upsert().from_pandas(df)
-    row, = temperature.select("value").where("(= timestamp '2023-11-28 02:00:00')")
+    (row,) = temperature.select("value").where("(= timestamp '2023-11-28 02:00:00')")
     assert row == (13,)

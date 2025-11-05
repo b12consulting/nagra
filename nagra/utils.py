@@ -90,7 +90,7 @@ class TableFmt(StrEnum):
     CSV = "csv"
 
 
-def print_table(rows, headers, pivot=False, format:TableFmt = None):
+def print_table(rows, headers, pivot=False, format: TableFmt = None):
     if format == TableFmt.CSV:
         writer = csv.writer(sys.stdout)
         writer.writerow(headers)

@@ -7,7 +7,6 @@ from nagra.upsert import Upsert
 from nagra.update import Update
 
 
-
 def equivalent_classes(A, B):
     # Quickwin !
     if A == B:
@@ -221,6 +220,7 @@ def test_nested_dataclasses(person):
 
     assert equivalent_classes(dclass, Person)
 
+
 def test_from_dataclass(person):
     @dataclass
     class PersonLikeModel:
@@ -230,7 +230,6 @@ def test_from_dataclass(person):
 
     select = Select.from_dataclass(PersonLikeModel)
     assert list(select.columns) == ["name", "parent"]
-
 
     @dataclass
     class PersonStub:

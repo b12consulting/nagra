@@ -147,10 +147,9 @@ class AST:
         "in": lambda x, *ys: f"{x} in (%s)" % ", ".join(map(str, ys)),
         # Usefull for IN operation with large number of items (see
         # https://postgres.cz/wiki/PostgreSQL_SQL_Tricks_I#Predicate_IN_optimalization)
-        "values": lambda *xs: ("(VALUES %s)" % (
-            ",".join("({})" for _ in xs)
-        )).format(*xs),
-
+        "values": lambda *xs: ("(VALUES %s)" % (",".join("({})" for _ in xs))).format(
+            *xs
+        ),
     }
 
     # Declare aggregate operators
@@ -225,7 +224,7 @@ class AST:
         return any(
             tk._is_nullable(env)
             for tk in self.chain()
-            if not isinstance(tk, (BuiltinToken, ))
+            if not isinstance(tk, (BuiltinToken,))
         )
 
     def get_args(self):
@@ -379,45 +378,53 @@ class OpToken(Token):
 
 
 class BuiltinToken(OpToken):
-    num_like = set(['+', '-', '*', '/'])
-    bool_like = set([
-        "!=",
-        "<",
-        ">",
-        ">=",
-        "<=",
-        "=",
-        "and",
-        "or",
-        "not",
-        "is",
-        "isnot",
-        "like",
-        "ilike",
-        "isfinite",
-    ])
-    datetime_like = set([
-        "clock_timestamp",
-        "current_timestamp",
-        "date_add",
-        "date_bin",
-        "date_subtract",
-        "date_trunc",
-        "localtimestamp",
-        "make_timestamp",
-        "now",
-        "statement_timestamp",
-        "to_timestamp",
-        "transaction_timestamp",
-    ])
-    date_like = set([
-        "current_date",
-        "make_date",
-    ])
-    float_like = set([
-        "date_part",
-        "extract",
-    ])
+    num_like = set(["+", "-", "*", "/"])
+    bool_like = set(
+        [
+            "!=",
+            "<",
+            ">",
+            ">=",
+            "<=",
+            "=",
+            "and",
+            "or",
+            "not",
+            "is",
+            "isnot",
+            "like",
+            "ilike",
+            "isfinite",
+        ]
+    )
+    datetime_like = set(
+        [
+            "clock_timestamp",
+            "current_timestamp",
+            "date_add",
+            "date_bin",
+            "date_subtract",
+            "date_trunc",
+            "localtimestamp",
+            "make_timestamp",
+            "now",
+            "statement_timestamp",
+            "to_timestamp",
+            "transaction_timestamp",
+        ]
+    )
+    date_like = set(
+        [
+            "current_date",
+            "make_date",
+        ]
+    )
+    float_like = set(
+        [
+            "date_part",
+            "extract",
+        ]
+    )
 
     def _eval_type(self, env, *operands):
         # FIXME, probably too basic
@@ -456,11 +463,13 @@ class LitToken(Token):
 
 class FloatToken(LitToken):
     "Float Token"
+
     _type = float
 
 
 class IntToken(LitToken):
     "Integer Token"
+
     _type = int
 
 
@@ -482,6 +491,7 @@ class LiteralToken(OpToken):
     """
     Class for hard-coded litteral token, one of `AST.literals`
     """
+
     def _eval_type(self, env, *operands):
         if self.value == "null":
             return None

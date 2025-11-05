@@ -35,24 +35,26 @@ def pg_init(pg_dsn):
         schema.create_tables()
         # Add cities
         cities = [
-            ("Brussels","50.8476° N", "4.3572° E"),
+            ("Brussels", "50.8476° N", "4.3572° E"),
             ("Louvain-la-Neuve", "50.6681° N", "4.6118° E"),
         ]
         city = schema.get("city")
         upsert = city.upsert("name", "lat", "long")
-        upsert.executemany(cities) # Execute upsert
+        upsert.executemany(cities)  # Execute upsert
 
         # Add temperatures
         temperature = schema.get("temperature")
         upsert = temperature.upsert("city.name", "timestamp", "value")
 
         upsert.execute("Louvain-la-Neuve", "2023-11-27 16:00:00", 6)
-        upsert.executemany([
-            ("Brussels", "2023-11-27 17:00:00", 7),
-            ("Brussels", "2023-11-27 20:00:00", 8),
-            ("Brussels", "2023-11-27 23:00:00", 5),
-            ("Brussels", "2023-11-28 02:00:00", 3),
-        ])
+        upsert.executemany(
+            [
+                ("Brussels", "2023-11-27 17:00:00", 7),
+                ("Brussels", "2023-11-27 20:00:00", 8),
+                ("Brussels", "2023-11-27 23:00:00", 5),
+                ("Brussels", "2023-11-28 02:00:00", 3),
+            ]
+        )
 
 
 def sync_to_sqlite(pg_dsn, sqlite_dsn):

@@ -26,7 +26,7 @@ city = "city"
 
 
 def random_name(k=10):
-    return ''.join(choices(ascii_letters, k=k))
+    return "".join(choices(ascii_letters, k=k))
 
 
 def setup():
@@ -46,9 +46,7 @@ def setup():
         ("Brussels",),
         ("Louvain-la-Neuve",),
     ]
-    cities.extend(set(
-        random_name() for _ in range(100_000)
-    ))
+    cities.extend(set(random_name() for _ in range(100_000)))
 
     upsert = city.upsert("name")
     upsert(cities)  # Execute upsert
@@ -60,16 +58,18 @@ def add_temp(with_cache):
     upsert = temperature.upsert("city.name", "timestamp", "value")
 
     for _ in range(2000):
-        upsert.executemany([
-            ("Brussels", "2023-11-27 17:00:00", 7),
-            ("Louvain-la-Neuve", "2023-11-27 20:00:00", 8),
-            ("Brussels", "2023-11-27 23:00:00", 5),
-            ("Louvain-la-Neuve", "2023-11-28 02:00:00", 3),
-            ("Brussels", "2023-11-27 17:00:00", 7),
-            ("Louvain-la-Neuve", "2023-11-27 20:00:00", 8),
-            ("Brussels", "2023-11-27 23:00:00", 5),
-            ("Louvain-la-Neuve", "2023-11-28 02:00:00", 3),
-        ])
+        upsert.executemany(
+            [
+                ("Brussels", "2023-11-27 17:00:00", 7),
+                ("Louvain-la-Neuve", "2023-11-27 20:00:00", 8),
+                ("Brussels", "2023-11-27 23:00:00", 5),
+                ("Louvain-la-Neuve", "2023-11-28 02:00:00", 3),
+                ("Brussels", "2023-11-27 17:00:00", 7),
+                ("Louvain-la-Neuve", "2023-11-27 20:00:00", 8),
+                ("Brussels", "2023-11-27 23:00:00", 5),
+                ("Louvain-la-Neuve", "2023-11-28 02:00:00", 3),
+            ]
+        )
 
 
 def bench_fk_cache(dsn: str, fk_cache: bool):
@@ -84,6 +84,7 @@ def bench_fk_cache(dsn: str, fk_cache: bool):
 
 if __name__ == "__main__":
     import cProfile
+
     dsn = "postgresql:///nagra-bench"
 
     for fk_cache in (True, False):

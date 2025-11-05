@@ -6,7 +6,6 @@ from nagra.schema import Schema
 
 
 def test_dummy_transaction():
-
     with pytest.raises(NoActiveTransaction):
         dummy_transaction.execute("SELECT 1")
 
