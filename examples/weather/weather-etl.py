@@ -14,6 +14,7 @@ def init():
     if not db_ok:
         Schema.default.create_tables()
 
+
 def load_city():
     # load cities
     df = read_csv(HERE / "city.csv")
@@ -37,6 +38,7 @@ def load_weather():
 
 if __name__ == "__main__":
     import sys
+
     with Transaction(DB):
         init()
         if sys.argv[1] == "city":

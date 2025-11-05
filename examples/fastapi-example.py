@@ -51,7 +51,7 @@ city = "city"
 app = FastAPI()
 DB = "sqlite://example.db"
 # or
-#DB = "postgresql:///demo"
+# DB = "postgresql:///demo"
 
 schema = Schema.default
 schema.load_toml(schema_toml)
@@ -63,6 +63,7 @@ class City:
     name: str
     lat: str | None = None
     long: str | None = None
+
 
 @dataclass
 class CityTemperatures:
@@ -90,30 +91,28 @@ def temperatures():
 def city_temperatures(name: str):
     with Transaction(DB):
         city = schema.get("city")
-        select = city.select(
-            "name",
-            "temperatures.value"
-        ).aliases("name", "temperature")
+        select = city.select("name", "temperatures.value").aliases(
+            "name", "temperature"
+        )
         return list(select.where("(= name {})").to_dict(name))
 
 
 # Rely on select to generate response model
-avg_select = schema.get("temperature").select(
-    "city.name",
-    "(avg value)",
-).aliases("city", "avg")
+avg_select = (
+    schema.get("temperature")
+    .select(
+        "city.name",
+        "(avg value)",
+    )
+    .aliases("city", "avg")
+)
 avg_class = avg_select.to_dataclass()
 
 
 @app.get("/avg/{name}/temperatures", response_model=List[avg_class])
 def avg_temperature(name: str):
     with Transaction(DB) as trn:
-        return list(
-            avg_select
-            .clone(trn=trn)
-            .where("(= city.name {})")
-            .to_dict(name)
-        )
+        return list(avg_select.clone(trn=trn).where("(= city.name {})").to_dict(name))
 
 
 # Init creates db tables and automate the creation of GET endpoint for
@@ -131,16 +130,20 @@ if __name__ == "__main__":
     with Transaction(DB):
         schema.create_tables()
         city = schema.get("city")
-        city.upsert("name" ,"lat", "long").executemany([
-            ("Brussels", "50.85045", "4.34878"),
-            ("London", "51.51279", "-0.09184"),
-            ("Berlin", "52.52437", "13.41053"),
-        ])
+        city.upsert("name", "lat", "long").executemany(
+            [
+                ("Brussels", "50.85045", "4.34878"),
+                ("London", "51.51279", "-0.09184"),
+                ("Berlin", "52.52437", "13.41053"),
+            ]
+        )
 
         temp = schema.get("temperature")
-        temp.upsert("city.name", "timestamp", "value").executemany([
-            ("Brussels", "2000-01-01T00:00", 0),
-            ("London", "2000-01-01T00:00", 1),
-            ("Berlin", "2000-01-01T00:00", 3),
-            ("Berlin", "2000-01-01T01:00", 2),
-        ])
+        temp.upsert("city.name", "timestamp", "value").executemany(
+            [
+                ("Brussels", "2000-01-01T00:00", 0),
+                ("London", "2000-01-01T00:00", 1),
+                ("Berlin", "2000-01-01T00:00", 3),
+                ("Berlin", "2000-01-01T01:00", 2),
+            ]
+        )

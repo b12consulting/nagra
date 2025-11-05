@@ -33,7 +33,7 @@ def test_select_with_fk(person):
         id: int
         parent_name: Optional[str] = None
 
-    assert  model.model_json_schema() == Person.model_json_schema()
+    assert model.model_json_schema() == Person.model_json_schema()
 
     # Double fk
     select = person.select("id", "parent.parent.name")
@@ -60,11 +60,10 @@ def test_kitchensink(kitchensink):
         timestamptz: Optional[datetime] = None
         bool: Optional[bool] = None
         date: Optional[date]
-        json: Optional[dict | list]  = None
+        json: Optional[dict | list] = None
         uuid: Optional[str] = None
         max: Optional[str] = None
         true: Optional[str] = None
         blob: Optional[bytes]
 
     # TODO loop on KitchenSink.model_fields and validate annotation and types
-

@@ -94,9 +94,9 @@ def test_from_pandas(transaction, kitchensink):
             "(date_bin '5 days' timestamptz '1900-01-01')",
         ).to_pandas()
         new_df.columns = ["ts"]
-        assert str(new_df.ts.dtype) == 'datetime64[ns, Europe/Brussels]'
+        assert str(new_df.ts.dtype) == "datetime64[ns, Europe/Brussels]"
         ts = new_df.ts[0]
-        assert ts.isoformat() == '1969-12-30T01:00:00+01:00'
+        assert ts.isoformat() == "1969-12-30T01:00:00+01:00"
         # NOTE the above result is expected:
         # ```
         # =# SELECT date_bin('5 days', TIMESTAMPTZ '1970-01-01 00:00:00+00', '1900-01-01');
@@ -112,5 +112,5 @@ def test_from_pandas(transaction, kitchensink):
             "(- int int)",
         ).to_pandas()
         new_df.columns = ["float", "int"]
-        assert str(new_df.float.dtype) == 'float64'
-        assert str(new_df.int.dtype) == 'int64'
+        assert str(new_df.float.dtype) == "float64"
+        assert str(new_df.int.dtype) == "int64"

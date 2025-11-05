@@ -11,7 +11,6 @@ HERE = Path(__file__).parent
 
 
 def test_toml_loader():
-
     # With a Path
     src = HERE / "assets" / "sample_schema.toml"
     test_schema = Schema.from_toml(src)

@@ -179,7 +179,10 @@ class WriterMixin:
 
         # Extract dict values - allows for field names or dotted column format
         f_or_c = list(zip(field_names, self.columns))
-        rows = (tuple(getter(record, field, col) for col, field in f_or_c) for record in records)
+        rows = (
+            tuple(getter(record, field, col) for col, field in f_or_c)
+            for record in records
+        )
         return self.executemany(rows)
 
 
@@ -193,6 +196,7 @@ def getter(record, field, col):
     if col in record:
         return record[col]
     raise KeyError(f"KeyError: neither {field} or {col} found")
+
 
 def _slicer(chunk_size=10_000):
     start = 0

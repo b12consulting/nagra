@@ -25,7 +25,7 @@ with Transaction("sqlite://"):
 
     # Add person
     person = schema.get("person")
-    record = ("Hugo","2000-01-01", "180")
+    record = ("Hugo", "2000-01-01", "180")
     person.upsert("name", "birthday", "height").execute(*record)
 
     # Create select
@@ -41,8 +41,8 @@ with Transaction("sqlite://"):
     # name <class 'str'>
     # birthday typing.Optional[datetime.date]
     # height typing.Optional[int]
-    
-    record, = select.to_dict()
+
+    (record,) = select.to_dict()
     print(record)
     # -> {'name': 'Hugo', 'birthday': '2000-01-01', 'height': 180}
 
@@ -50,7 +50,6 @@ with Transaction("sqlite://"):
     # ->
     #      name   birthday  height
     # 0  Hugo 2000-01-01     180
-
 
     adapter = TypeAdapter(dclass)
     obj = adapter.validate_python(record)
