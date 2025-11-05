@@ -254,13 +254,23 @@ def test_return_ids(cacheable_transaction, person):
     assert insert_ids == update_ids
     assert insert_ids != [None, None]
 
-    # Create an "on conflict do nothing" upsert
+    # Create an "on conflict do nothing" upsert (because we only write
+    # nk)
     upsert = person.upsert("name")
     records = [("Papa",), ("Quebec",)]
     insert_ids = upsert.executemany(records)
     assert insert_ids != [None, None]
     update_ids = upsert.executemany(records)
     assert update_ids == [None, None]
+
+    # This time pass other columns but with an insert
+    records = [("Papa", 1), ("Quebec", 1)]
+    insert_ids = person.insert("name", "parent").executemany(records)
+    assert insert_ids == [None, None]
+
+    # Check db content
+    res = list(person.select("parent").where('(= name {})').execute("Papa"))
+    assert res == [(None,)]
 
 
 def test_double_insert(cacheable_transaction, person):
