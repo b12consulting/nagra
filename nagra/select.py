@@ -302,8 +302,8 @@ class Select:
         cursor = self.execute(*args)
         pl_schema = dict(schema)
         if self._aliases:
-            mapping = dict(zip((n for n, _ in schema), self._aliases))
-            for old, new in mapping.items():
+            mapping = zip((n for n, _ in schema), self._aliases)
+            for old, new in mapping:
                 pl_schema[new] = pl_schema.pop(old)
         if schema_overrides:
             pl_schema.update(schema_overrides)
