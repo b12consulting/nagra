@@ -161,13 +161,11 @@ class WriterMixin:
         # Convert non-basic types to string
         for name, dtype in schema.items():
             if dtype == Struct:
-                df = df.with_columns(col("json").struct.json_encode())
+                df = df.with_columns(col(name).struct.json_encode())
 
         res = []
-        for start, stop in _slicer():
-            chunk = df.slice(start, stop).collect()
-            if chunk.is_empty():
-                break
+        ddf = df.collect()
+        for chunk in ddf.iter_slices(10000):
             rows = chunk.iter_rows()
             res += self.executemany(rows)
         return res
@@ -179,7 +177,10 @@ class WriterMixin:
 
         # Extract dict values - allows for field names or dotted column format
         f_or_c = list(zip(field_names, self.columns))
-        rows = (tuple(getter(record, field, col) for col, field in f_or_c) for record in records)
+        rows = (
+            tuple(getter(record, field, col) for col, field in f_or_c)
+            for record in records
+        )
         return self.executemany(rows)
 
 
@@ -193,6 +194,7 @@ def getter(record, field, col):
     if col in record:
         return record[col]
     raise KeyError(f"KeyError: neither {field} or {col} found")
+
 
 def _slicer(chunk_size=10_000):
     start = 0
