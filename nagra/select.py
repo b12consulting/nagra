@@ -84,9 +84,9 @@ class Select:
         return cln
 
     def distinct_on(self, *names: str):
-        assert (
-            self.trn.flavor == "postgresql"
-        ), "distinct_on is only supported with Postgresql"
+        assert self.trn.flavor == "postgresql", (
+            "distinct_on is only supported with Postgresql"
+        )
         assert not self.distinct, "distinct and distinct_on can not be combined"
         cln = self.clone()
         cln.distinct_on_ast += tuple(AST.parse(n) for n in names)
@@ -286,17 +286,28 @@ class Select:
         )
         return stm()
 
-    def to_polars(self, *args) -> "LazyFrame":
+    def to_polars(self, *args, schema_overrides: dict | None = None) -> "LazyFrame":
+        """
+        Execute the query with given args and return a polars
+        LazyFrame. Optionally, `schema_overrides` can be provided to
+        override the column types inferred from the database schema
+        and the query operations.
+
+        Only supported with PostgreSQL.
+        """
         assert self.trn.flavor != "sqlite", "Polars is only supported with Postgresql"
         import polars
 
         schema = self.dtypes(with_optional=False)
         cursor = self.execute(*args)
-        columns = [c for c, _ in schema]
-        df = polars.LazyFrame(cursor, schema=columns)
+        pl_schema = dict(schema)
         if self._aliases:
-            mapping = dict(zip((n for n, _ in schema), self._aliases))
-            df = df.rename(mapping)
+            mapping = zip((n for n, _ in schema), self._aliases)
+            for old, new in mapping:
+                pl_schema[new] = pl_schema.pop(old)
+        if schema_overrides:
+            pl_schema.update(schema_overrides)
+        df = polars.LazyFrame(cursor, schema=pl_schema)
         return df
 
     def to_pandas(
