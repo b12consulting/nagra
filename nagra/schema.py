@@ -306,6 +306,8 @@ class Schema:
         for name, table in self.tables.items():
             if table.is_view or f"{name}_idx" in db_indexes:
                 continue
+            if not table.natural_key:
+                continue
             stmt = Statement(
                 "create_unique_index",
                 trn.flavor,
