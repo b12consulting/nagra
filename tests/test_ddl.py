@@ -83,9 +83,8 @@ def test_create_table_pk_is_fk(empty_transaction):
             '   CONSTRAINT fk_concept REFERENCES "concept"("concept_id")\n'
             ");",
             'ALTER TABLE "concept"\n ADD COLUMN "name" TEXT NOT NULL',
-            'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER NOT NULL',
+            'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER',
             'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
-            'CREATE UNIQUE INDEX score_idx ON "score" (\n  "concept", "score"\n);',
         ]
     else:
         assert lines == [
@@ -95,9 +94,8 @@ def test_create_table_pk_is_fk(empty_transaction):
             '   CONSTRAINT fk_concept REFERENCES "concept"("concept_id")\n'
             ");",
             'ALTER TABLE "concept"\n ADD COLUMN "name" TEXT NOT NULL\n',
-            'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER NOT NULL\n',
+            'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER\n',
             'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
-            'CREATE UNIQUE INDEX score_idx ON "score" (\n  "concept", "score"\n);',
         ]
 
 
