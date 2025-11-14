@@ -152,7 +152,11 @@ class WriterMixin:
         rows = df[self.columns].values
         return self.executemany(rows)
 
-    def from_polars(self, df: "LazyFrame"):
+    def from_polars(self, df: "LazyFrame", batch: bool = False):
+        """
+        Write data from a polars LazyFrame. Set `batch` to True
+        to enable streaming through the collect_batches() method
+        """
         from polars import Struct, col
 
         # Ignore extra columns
@@ -163,9 +167,13 @@ class WriterMixin:
             if dtype == Struct:
                 df = df.with_columns(col(name).struct.json_encode())
 
+        if batch:
+            chunks = df.collect_batches()
+        else:
+            chunks = [df.collect()]
+
         res = []
-        ddf = df.collect()
-        for chunk in ddf.iter_slices(10000):
+        for chunk in chunks:
             rows = chunk.iter_rows()
             res += self.executemany(rows)
         return res
