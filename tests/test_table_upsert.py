@@ -420,3 +420,21 @@ def test_from_dict(transaction, person):
         {"name": "Bob", "parent_name": "Big Bob"},
         {"name": "Other Bob", "parent_name": "Big Bob"},
     ]
+
+
+def test_nk_less_table(transaction, value):
+    # Simple insert
+    upsert = value.insert("value")
+    ids = upsert.execute(1)
+    assert ids == 1
+
+    # Update work if id is given
+    upsert = value.update("id", "value")
+    ids = upsert.execute(1, 1.1)
+    assert ids == 1
+
+    # Upsert should fail if id is not given
+    upsert = value.upsert("value")
+    with pytest.raises(ValidationError):
+        upsert.execute(1)
+    # return
