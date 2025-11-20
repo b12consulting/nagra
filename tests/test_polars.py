@@ -4,6 +4,7 @@ from uuid import UUID
 
 import polars
 import polars.datatypes
+import polars.testing
 import pytest
 
 
@@ -33,7 +34,8 @@ def test_to_polars(transaction, temperature):
     assert sorted(df["city"]) == ["London"]
 
 
-def test_from_polars(transaction, kitchensink):
+@pytest.mark.parametrize("batch", [True, False])
+def test_from_polars(transaction, kitchensink, batch):
     if transaction.flavor != "postgresql":
         pytest.skip("Sqlite not supported with polars")
 
@@ -58,7 +60,7 @@ def test_from_polars(transaction, kitchensink):
     )
 
     # UPSERT
-    kitchensink.upsert().from_polars(df)
+    kitchensink.upsert().from_polars(df, batch=batch)
     (row,) = kitchensink.select()
     BRUTZ = zoneinfo.ZoneInfo(key="Europe/Brussels")
     assert row == (
@@ -104,3 +106,22 @@ def test_from_polars(transaction, kitchensink):
     assert str(ts.dtype) == "Datetime(time_unit='us', time_zone='Europe/Brussels')"
 
     assert ts[0].isoformat() == "1969-12-30T01:00:00+01:00"
+
+
+@pytest.mark.parametrize("batch", [True, False])
+def test_with_chunking(transaction, temperature_no_nk, batch):
+    if transaction.flavor != "postgresql":
+        pytest.skip("Sqlite not supported with polars")
+    df = polars.DataFrame(
+        {
+            "timestamp": polars.datetime_range(
+                datetime(1970, 1, 1), datetime(1970, 1, 2), "1s", eager=True
+            ),
+            "city": "City",
+            "value": 20.0,
+        }
+    )
+    temperature_no_nk.insert("timestamp", "city", "value").from_polars(df.lazy(), batch=batch)
+    result = temperature_no_nk.select().to_polars().sort("timestamp").collect()
+
+    polars.testing.assert_frame_equal(result, df)
