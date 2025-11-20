@@ -8,6 +8,7 @@ except ImportError:
     DataFrame = None
 
 from nagra import Statement, Schema
+from nagra.exceptions import ValidationError
 from nagra.transaction import Transaction
 from nagra.writer import WriterMixin
 from nagra.utils import snake_to_pascal, get_table_from_dataclass, iter_dataclass_cols
@@ -67,7 +68,15 @@ class Upsert(WriterMixin):
 
     def stm(self):
         pk = self.table.primary_key
+        # Default to primarey key if present in given columns
         conflict_key = [pk] if pk in self.groups else self.table.natural_key
+        if not conflict_key and not self._insert_only:
+            msg = (
+                "Neither primary key nor natural key present in the set of "
+                f"columns to upsert (table: {self.table.name})"
+            )
+            raise ValidationError(msg)
+
         columns = self.groups
         do_update = False if self._insert_only else len(columns) > len(conflict_key)
         stm = Statement(

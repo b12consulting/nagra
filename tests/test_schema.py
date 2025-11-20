@@ -157,6 +157,7 @@ def test_schema_from_nagra_db(transaction):
         "skill",
         "temperature",
         "temperature_no_nk",
+        "value",
     ]
     schema.introspect_db()
     assert sorted(schema.tables) == tables
