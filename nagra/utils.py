@@ -10,6 +10,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import Iterator, TYPE_CHECKING, get_args
 from enum import StrEnum
+from urllib.parse import parse_qs, unquote_plus, urlparse
 
 from jinja2 import FileSystemLoader, Environment
 from rich import box
@@ -158,3 +159,37 @@ def get_table_from_dataclass(cls: dataclass, schema: "Schema"):
     cls_name = getattr(cls, "__table__", cls.__name__)
     table = schema.get(pascal_to_snake(cls_name))
     return table
+
+
+def mssql_connection_string(dsn: str) -> str:
+    """
+    Build an ODBC connection string from a mssql:// style DSN.
+    """
+    parsed = urlparse(dsn)
+    query = parse_qs(parsed.query, keep_blank_values=True)
+    q = lambda name, default=None: unquote_plus(
+        query.pop(name, [default])[-1]
+    )
+
+    driver = q("driver", "ODBC Driver 18 for SQL Server")
+    trustservercertificate = q("trust_server_certificate", "no")
+    parts = [
+        f"DRIVER={{{driver}}}",
+        f"TrustServerCertificate={{{trustservercertificate}}}",
+    ]
+
+    host = parsed.hostname or "localhost"
+    if parsed.port:
+        host = f"{host},{parsed.port}"
+    parts.append(f"SERVER={host}")
+
+    database = parsed.path.lstrip("/")
+    if database:
+        parts.append(f"DATABASE={unquote_plus(database)}")
+
+    if parsed.username:
+        parts.append(f"UID={unquote_plus(parsed.username)}")
+    if parsed.password:
+        parts.append(f"PWD={unquote_plus(parsed.password)}")
+
+    return ";".join(parts)

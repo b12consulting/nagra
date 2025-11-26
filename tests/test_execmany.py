@@ -12,8 +12,9 @@ def test_resolver(transaction, person):
     results = list(rsv)
     assert results == [(0,), (1,), (2,), (3,), (4,)]
 
+    false = "false" if transaction.flavor != "mssql" else "0=1"
     rsv = ExecMany(
-        f"SELECT {placeholder} from person WHERE false",
+        f"SELECT {placeholder} from person WHERE {false}",
         values,
         trn=transaction,
     )

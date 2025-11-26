@@ -24,30 +24,67 @@ def test_create_table(empty_transaction):
     lines = list(schema.setup_statements(trn=empty_transaction))
     create_table, add_name, add_score, create_idx = map(strip_lines, lines)
 
-    if flavor == "postgresql":
-        assert create_table == [
-            'CREATE TABLE  "my_table" (',
-            '"custom_id" BIGSERIAL PRIMARY KEY',
-            ");",
-        ]
-    else:
-        assert create_table == [
-            'CREATE TABLE  "my_table" (',
-            '"custom_id"  INTEGER PRIMARY KEY',
-            ");",
-        ]
-    assert add_name == ['ALTER TABLE "my_table"', 'ADD COLUMN "name" TEXT NOT NULL']
+    match flavor:
+        case "postgresql":
+            assert create_table == [
+                'CREATE TABLE  "my_table" (',
+                '"custom_id" BIGSERIAL PRIMARY KEY',
+                ");",
+            ]
+        case "sqlite":
+            assert create_table == [
+                'CREATE TABLE  "my_table" (',
+                '"custom_id"  INTEGER PRIMARY KEY',
+                ");",
+            ]
+        case "mssql":
+            assert create_table == [
+                'CREATE TABLE [my_table] (',
+                '[custom_id] BIGINT IDENTITY(1,1) PRIMARY KEY',
+                ');'
+            ]
+    match flavor:
+        case "postgresql" | "sqlite" :
+            assert add_name == [
+                'ALTER TABLE "my_table"',
+                'ADD COLUMN "name" TEXT NOT NULL',
+                ';'
+            ]
+        case "mssql":
+            assert add_name == [
+                'ALTER TABLE [my_table]',
+                'ADD [name] NVARCHAR(200) NOT NULL',
+                ';',
+            ]
 
-    assert add_score == [
-        'ALTER TABLE "my_table"',
-        'ADD COLUMN "score" INTEGER NOT NULL',
-        "DEFAULT 0",
-    ]
-    assert create_idx == [
-        'CREATE UNIQUE INDEX my_table_idx ON "my_table" (',
-        '"name"',
-        ");",
-    ]
+    match flavor:
+        case "postgresql" | "sqlite" :
+            assert add_score == [
+                'ALTER TABLE "my_table"',
+                'ADD COLUMN "score" INTEGER NOT NULL',
+                "DEFAULT 0",
+                ';',
+            ]
+        case "mssql" :
+            assert add_score == [
+                'ALTER TABLE [my_table]',
+                'ADD [score] INT NOT NULL',
+                "DEFAULT 0",
+                ';',
+            ]
+
+    match flavor:
+        case "postgresql" | "sqlite" :
+            assert create_idx == [
+                'CREATE UNIQUE INDEX my_table_idx ON "my_table" (',
+                '"name"',
+                ");",
+            ]
+        case "mssql" :
+            assert create_idx == [
+                'CREATE UNIQUE INDEX [my_table_idx] ON [my_table] ([name]',
+                ");",
+            ]
 
 
 def test_create_table_pk_is_fk(empty_transaction):

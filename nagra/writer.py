@@ -120,7 +120,6 @@ class WriterMixin:
         exm = ExecMany(stm, values, trn=self.trn)
         for res, vals in zip(exm, values):
             if res is not None:
-                print(res)
                 yield res[0]
             elif any(v is None for v in vals):
                 # One of the values is not given

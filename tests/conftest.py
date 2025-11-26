@@ -228,7 +228,7 @@ def parameter():
 DSN = [
     "postgresql:///nagra",
     "sqlite://",
-    "mssql://sa:p4ssw0rD@localhost/nagra",
+    "mssql://sa:p4ssw0rD@127.0.0.1/nagra?trust_server_certificate=yes",
     # "postgresql://yugabyte:yugabyte@localhost:5433/nagra"
     # "duckdb://",
 ]

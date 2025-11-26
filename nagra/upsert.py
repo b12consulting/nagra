@@ -67,7 +67,8 @@ class Upsert(WriterMixin):
 
     def stm(self):
         pk = self.table.primary_key
-        conflict_key = [pk] if pk in self.groups else self.table.natural_key
+        with_pk = pk in self.groups
+        conflict_key = [pk] if with_pk else self.table.natural_key
         columns = self.groups
         do_update = False if self._insert_only else len(columns) > len(conflict_key)
         stm = Statement(
@@ -78,6 +79,7 @@ class Upsert(WriterMixin):
             conflict_key=conflict_key,
             do_update=do_update,
             returning=[pk] if pk else self.table.natural_key,
+            with_pk=with_pk,
         )
         return stm()
 

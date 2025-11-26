@@ -1,10 +1,9 @@
 import sqlite3
 import threading
-from contextvars import ContextVar
+from itertools import islice
 from typing import Callable
-from urllib.parse import parse_qs, unquote_plus, urlparse
 
-from nagra.utils import logger, UNSET
+from nagra.utils import logger, UNSET, mssql_connection_string
 from nagra.exceptions import NoActiveTransaction
 
 
@@ -71,50 +70,6 @@ class LRUGenerator:
             self.recent = {}
 
 
-def _mssql_connection_string(dsn: str) -> str:
-    """
-    Build an ODBC connection string from a mssql:// style DSN.
-    Supports typical URL components as well as a raw odbc_connect query parameter.
-    """
-    parsed = urlparse(dsn)
-    query = parse_qs(parsed.query, keep_blank_values=True)
-
-    if "odbc_connect" in query:
-        return unquote_plus(query["odbc_connect"][-1])
-
-    driver = unquote_plus(query.pop("driver", ["ODBC Driver 18 for SQL Server"])[-1])
-    parts = [
-        f"DRIVER={{{driver}}}",
-        "TrustServerCertificate=yes", # FIXME should come from dsn
-    ]
-
-    host = parsed.hostname or "localhost"
-    if parsed.port:
-        host = f"{host},{parsed.port}"
-    parts.append(f"SERVER={host}")
-
-    database = parsed.path.lstrip("/")
-    if database:
-        parts.append(f"DATABASE={unquote_plus(database)}")
-
-    if parsed.username:
-        parts.append(f"UID={unquote_plus(parsed.username)}")
-    if parsed.password:
-        parts.append(f"PWD={unquote_plus(parsed.password)}")
-
-    trusted_values = query.pop("trusted_connection", query.pop("Trusted_Connection", [None]))
-    trusted = trusted_values[-1]
-    if trusted is not None:
-        parts.append(f"Trusted_Connection={unquote_plus(trusted)}")
-
-    for key, values in query.items():
-        if not values:
-            continue
-        parts.append(f"{key}={unquote_plus(values[-1])}")
-
-    return ";".join(parts)
-
-
 class Transaction:
 
     _stack_lock = threading.Lock()
@@ -149,7 +104,7 @@ class Transaction:
                 raise ImportError(msg) from exc
 
             self.flavor = "mssql"
-            conn_str = _mssql_connection_string(dsn)
+            conn_str = mssql_connection_string(dsn)
             self.connection = pyodbc.connect(conn_str, autocommit=False)
             cursor = self.connection.cursor()
             cursor.execute("SET QUOTED_IDENTIFIER ON")
@@ -169,56 +124,45 @@ class Transaction:
         logger.debug(stmt)
         cursor = self.connection.cursor()
         cursor.execute(stmt, args)
-        if self.flavor == "duckdb":
-            return yield_from_cursor(cursor)
-        else:
-            return cursor
+        match self.flavor:
+            case "postgresql" | "sqlite":
+                return ResultCursor(cursor)
+            case "mssql":
+                return MSSQLCursor(cursor)
+            case _:
+                msg = f"Unsupported flavor for execute: {self.flavor}"
+                raise RuntimeError(msg)
 
     def executemany(self, stmt, args=None, returning=True):
         logger.debug(stmt)
         cursor = self.connection.cursor()
         args = args or []
 
-        if self.flavor == "sqlite":
-            cursor.executemany(stmt, args)
-            return cursor
+        match self.flavor:
+            case "postgresql" | "sqlite":
+                cursor.executemany(stmt, args, returning=returning)
+                return ResultCursor(cursor)
+            case "mssql":
+                if not returning:
+                    cursor.fast_executemany = True
+                    cursor.executemany(stmt, args, returning=returning)
+                    return ResultCursor(cursor)
+                else:
+                    rows = self._executemany_mssql(cursor, stmt, args)
+                    return RowCursor(rows)
+            case _:
+                msg = f"Unsupported flavor for executemany: {self.flavor}"
+                raise RuntimeError(msg)
 
-        if self.flavor == "duckdb":
-            cursor.executemany(stmt, args, returning=returning)
-            return yield_from_cursor(cursor)
-
-        if self.flavor == "mssql":
-            cursor.executemany(stmt, args)
-            # return cursor
-            return self._executemany_mssql(cursor, stmt, args, returning)
-
-        cursor.executemany(stmt, args, returning=returning)
-        return cursor
-
-    def _executemany_mssql(self, cursor, stmt, args, returning):
-        import pyodbc  # Local import to keep optional dependency scoped
-
-        # sequence = list(args)
-        # if not sequence:
-        #     return SequenceCursor([]) if returning else cursor
-        if returning:
-            rows = []
-            for params in args:
-                cursor.execute(stmt, params)
-                try:
-                    row = cursor.fetchone()
-                except pyodbc.Error:  # pragma: no cover - driver specific
-                    row = None
-                yield row
-            #     rows.append(tuple(row))
-            # return SequenceCursor(rows)
-
-        try:
-            cursor.fast_executemany = True
-        except AttributeError:
-            pass
-        cursor.executemany(stmt, args)
-        return (tuple(r) for r in cursor)
+    def _executemany_mssql(self, cursor, stmt, args):
+        import pyodbc
+        for params in args:
+            cursor.execute(stmt, params)
+            try:
+                row = cursor.fetchone()
+            except pyodbc.Error:
+                row = None
+            yield row
 
     def rollback(self):
         self.connection.rollback()
@@ -293,27 +237,72 @@ def yield_from_cursor(cursor):
         yield from rows
 
 
-class SequenceCursor:
+class CursorMixin:
     """
-    Minimal cursor-like object used to return rows collected during manual executemany calls.
+    Provide extra properties (one, all, scalar, scalars) and
+    usefull methods for Cursor classes.
+    """
+
+    def fetchone(self):
+        return next(self, None)
+
+    def fetchmany(self, size=None):
+        return list(islice(self, 1000))
+
+    def fetchall(self):
+        return list(self)
+
+    @property
+    def one(self):
+        return self.fetchone()
+
+    @property
+    def all(self):
+        return self.fetchall()
+
+    @property
+    def scalar(self):
+        res, = self.fetchone()
+        return res
+
+    @property
+    def scalars(self):
+        for res, in self:
+            yield res
+
+
+class ResultCursor(CursorMixin):
+
+    def __init__(self, native_cursor):
+        self.native_cursor = native_cursor
+
+    def __iter__(self):
+        return iter(self.native_cursor)
+
+    def __next__(self):
+        return next(self.native_cursor)
+
+
+class MSSQLCursor(ResultCursor):
+
+    def __iter__(self):
+        yield from (r and tuple(r) for r in self.native_cursor)
+
+    def __next__(self):
+        return next(self.native_cursor)
+
+
+class RowCursor:
+    """
+    Wrapper around a collection of rows that mimicks ResultCursor,
+    needed for mssql support.
     """
 
     def __init__(self, rows):
-        self._rows = rows
-        self._index = 0
+        self.rows = iter(rows)
 
-    def fetchone(self):
-        if self._index < len(self._rows):
-            return self._rows[self._index]
-        return None
-
-    def nextset(self):
-        if self._index < len(self._rows) - 1:
-            self._index += 1
-            return True
-        if self._index == len(self._rows) - 1:
-            self._index += 1
-        return False
+    def __iter__(self):
+        yield from (r and tuple(r) for r in self.rows)
 
 
 class ExecMany:
@@ -328,19 +317,33 @@ class ExecMany:
         self.trn = trn
 
     def __iter__(self):
-        # Create a dedicated cursor
-        if self.trn.flavor == "sqlite":
-            cursor = self.trn.connection.cursor()
-            for vals in self.values:
-                logger.debug(self.stm)
-                cursor.execute(self.stm, vals)
-                res = next(cursor)
-                print(vals, res)
-                yield res
-        else:
-            cursor = self.trn.executemany(self.stm, self.values, returning=True)
-            for vals in cursor.fetchone():
-                yield vals
+        # Use a dedicated cursor to allow concurrent execution
+        logger.debug(self.stm)
+        match self.trn.flavor:
+            case "sqlite":
+                cursor = self.trn.connection.cursor()
+                for vals in self.values:
+                    cursor.execute(self.stm, vals)
+                    yield cursor.fetchone()
+            case "postgresql":
+                cursor = self.trn.executemany(
+                    self.stm,
+                    self.values,
+                    returning=True,
+                ).native_cursor
+
+                while True:
+                    vals = cursor.fetchone()
+                    yield vals
+                    if not cursor.nextset():
+                        break
+            case "mssql":
+                cursor = self.trn.executemany(
+                    self.stm,
+                    self.values,
+                    returning=True,
+                )
+                yield from cursor
 
 
 class DummyTransaction(Transaction):
