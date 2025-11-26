@@ -1,2 +1,1 @@
-{% macro q(name) -%}[{{ name }}]{%- endmacro %}
-CREATE OR ALTER VIEW {{ q(name) }} AS {{ view_def }};
+CREATE OR ALTER VIEW [{{ name }}] AS {{ view_def }};

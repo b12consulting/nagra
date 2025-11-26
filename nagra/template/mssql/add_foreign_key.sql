@@ -1,4 +1,3 @@
-{% macro q(name) -%}[{{ name }}]{%- endmacro %}
-ALTER TABLE {{ q(table) }}
- ADD CONSTRAINT FOREIGN KEY ({{ q(column) }})
- REFERENCES {{ q(foreign_table) }} ({{ q(foreign_column) }});
+ALTER TABLE [{{ table }}]
+ ADD CONSTRAINT FOREIGN KEY ([{{ column }}])
+ REFERENCES [{{ foreign_table }}] ([{{ foreign_column }}]);

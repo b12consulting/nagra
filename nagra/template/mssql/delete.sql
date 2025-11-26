@@ -1,5 +1,4 @@
-{% macro q(name) -%}[{{ name }}]{%- endmacro %}
-DELETE FROM {{ q(table) }}
+DELETE FROM [{{ table }}]
 {% if conditions -%}
  WHERE
  {{ conditions | join(' AND ') }}
