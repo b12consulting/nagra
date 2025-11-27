@@ -10,8 +10,9 @@ from pathlib import Path
 from time import perf_counter
 from typing import Iterator, TYPE_CHECKING, get_args
 from enum import StrEnum
+from urllib.parse import parse_qs, unquote_plus, urlparse
 
-from jinja2 import FileSystemLoader, Environment
+from jinja2 import FileSystemLoader, Environment, StrictUndefined
 from rich import box
 from rich.console import Console
 from rich.markup import escape
@@ -32,6 +33,22 @@ RE_SC_PC = re.compile(r"(?:^|_)(\w)")
 RE_PC_SC = re.compile(r"(?<!^)(?=[A-Z])")
 
 
+def quote_identifier(name: str, flavor: str | None = None) -> str:
+    """
+    Quote an identifier according to the given database flavor.
+    Defaults to ANSI double quotes when flavor is not specified.
+    """
+    left, right = ('[', ']') if flavor == "mssql" else ('"', '"')
+
+    if name.startswith(left) and name.endswith(right):
+        return name
+
+    if "." in name:
+        return ".".join(quote_identifier(part, flavor) for part in name.split("."))
+
+    return f"{left}{name}{right}"
+
+
 def autoquote(x):
     if x.startswith('"'):
         return x
@@ -39,7 +56,10 @@ def autoquote(x):
 
 
 # Setup jinja env
-jinja_env = Environment(loader=FileSystemLoader(HERE / "template"))
+jinja_env = Environment(
+    loader=FileSystemLoader(HERE / "template"),
+    undefined=StrictUndefined,
+)
 jinja_env.filters["autoquote"] = autoquote
 
 
@@ -142,3 +162,37 @@ def get_table_from_dataclass(cls: dataclass, schema: "Schema"):
     cls_name = getattr(cls, "__table__", cls.__name__)
     table = schema.get(pascal_to_snake(cls_name))
     return table
+
+
+def mssql_connection_string(dsn: str) -> str:
+    """
+    Build an ODBC connection string from a mssql:// style DSN.
+    """
+    parsed = urlparse(dsn)
+    query = parse_qs(parsed.query, keep_blank_values=True)
+    q = lambda name, default=None: unquote_plus(
+        query.pop(name, [default])[-1]
+    )
+
+    driver = q("driver", "ODBC Driver 18 for SQL Server")
+    trustservercertificate = q("trust_server_certificate", "no")
+    parts = [
+        f"DRIVER={{{driver}}}",
+        f"TrustServerCertificate={{{trustservercertificate}}}",
+    ]
+
+    host = parsed.hostname or "localhost"
+    if parsed.port:
+        host = f"{host},{parsed.port}"
+    parts.append(f"SERVER={host}")
+
+    database = parsed.path.lstrip("/")
+    if database:
+        parts.append(f"DATABASE={unquote_plus(database)}")
+
+    if parsed.username:
+        parts.append(f"UID={unquote_plus(parsed.username)}")
+    if parsed.password:
+        parts.append(f"PWD={unquote_plus(parsed.password)}")
+
+    return ";".join(parts)

@@ -8,7 +8,7 @@ CREATE TABLE  "{{table.name}}" (
 
     {%- if name in fk_tables %}
     {% set fk_table = fk_tables[name] %}
-     CONSTRAINT fk_{{name}} REFERENCES "{{fk_table.name}}"("{{fk_table.primary_key}}") {{- " ON DELETE CASCADE" if not_null else "" }}
+     CONSTRAINT fk_{{name}} REFERENCES "{{fk_table.name}}"("{{fk_table.primary_key}}") {{- " ON DELETE CASCADE" if name in table.not_null else "" }}
     {%- endif %}
 
    {{", " if not loop.last}}

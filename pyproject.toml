@@ -23,9 +23,10 @@ nagra = "nagra.cli:run"
 [project.optional-dependencies]
 pandas = ["pandas"]
 polars = ["polars"]
+mssql = ["pyodbc"]
 pg = ["psycopg[binary]"]
 pydantic = ["pydantic"]
-all = ["nagra[pandas,polars,pg,pydantic]"]
+all = ["nagra[pandas,polars,pg,pydantic,mssql]"]
 
 [dependency-groups]
 dev = ["nagra[all]", "pytest", "typeguard", "ruff"]
