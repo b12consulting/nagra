@@ -325,6 +325,8 @@ class Schema:
                 continue
             if trn.flavor == "mssql" and table.has_array:
                 continue
+            if not table.natural_key:
+                continue
 
             stmt = Statement(
                 "create_unique_index",

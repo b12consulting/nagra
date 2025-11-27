@@ -3,6 +3,7 @@ from datetime import datetime, date
 from uuid import UUID
 
 import polars
+import polars.datatypes
 import pytest
 
 
@@ -23,18 +24,21 @@ def test_to_polars(transaction, temperature):
     assert columns == ["timestamp", "city", "value"]
     # to_polars return a LazyFrame, we matertialize it
     df = df.collect()
-    assert sorted(df['city']) == ["Berlin", "London"]
+    assert sorted(df["city"]) == ["Berlin", "London"]
 
     # Read with custom arg
     cond = "(= value {})"
     df = temperature.select().where(cond).to_polars(12).collect()
     assert list(df.columns) == ["timestamp", "city", "value"]
-    assert sorted(df['city']) == ["London"]
+    assert sorted(df["city"]) == ["London"]
 
 
 def test_from_polars(transaction, kitchensink):
     if transaction.flavor != "postgresql":
         pytest.skip("Sqlite not supported with polars")
+
+    json = {"a": 5, "b": [1, 2, 3]}
+
     df = polars.LazyFrame(
         {
             "varchar": ["ham"],
@@ -45,7 +49,7 @@ def test_from_polars(transaction, kitchensink):
             "timestamptz": ["1970-01-01 00:00:00+00:00"],
             "bool": [True],
             "date": ["1970-01-01"],
-            "json": [{}],
+            "json": [json],
             "uuid": ["F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"],
             "max": ["max"],
             "true": ["true"],
@@ -66,20 +70,37 @@ def test_from_polars(transaction, kitchensink):
         datetime(1970, 1, 1, 1, 0, tzinfo=BRUTZ),
         True,
         date(1970, 1, 1),
-        {},
+        json,
         UUID("F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C"),
         "max",
         "true",
         b"blob",
     )
 
-    # SELECT with operator
-    new_df = kitchensink.select(
-        "(date_bin '5 days' timestamptz '1900-01-01')",
-    ).to_polars().collect()
+    # SELECT with schema override for JSON
+    json_df = (
+        kitchensink.select("json")
+        .to_polars(schema_overrides={"json": polars.datatypes.Object})
+        .collect()
+    )
+    json_col = json_df["json"]
+    assert json_col[0] == json
 
-    new_df.columns = ["ts"]
-    ts = new_df['ts']
+    # SELECT with operator and schema override
+    new_df = (
+        kitchensink.select(
+            "(date_bin '5 days' timestamptz '1900-01-01')",
+        )
+        .aliases("ts")
+        .to_polars(
+            schema_overrides={
+                "ts": polars.datatypes.Datetime(time_zone="Europe/Brussels")
+            }
+        )
+        .collect()
+    )
+
+    ts = new_df["ts"]
     assert str(ts.dtype) == "Datetime(time_unit='us', time_zone='Europe/Brussels')"
 
-    assert ts[0].isoformat() == '1969-12-30T01:00:00+01:00'
+    assert ts[0].isoformat() == "1969-12-30T01:00:00+01:00"

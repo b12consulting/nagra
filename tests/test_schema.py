@@ -132,12 +132,12 @@ def test_custom_id_type(empty_transaction):
         },
         schema=sch,
     )
-    with empty_transaction:
-        sch.drop()
-        sch.create_tables()
-        row_id = city.upsert("id", "name").execute("this-is-an-uuid", "test")
-        assert row_id == "this-is-an-uuid"
-        assert list(city.select()) == [("this-is-an-uuid", "test")]
+
+    sch.drop()
+    sch.create_tables()
+    row_id = city.upsert("id", "name").execute("this-is-an-uuid", "test")
+    assert row_id == "this-is-an-uuid"
+    assert list(city.select()) == [("this-is-an-uuid", "test")]
 
 
 def test_schema_from_nagra_db(transaction):
@@ -157,6 +157,7 @@ def test_schema_from_nagra_db(transaction):
         "population",
         "skill",
         "temperature",
+        "value",
     ]
     schema.introspect_db()
     if transaction.flavor == "mssql":

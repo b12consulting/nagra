@@ -4,8 +4,13 @@
 
 ### 0.9 (to be released)
 
+**Polars**:
+- select: specify schema based on database schema and on inferred derived column types.
+- select: allow overriding inferred schema.
+
 **Misc**:
 - Fixed bug in select when joining with foreign key that is not lowercase.
+- Fix string escape of field aliases
 
 ### 0.8 (released 2025-09-24)
 

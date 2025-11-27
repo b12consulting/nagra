@@ -183,6 +183,10 @@ class Transaction:
             self.rollback()
         else:
             self.commit()
+        self.close()
+
+    def close(self):
+        self.connection.close()
 
     @classmethod
     def push(cls, transaction):

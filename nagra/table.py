@@ -215,7 +215,7 @@ class Table:
     ):
         self.name = name
         self.columns = {name: Column(name, dtype) for name, dtype in columns.items()}
-        self.natural_key = natural_key or list(columns)
+        self.natural_key = natural_key or []
         self.foreign_keys = foreign_keys or {}
         self.not_null = set(self.natural_key) | set(not_null or []) | set([primary_key])
         self.one2many = one2many or {}
@@ -240,6 +240,12 @@ class Table:
                     f"Table '{name}': unknown column name '{nk_name}'"
                     " referenced in natural key"
                 )
+
+        # natural key and primary can't be both unset/empty
+        if not self.primary_key and not self.natural_key:
+            raise IncorrectSchema(
+                f"Table '{name}': at least one of natural key or primary key must be defined"
+            )
 
         # Add table to schema
         self.schema.add_table(self.name, self)
@@ -339,25 +345,29 @@ class Table:
             or col_name == self.primary_key
         )
 
-    def default_columns(self, nk_only: bool = False):
+    def default_columns(self, compact: bool = False):
         """
         Return the list of default column for the current
         table. Used by `Table.select` and `Table.upsert` when no
         columns are provided.
         """
-        columns = self.natural_key if nk_only else self.columns
+        if compact:
+            columns = self.natural_key or [self.primary_key]
+        else:
+            columns = self.columns
+
         for column in columns:
             # Escape literals (nul, true, false)
             if column in AST.literals:
                 yield f".{column}"
                 continue
             # Handle non foreign keys
-            if column not in self.foreign_keys or nk_only:
+            if column not in self.foreign_keys or compact:
                 yield column
                 continue
             # FK
             ftable = self.schema.get(self.foreign_keys[column])
-            yield from (f"{column}.{k}" for k in ftable.default_columns(nk_only=True))
+            yield from (f"{column}.{k}" for k in ftable.default_columns(compact=True))
 
     def join(self, env: "Env"):
         for prefix, alias in env.refs.items():

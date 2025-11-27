@@ -23,12 +23,13 @@ nagra = "nagra.cli:run"
 [project.optional-dependencies]
 pandas = ["pandas"]
 polars = ["polars"]
-pg = ["psycopg"]
 mssql = ["pyodbc"]
-all = ["nagra[pandas,polars,pg,mssql]"]
+pg = ["psycopg[binary]"]
+pydantic = ["pydantic"]
+all = ["nagra[pandas,polars,pg,pydantic,mssql]"]
 
 [dependency-groups]
-dev = ["pytest", "typeguard", "ruff"]
+dev = ["nagra[all]", "pytest", "typeguard", "ruff"]
 
 [project.urls]
 Homepage = "https://github.com/b12consulting/nagra"

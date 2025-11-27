@@ -97,7 +97,7 @@ def test_create_table_pk_is_fk(empty_transaction):
         primary_key="concept_id",
         schema=schema,
     )
-    Table(  # Table with no primary key and a fk in the nk
+    Table(  # Table with no natura key and a fk in the primary key
         "score",
         columns={
             "concept": "bigint",
@@ -110,6 +110,7 @@ def test_create_table_pk_is_fk(empty_transaction):
         schema=schema,
     )
     lines = list(schema.setup_statements(trn=empty_transaction))
+
     match flavor:
         case "postgresql":
             assert lines == [
@@ -120,9 +121,8 @@ def test_create_table_pk_is_fk(empty_transaction):
                 '   ON DELETE CASCADE\n'
                 ");",
                 'ALTER TABLE "concept"\n ADD COLUMN "name" TEXT NOT NULL;',
-                'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER NOT NULL;',
+                'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER;',
                 'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
-                'CREATE UNIQUE INDEX score_idx ON "score" (\n  "concept", "score"\n);',
             ]
         case "sqlite":
             assert lines == [
@@ -133,9 +133,8 @@ def test_create_table_pk_is_fk(empty_transaction):
                 '   ON DELETE CASCADE\n'
                 ");",
                 'ALTER TABLE "concept"\n ADD COLUMN "name" TEXT NOT NULL;',
-                'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER NOT NULL;',
+                'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER;',
                 'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
-                'CREATE UNIQUE INDEX score_idx ON "score" (\n  "concept", "score"\n);',
             ]
         case "mssql":
             assert lines == [
@@ -149,9 +148,8 @@ def test_create_table_pk_is_fk(empty_transaction):
                 '    ON DELETE CASCADE\n'
                 ");",
                 "ALTER TABLE [concept]\n ADD [name] NVARCHAR(200) NOT NULL\n;\n",
-                "ALTER TABLE [score]\n ADD [score] INT NOT NULL\n;\n",
+                "ALTER TABLE [score]\n ADD [score] INT\n;\n",
                 "CREATE UNIQUE INDEX [concept_idx] ON [concept] ([name]\n);",
-                "CREATE UNIQUE INDEX [score_idx] ON [score] ([concept], [score]\n);",
             ]
 
 

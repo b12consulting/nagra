@@ -170,6 +170,15 @@ min_pop_view = View(
 )
 
 
+# A table without natural keys
+value_table = Table(
+    "value",
+    columns={
+        "value": "float",
+    },
+)
+
+
 @pytest.fixture(scope="session")
 def person():
     return person_table
@@ -223,6 +232,11 @@ def max_pop():
 @pytest.fixture(scope="session")
 def parameter():
     return parameter_table
+
+
+@pytest.fixture(scope="session")
+def value():
+    return value_table
 
 
 DSN = [
