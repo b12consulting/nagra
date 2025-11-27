@@ -18,10 +18,10 @@
 - Fixed bug in select when joining with foreign key that is not lowercase.
 - Fix string escape of field aliases.
 - Table can now be defined without natural key: this replace the
-  inconvenient previous behavour **/!\** to fall back an all columns as
+  inconvenient previous behavour ** /!\ ** to fall back an all columns as
   natural key.
 - Foreign keys columns that are required, now automatically come with
-  and `ON DELETE CASCADE` config **/!\**, this behavior was always
+  and `ON DELETE CASCADE` config ** /!\ **, this behavior was always
   implemented but hidden by a bug.
 
 
