@@ -9,7 +9,9 @@
 - select: allow overriding inferred schema.
 
 **MSSQL**
-- First release with support of MSSQL.
+- First release with support of MSSQL. While all the test suite pass,
+  this was never put into action in a real project, consider this
+  support as beta-quality.
 - Array columns are not supported, table containing array columns are
   simply ignored.
 - String columns (nvarchar) are limited to 200 characters.
