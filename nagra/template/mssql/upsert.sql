@@ -1,4 +1,4 @@
-{% if with_pk %}
+{% if set_identity %}
 SET IDENTITY_INSERT [{{ table }}] ON;
 {% endif %}
 
@@ -37,6 +37,6 @@ OUTPUT {% for col in returning -%}
 {% endif %}
 ;
 
-{% if with_pk %}
+{% if set_identity %}
 SET IDENTITY_INSERT [{{ table }}] OFF;
 {% endif %}

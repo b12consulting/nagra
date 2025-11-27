@@ -1,7 +1,9 @@
 import zoneinfo
 from datetime import datetime, date
-from uuid import UUID
 from pandas import concat, DataFrame, to_datetime
+from uuid import UUID
+
+import pytest
 
 from nagra import Transaction
 
@@ -33,6 +35,9 @@ def test_to_pandas(transaction, temperature):
 
 
 def test_from_pandas(transaction, kitchensink):
+    if transaction.flavor == "mssql":
+        pytest.skip("TZ-aware timestamps are not supported by MSSQL")
+
     df = DataFrame(
         {
             "varchar": ["ham"],
@@ -85,7 +90,7 @@ def test_from_pandas(transaction, kitchensink):
             "F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C",
             "max",
             "true",
-            "blob",
+            b"blob",
         )
 
     # SELECT with operator

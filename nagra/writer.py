@@ -138,11 +138,19 @@ class WriterMixin:
         return self.executemany(records)
 
     def from_pandas(self, df: "DataFrame"):
+        if df.empty:
+            return self.executemany([])
+
         # Convert non-basic types to string
         is_copy = False
         for col in self.columns:
             if df[col].dtype in ("int", "float", "bool", "str"):
                 continue
+            if df[col].dtype == "object":
+                # bytes is not a dedicated type, we rely on the first
+                # value and hope the column type is consistent
+                if isinstance(df[col][0], bytes):
+                    continue
             if not is_copy:
                 df = df.copy()
                 is_copy = True

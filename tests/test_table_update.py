@@ -67,6 +67,9 @@ def test_return_ids(transaction, person):
 
 
 def test_from_pandas(transaction, kitchensink):
+    if transaction.flavor == "mssql":
+        pytest.skip("TZ-aware timestamps are not supported by MSSQL")
+
     # First insert
     df = DataFrame(
         {
@@ -139,7 +142,7 @@ def test_from_pandas(transaction, kitchensink):
             "F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11D",
             "max",
             "true",
-            "blob",
+            b"blob",
         )
 
 

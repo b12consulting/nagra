@@ -120,15 +120,15 @@ temperature_table = Table(
 )
 
 
-# parameter_table = Table(
-#     "parameter",
-#     columns={
-#         "name": "str",
-#         "timestamps": "timestamp []",
-#         "values": "float []",
-#     },
-#     natural_key=["name"],
-# )
+parameter_table = Table(
+    "parameter",
+    columns={
+        "name": "str",
+        "timestamps": "timestamp []",
+        "values": "float []",
+    },
+    natural_key=["name"],
+)
 
 
 population_table = Table(

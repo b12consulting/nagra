@@ -80,23 +80,22 @@ def test_mssql_upsert_uses_merge():
         conflict_key=["email"],
         do_update=False,
         returning=["id"],
+        set_identity=False,
     )
     doc = stmt()
     lines = strip_lines(doc)
     assert lines == [
         'MERGE INTO [people] AS target',
-        'USING (',
-        'SELECT? AS [name], ? AS [email]',
+        'USING',
+        '(SELECT',
+        '? AS [name], ? AS [email]',
         ') AS source',
         'ON (',
         'target.[email] = source.[email]',
         ')',
-        'WHEN NOT MATCHED THEN',
-        'INSERT ([name], [email]',
-        ')',
-        'VALUES (source.[name], source.[email]',
-        ')',
+        'WHEN NOT MATCHED THEN INSERT ([name], [email]) VALUES (source.[name], '
+        'source.[email])',
         'OUTPUT inserted.[id]',
-        ';']
-
+        ';'
+]
 

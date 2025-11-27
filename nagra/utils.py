@@ -12,7 +12,7 @@ from typing import Iterator, TYPE_CHECKING, get_args
 from enum import StrEnum
 from urllib.parse import parse_qs, unquote_plus, urlparse
 
-from jinja2 import FileSystemLoader, Environment
+from jinja2 import FileSystemLoader, Environment, StrictUndefined
 from rich import box
 from rich.console import Console
 from rich.markup import escape
@@ -56,7 +56,10 @@ def autoquote(x):
 
 
 # Setup jinja env
-jinja_env = Environment(loader=FileSystemLoader(HERE / "template"))
+jinja_env = Environment(
+    loader=FileSystemLoader(HERE / "template"),
+    undefined=StrictUndefined,
+)
 jinja_env.filters["autoquote"] = autoquote
 
 

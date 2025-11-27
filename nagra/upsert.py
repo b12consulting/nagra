@@ -71,6 +71,11 @@ class Upsert(WriterMixin):
         conflict_key = [pk] if with_pk else self.table.natural_key
         columns = self.groups
         do_update = False if self._insert_only else len(columns) > len(conflict_key)
+        set_identity = (
+            self.trn.flavor == "mssql"
+            and with_pk
+            and self.table.primary_key_is_identity
+        )
         stm = Statement(
             "upsert",
             self.trn.flavor,
@@ -79,7 +84,7 @@ class Upsert(WriterMixin):
             conflict_key=conflict_key,
             do_update=do_update,
             returning=[pk] if pk else self.table.natural_key,
-            with_pk=with_pk,
+            set_identity=set_identity,
         )
         return stm()
 

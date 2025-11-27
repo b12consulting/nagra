@@ -139,8 +139,11 @@ class Transaction:
         args = args or []
 
         match self.flavor:
-            case "postgresql" | "sqlite":
+            case "postgresql":
                 cursor.executemany(stmt, args, returning=returning)
+                return ResultCursor(cursor)
+            case "sqlite":
+                cursor.executemany(stmt, args)
                 return ResultCursor(cursor)
             case "mssql":
                 if not returning:

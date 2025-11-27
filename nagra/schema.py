@@ -133,7 +133,12 @@ class Schema:
     def _db_fk(cls, *whitelist, trn=None, pg_schema="public"):
         trn = trn or Transaction.current()
         res = defaultdict(dict)
-        stmt = Statement("find_foreign_keys", trn.flavor, pg_schema=pg_schema)
+        stmt = Statement(
+            "find_foreign_keys",
+            trn.flavor,
+            pg_schema=pg_schema,  # FIXME put schema on transaction
+            mssql_schema="dbo",  # should come from the dsn
+        )
         for name, tbl, col, ftable, fcol in trn.execute(stmt()):
             if whitelist and tbl not in whitelist:
                 continue
@@ -223,6 +228,9 @@ class Schema:
             if name in db_columns:
                 continue
             ctypes = table.ctypes(trn.flavor, table.columns)
+            if trn.flavor == "mssql" and table.has_array:
+                print("SKIP", name)
+                continue
 
             # TODO use "KEY GENERATED ALWAYS AS IDENTITY" instead of
             # serials (see https://stackoverflow.com/a/55300741) ?
@@ -266,6 +274,7 @@ class Schema:
                     table=table,
                     pk_type=ctypes.get(table.primary_key),
                     fk_table=fk_table,
+                    not_null=table.primary_key in table.not_null,
                 )
             yield stmt()
 
@@ -273,6 +282,9 @@ class Schema:
         # Add columns
         for table in self.tables.values():
             if table.is_view:
+                continue
+            if trn.flavor == "mssql" and table.has_array:
+                print("SKIP", table.name)
                 continue
 
             ctypes = table.ctypes(trn.flavor, table.columns)
@@ -306,6 +318,10 @@ class Schema:
         for name, table in self.tables.items():
             if table.is_view or f"{name}_idx" in db_indexes:
                 continue
+            if trn.flavor == "mssql" and table.has_array:
+                print("SKIP", table.name)
+                continue
+
             stmt = Statement(
                 "create_unique_index",
                 trn.flavor,

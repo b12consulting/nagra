@@ -6,7 +6,7 @@ CREATE TABLE [{{ table.name }}] (
   {%- endif %}
   {%- if fk_tables.get(name) %}
    CONSTRAINT fk_{{ name }} FOREIGN KEY ([{{ name }}])
-     REFERENCES [{{ fk_tables[name].name }}] ([{{ fk_tables[name].primary_key }}])
+     REFERENCES [{{ fk_tables[name].name }}] ([{{ fk_tables[name].primary_key }}]) {{- " ON DELETE CASCADE" if name in table.not_null else "" }}
   {%- endif %}
   {{ "," if not loop.last }}
   {% endfor %}

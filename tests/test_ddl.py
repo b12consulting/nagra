@@ -117,6 +117,7 @@ def test_create_table_pk_is_fk(empty_transaction):
                 'CREATE TABLE  "score" (\n'
                 '  "concept" BIGINT PRIMARY KEY\n'
                 '   CONSTRAINT fk_concept REFERENCES "concept"("concept_id")\n'
+                '   ON DELETE CASCADE\n'
                 ");",
                 'ALTER TABLE "concept"\n ADD COLUMN "name" TEXT NOT NULL;',
                 'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER NOT NULL;',
@@ -129,6 +130,7 @@ def test_create_table_pk_is_fk(empty_transaction):
                 'CREATE TABLE  "score" (\n'
                 '  "concept"  INTEGER PRIMARY KEY\n'
                 '   CONSTRAINT fk_concept REFERENCES "concept"("concept_id")\n'
+                '   ON DELETE CASCADE\n'
                 ");",
                 'ALTER TABLE "concept"\n ADD COLUMN "name" TEXT NOT NULL;',
                 'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER NOT NULL;',
@@ -144,6 +146,7 @@ def test_create_table_pk_is_fk(empty_transaction):
                 "  [concept] BIGINT PRIMARY KEY\n"
                 "  , CONSTRAINT fk_concept FOREIGN KEY ([concept])\n"
                 "    REFERENCES [concept] ([concept_id])\n"
+                '    ON DELETE CASCADE\n'
                 ");",
                 "ALTER TABLE [concept]\n ADD [name] NVARCHAR(200) NOT NULL\n;\n",
                 "ALTER TABLE [score]\n ADD [score] INT NOT NULL\n;\n",
@@ -197,7 +200,7 @@ def test_create_table_no_pk(empty_transaction):
             assert create_score_table == [
                 'CREATE TABLE  "score" (',
                 '"concept"  BIGINT NOT NULL',
-                'CONSTRAINT fk_concept REFERENCES "concept"("id")',
+                'CONSTRAINT fk_concept REFERENCES "concept"("id") ON DELETE CASCADE',
                 ");",
             ]
         case "sqlite":
@@ -210,7 +213,7 @@ def test_create_table_no_pk(empty_transaction):
             assert create_score_table == [
                 'CREATE TABLE  "score" (',
                 '"concept"  INTEGER NOT NULL',
-                'CONSTRAINT fk_concept REFERENCES "concept"("id")',
+                'CONSTRAINT fk_concept REFERENCES "concept"("id") ON DELETE CASCADE',
                 ");",
             ]
 
@@ -224,7 +227,7 @@ def test_create_table_no_pk(empty_transaction):
                 "CREATE TABLE [score] (",
                 "[concept] BIGINT NOT NULL",
                 "CONSTRAINT fk_concept FOREIGN KEY ([concept])",
-                "REFERENCES [concept] ([id])",
+                "REFERENCES [concept] ([id]) ON DELETE CASCADE",
                 ");",
             ]
 

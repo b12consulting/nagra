@@ -3,5 +3,6 @@ CREATE TABLE [{{ table.name }}] (
   {%- if fk_table %}
   , CONSTRAINT fk_{{ fk_table.name }} FOREIGN KEY ([{{ table.primary_key }}])
     REFERENCES [{{ fk_table.name }}] ([{{ fk_table.primary_key }}])
+    ON DELETE CASCADE
   {%- endif %}
 );

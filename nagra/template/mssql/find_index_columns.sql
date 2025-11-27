@@ -9,5 +9,4 @@ JOIN sys.tables AS t
 JOIN sys.schemas AS s
   ON s.schema_id = t.schema_id
 WHERE i.name = '{{name}}'
-  AND s.name = '{{pg_schema}}'
 ORDER BY ic.key_ordinal;

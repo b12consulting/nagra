@@ -5,4 +5,4 @@ JOIN sys.tables AS t
 JOIN sys.schemas AS s
   ON s.schema_id = t.schema_id
 WHERE i.name IS NOT NULL
-  AND s.name = '{{pg_schema}}';
+;

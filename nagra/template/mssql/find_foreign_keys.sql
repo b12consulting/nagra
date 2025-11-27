@@ -1,18 +1,26 @@
-SELECT DISTINCT
-   rc.CONSTRAINT_NAME,
-   tc.TABLE_NAME,
-   kcu.COLUMN_NAME,
-   ccu.TABLE_NAME AS foreign_table_name,
-   ccu.COLUMN_NAME AS foreign_column_name
- FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc
- JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
-   ON rc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
- JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
-   ON rc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
- JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE ccu
-   ON rc.CONSTRAINT_NAME = ccu.CONSTRAINT_NAME
- WHERE tc.CONSTRAINT_TYPE = 'FOREIGN KEY'
-   AND tc.TABLE_SCHEMA = '{{pg_schema}}'
- ORDER BY
-   rc.CONSTRAINT_NAME,
-   tc.TABLE_NAME;
+SELECT
+    fk.name AS [ForeignKey_Name],
+    t_origin.name AS [Origin_Table],
+    c_origin.name AS [Origin_Column],
+    t_dest.name AS [Destination_Table],
+    c_dest.name AS [Destination_Column]
+FROM
+    sys.foreign_keys AS fk
+INNER JOIN
+    sys.foreign_key_columns AS fkc
+    ON fk.object_id = fkc.constraint_object_id
+INNER JOIN
+    sys.tables AS t_origin
+    ON fkc.parent_object_id = t_origin.object_id
+INNER JOIN
+    sys.columns AS c_origin
+    ON fkc.parent_object_id = c_origin.object_id
+    AND fkc.parent_column_id = c_origin.column_id
+INNER JOIN
+    sys.tables AS t_dest
+    ON fkc.referenced_object_id = t_dest.object_id
+INNER JOIN
+    sys.columns AS c_dest
+    ON fkc.referenced_object_id = c_dest.object_id
+    AND fkc.referenced_column_id = c_dest.column_id
+WHERE SCHEMA_NAME(t_origin.schema_id) = '{{mssql_schema}}'
