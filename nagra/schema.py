@@ -4,6 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 from io import IOBase
 from typing import Optional, TYPE_CHECKING
+from warnings import warn
 
 import toml
 from nagra.statement import Statement
@@ -14,6 +15,11 @@ from nagra.utils import logger, snake_to_pascal, template
 if TYPE_CHECKING:
     from nagra.table import Table
     from nagra.view import View
+
+MSSQL_ARRAY_MSG = (
+    "MS SQL Server does not support array types. Table '{table}' "
+    "with array columns is ignored."
+)
 
 
 class Schema:
@@ -229,7 +235,7 @@ class Schema:
                 continue
             ctypes = table.ctypes(trn.flavor, table.columns)
             if trn.flavor == "mssql" and table.has_array:
-                print("SKIP", name)
+                warn(MSSQL_ARRAY_MSG.format(table=table.name), RuntimeWarning)
                 continue
 
             # TODO use "KEY GENERATED ALWAYS AS IDENTITY" instead of
@@ -284,7 +290,6 @@ class Schema:
             if table.is_view:
                 continue
             if trn.flavor == "mssql" and table.has_array:
-                print("SKIP", table.name)
                 continue
 
             ctypes = table.ctypes(trn.flavor, table.columns)
@@ -319,7 +324,6 @@ class Schema:
             if table.is_view or f"{name}_idx" in db_indexes:
                 continue
             if trn.flavor == "mssql" and table.has_array:
-                print("SKIP", table.name)
                 continue
 
             stmt = Statement(
