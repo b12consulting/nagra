@@ -20,9 +20,10 @@
 - Table can now be defined without natural key: this replace the
   inconvenient previous behavour to fall back to all columns as
   natural key.
-- For foreign keys columns that are required, now automatically come with
-  and `ON DELETE CASCADE` config, this behavior was always
-  implemented but hidden by a bug.
+- For foreign keys columns that are required (not null), their
+  definition will now automatically come with and `ON DELETE CASCADE`
+  configuration, this behavior was always implemented but hidden by a
+  bug.
 
 **Misc**:
 - Fixed bug in select when joining with foreign key that is not lowercase.
