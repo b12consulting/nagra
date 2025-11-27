@@ -133,7 +133,7 @@ class Transaction:
                 msg = f"Unsupported flavor for execute: {self.flavor}"
                 raise RuntimeError(msg)
 
-    def executemany(self, stmt, args=None, returning=True):
+    def executemany(self, stmt, args=None, returning=False):
         logger.debug(stmt)
         cursor = self.connection.cursor()
         args = args or []
@@ -141,7 +141,7 @@ class Transaction:
         match self.flavor:
             case "postgresql":
                 cursor.executemany(stmt, args, returning=returning)
-                return ResultCursor(cursor)
+                return ResultCursor(cursor, returning=returning)
             case "sqlite":
                 cursor.executemany(stmt, args)
                 return ResultCursor(cursor)
@@ -149,7 +149,7 @@ class Transaction:
                 if not returning:
                     cursor.fast_executemany = True
                     cursor.executemany(stmt, args, returning=returning)
-                    return ResultCursor(cursor)
+                    return ResultCursor(cursor, returning=returning)
                 else:
                     rows = self._executemany_mssql(cursor, stmt, args)
                     return RowCursor(rows)
@@ -249,8 +249,8 @@ class CursorMixin:
     def fetchone(self):
         return next(self, None)
 
-    def fetchmany(self, size=None):
-        return list(islice(self, 1000))
+    def fetchmany(self, size=1000):
+        return list(islice(self, size))
 
     def fetchall(self):
         return list(self)
@@ -276,14 +276,26 @@ class CursorMixin:
 
 class ResultCursor(CursorMixin):
 
-    def __init__(self, native_cursor):
+    def __init__(self, native_cursor, returning=False):
         self.native_cursor = native_cursor
+        self.returning = returning
 
     def __iter__(self):
-        return iter(self.native_cursor)
+        if not self.returning:
+            return iter(self.native_cursor)
+        return self.iter_returning()
+
+    def iter_returning(self):
+        # Insert/update queries returning data must be iterated in a
+        # different fashion
+        while True:
+            row = self.native_cursor.fetchone()
+            yield row
+            if not self.native_cursor.nextset():
+                break
 
     def __next__(self):
-        return next(self.native_cursor)
+        return next(iter(self))
 
 
 class MSSQLCursor(ResultCursor):
@@ -321,6 +333,7 @@ class ExecMany:
 
     def __iter__(self):
         # Use a dedicated cursor to allow concurrent execution
+        # TODO re-use ResultCursor here (to avoid repeating returning logic)
         logger.debug(self.stm)
         match self.trn.flavor:
             case "sqlite":
