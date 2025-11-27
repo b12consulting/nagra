@@ -333,7 +333,6 @@ class ExecMany:
 
     def __iter__(self):
         # Use a dedicated cursor to allow concurrent execution
-        # TODO re-use ResultCursor here (to avoid repeating returning logic)
         logger.debug(self.stm)
         match self.trn.flavor:
             case "sqlite":
@@ -341,19 +340,7 @@ class ExecMany:
                 for vals in self.values:
                     cursor.execute(self.stm, vals)
                     yield cursor.fetchone()
-            case "postgresql":
-                cursor = self.trn.executemany(
-                    self.stm,
-                    self.values,
-                    returning=True,
-                ).native_cursor
-
-                while True:
-                    vals = cursor.fetchone()
-                    yield vals
-                    if not cursor.nextset():
-                        break
-            case "mssql":
+            case "postgresql" | "mssql":
                 cursor = self.trn.executemany(
                     self.stm,
                     self.values,
