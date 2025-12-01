@@ -119,6 +119,16 @@ temperature_table = Table(
     natural_key=["timestamp", "city"],
 )
 
+temperature_no_nk_table = Table(
+    "temperature_no_nk",
+    columns={
+        "timestamp": "timestamp",
+        "city": "varchar",
+        "value": "float",
+    },
+    natural_key=[],
+)
+
 
 parameter_table = Table(
     "parameter",
@@ -207,6 +217,11 @@ def kitchensink():
 @pytest.fixture(scope="session")
 def temperature():
     return temperature_table
+
+
+@pytest.fixture(scope="session")
+def temperature_no_nk():
+    return temperature_no_nk_table
 
 
 @pytest.fixture(scope="session")

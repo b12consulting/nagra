@@ -27,8 +27,8 @@
 
 **Misc**:
 - Fixed bug in select when joining with foreign key that is not lowercase.
-- Fix string escape of field aliases.
-
+- Fix string escape of field aliases
+- Fixed duplicates when inserting from polars in a table with no natural key.
 
 ### 0.8 (released 2025-09-24)
 
