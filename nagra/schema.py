@@ -4,6 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 from io import IOBase
 from typing import Optional, TYPE_CHECKING
+from warnings import warn
 
 import toml
 from nagra.statement import Statement
@@ -14,6 +15,11 @@ from nagra.utils import logger, snake_to_pascal, template
 if TYPE_CHECKING:
     from nagra.table import Table
     from nagra.view import View
+
+MSSQL_ARRAY_MSG = (
+    "MS SQL Server does not support array types. Table '{table}' "
+    "with array columns is ignored."
+)
 
 
 class Schema:
@@ -41,7 +47,8 @@ class Schema:
             case IOBase():
                 content = toml_src.read()
             case Path():
-                content = toml_src.open().read()
+                with toml_src.open() as toml_src:
+                    content = toml_src.read()
             case _:
                 content = toml_src
         tables = toml.loads(content)
@@ -119,7 +126,7 @@ class Schema:
     def _db_indexes(cls, trn=None, pg_schema="public"):
         trn = trn or Transaction.current()
         stmt = Statement("find_indexes", trn.flavor, pg_schema=pg_schema)
-        res = [n for n, in trn.execute(stmt())]
+        res = [n for (n,) in trn.execute(stmt())]
         return res
 
     def _db_views(cls, trn=None, pg_schema="public") -> dict[str, str]:
@@ -133,7 +140,12 @@ class Schema:
     def _db_fk(cls, *whitelist, trn=None, pg_schema="public"):
         trn = trn or Transaction.current()
         res = defaultdict(dict)
-        stmt = Statement("find_foreign_keys", trn.flavor, pg_schema=pg_schema)
+        stmt = Statement(
+            "find_foreign_keys",
+            trn.flavor,
+            pg_schema=pg_schema,  # FIXME put schema on transaction
+            mssql_schema="dbo",  # should come from the dsn
+        )
         for name, tbl, col, ftable, fcol in trn.execute(stmt()):
             if whitelist and tbl not in whitelist:
                 continue
@@ -175,7 +187,7 @@ class Schema:
                     pg_schema=pg_schema,
                     name=constraint_name,
                 )
-                columns = [c for c, in trn.execute(col_stmt())]
+                columns = [c for (c,) in trn.execute(col_stmt())]
                 # Postgresql will wrap columns names with quotes for
                 # reserved words
                 columns = [c.strip('"') for c in columns]
@@ -223,6 +235,9 @@ class Schema:
             if name in db_columns:
                 continue
             ctypes = table.ctypes(trn.flavor, table.columns)
+            if trn.flavor == "mssql" and table.has_array:
+                warn(MSSQL_ARRAY_MSG.format(table=table.name), RuntimeWarning)
+                continue
 
             # TODO use "KEY GENERATED ALWAYS AS IDENTITY" instead of
             # serials (see https://stackoverflow.com/a/55300741) ?
@@ -266,6 +281,7 @@ class Schema:
                     table=table,
                     pk_type=ctypes.get(table.primary_key),
                     fk_table=fk_table,
+                    not_null=table.primary_key in table.not_null,
                 )
             yield stmt()
 
@@ -273,6 +289,8 @@ class Schema:
         # Add columns
         for table in self.tables.values():
             if table.is_view:
+                continue
+            if trn.flavor == "mssql" and table.has_array:
                 continue
 
             ctypes = table.ctypes(trn.flavor, table.columns)
@@ -306,8 +324,11 @@ class Schema:
         for name, table in self.tables.items():
             if table.is_view or f"{name}_idx" in db_indexes:
                 continue
+            if trn.flavor == "mssql" and table.has_array:
+                continue
             if not table.natural_key:
                 continue
+
             stmt = Statement(
                 "create_unique_index",
                 trn.flavor,
@@ -399,7 +420,9 @@ class Schema:
         res = "\n".join(tpl.render(table=t) for t in tables)
         return res
 
-    def generate_pydantic_models(self, base_class:str="BaseModel", table_names:list[str] | None= None):
+    def generate_pydantic_models(
+        self, base_class: str = "BaseModel", table_names: list[str] | None = None
+    ):
         tpl = template("misc/pydantic-schema.py")
         if not table_names:
             tables = self.tables.values()

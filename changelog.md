@@ -2,11 +2,28 @@
 # Changelog
 
 
-### 0.9 (to be released)
+### 0.9 (released 2025-11-27)
 
 **Polars**:
 - select: specify schema based on database schema and on inferred derived column types.
 - select: allow overriding inferred schema.
+
+**MSSQL**
+- First release with support of MSSQL. While all the test suite pass,
+  this was never put into action in a real project, consider this
+  support as beta-quality.
+- Array columns are not supported, table containing array columns are
+  simply ignored.
+- String columns (nvarchar) are limited to 200 characters.
+
+**Breaking changes:**
+- Table can now be defined without natural key: this replace the
+  inconvenient previous behavour to fall back to all columns as
+  natural key.
+- For foreign keys columns that are required (not null), their
+  definition will now automatically come with and `ON DELETE CASCADE`
+  configuration, this behavior was always implemented but hidden by a
+  bug.
 
 **Misc**:
 - Fixed bug in select when joining with foreign key that is not lowercase.

@@ -79,20 +79,17 @@ class WriterMixin:
             chunk = list(islice(args, 1000))
             if not chunk:
                 break
-            if self.trn.flavor == "sqlite":
-                for item in chunk:
-                    cursor = self.trn.execute(stm, item)
-                    new_id = cursor.fetchone()
-                    ids.append(new_id[0] if new_id else None)
-            else:
-                returning = self.table.primary_key is not None
-                cursor = self.trn.executemany(stm, chunk, returning)
-                if returning:
-                    while True:
+            match self.trn.flavor:
+                case "sqlite" | "mssql":
+                    for item in chunk:
+                        cursor = self.trn.execute(stm, item)
                         new_id = cursor.fetchone()
                         ids.append(new_id[0] if new_id else None)
-                        if not cursor.nextset():
-                            break
+                case "postgresql":
+                    returning = self.table.primary_key is not None
+                    cursor = self.trn.executemany(stm, chunk, returning)
+                    if returning:
+                        ids.extend(r and r[0] for r in cursor)
 
         # If conditions are present, enforce those
         if self._check:
@@ -139,11 +136,19 @@ class WriterMixin:
         return self.executemany(records)
 
     def from_pandas(self, df: "DataFrame"):
+        if df.empty:
+            return self.executemany([])
+
         # Convert non-basic types to string
         is_copy = False
         for col in self.columns:
             if df[col].dtype in ("int", "float", "bool", "str"):
                 continue
+            if df[col].dtype == "object":
+                # bytes is not a dedicated type, we rely on the first
+                # value and hope the column type is consistent
+                if isinstance(df[col][0], bytes):
+                    continue
             if not is_copy:
                 df = df.copy()
                 is_copy = True

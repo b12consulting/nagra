@@ -332,6 +332,9 @@ def test_default_value(transaction, org):
 
 
 def test_mixed_cursor(cacheable_transaction, person):
+    if cacheable_transaction.flavor == "mssql":
+        pytest.skip("MSSQL does not support multiple live cursors")
+
     # First upsert
     upsert = person.upsert("name")
     records = [("Romeo",), ("Sierra",), ("Tango",)]
@@ -353,6 +356,8 @@ def test_mixed_cursor(cacheable_transaction, person):
 
 
 def test_arrays(cacheable_transaction, parameter):
+    if cacheable_transaction.flavor == "mssql":
+        pytest.skip("MSSQL does not support array columns")
     # First upsert
     upsert = parameter.upsert()
     records = [

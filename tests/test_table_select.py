@@ -280,6 +280,8 @@ def test_o2m_select(transaction, person, org, address):
             ("Beirut", "Beta"),
         ]
     )
+    # if transaction.flavor == "mssql":
+    #     breakpoint()
     rows = list(
         person.select("name", "orgs.addresses.city").orderby("orgs.addresses.city")
     )
@@ -301,18 +303,19 @@ def test_agg(transaction, temperature):
     assert len(rows) == 2
 
     # String concat
-    is_pg = Transaction.current().flavor == "postgresql"
-    if is_pg:
-        select = temperature.select("(string_agg city ',')")
-    else:
-        select = temperature.select("(group_concat city)")
+    match Transaction.current().flavor:
+        case "postgresql" | "mssql":
+            select = temperature.select("(string_agg city ',')")
+        case "sqlite":
+            select = temperature.select("(group_concat city)")
+
     rows = list(select)
     assert len(rows) == 1
     (record,) = rows
     assert record[0] in ("Berlin,London", "London,Berlin")
 
     # Strings into array
-    if is_pg:
+    if Transaction.current().flavor == "postgresql":
         (record,) = list(temperature.select("(array_agg city)"))
         assert sorted(record[0]) == ["Berlin", "London"]
 
@@ -334,14 +337,13 @@ def test_agg(transaction, temperature):
     assert records == {"Berlin": 20.0, "London": 24.0}
 
     # Json agg
-    if is_pg:
+    if Transaction.current().flavor == "postgresql":
         select = temperature.select("(json_object_agg city value)")
         (record,) = list(select)
         assert record[0] == {"Berlin": 10, "London": 12}
 
 
 def test_date_op(transaction, temperature):
-    is_pg = Transaction.current().flavor == "postgresql"
 
     temperature.upsert("timestamp", "city", "value").executemany(
         [
@@ -349,14 +351,19 @@ def test_date_op(transaction, temperature):
             ("1970-01-02", "London", 12),
         ]
     )
-    if is_pg:
-        select = temperature.select("(extract 'year' timestamp)")
-        records = list(select)
-        assert records[0][0] == 1970
-    else:
-        select = temperature.select("(strftime '%Y' timestamp)")
-        records = list(select)
-        assert records[0][0] == "1970"
+    match Transaction.current().flavor:
+        case "postgresql":
+            select = temperature.select("(extract 'year' timestamp)")
+            records = list(select)
+            assert records[0][0] == 1970
+        case "mssql":
+            select = temperature.select("(year timestamp)")
+            records = list(select)
+            assert records[0][0] == 1970
+        case "sqlite":
+            select = temperature.select("(strftime '%Y' timestamp)")
+            records = list(select)
+            assert records[0][0] == "1970"
     assert len(records) == 2
 
 
@@ -458,12 +465,15 @@ def test_to_nested_dict(transaction, person, nest_with_param):
 
 def test_any_and_values(transaction, person):
     person.insert("id", "name").execute(1, "one")
-    select = person.select("id").where("(in id (values {} {}))")
-    res = list(select.execute(1, 2))
-    assert res == [(1,)]
+    if transaction.flavor != "mssql":
+        # VALUES is not supported by mssql
+        select = person.select("id").where("(in id (values {} {}))")
+        res = list(select.execute(1, 2))
+        assert res == [(1,)]
 
-    if transaction.flavor != "sqlite":
-        # ANY is not supported by sqlite
+    if transaction.flavor == "postgresql":
+        # ANY is only supported by postgres
+
         select = person.select("id").where("(= id (any {}))")
         res = list(select.execute([1, 2]))
         assert res == [(1,)]
@@ -493,7 +503,10 @@ def test_distinct_on(transaction, person):
     assert list(select) == [("three",)]
 
 
-def test_distinct_on(transaction, temperature):
+def test_select_distinct(transaction, temperature):
+    if transaction.flavor == "mssql":
+        pytest.skip("Disctinct on is not supported by MSSQL")
+
     temperature.insert("city", "timestamp", "value").executemany([
         ("Brussels", "2025-10-03", 11),
         ("Amsterdam", "2025-10-03", 11),

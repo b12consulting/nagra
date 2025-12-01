@@ -160,6 +160,9 @@ def test_schema_from_nagra_db(transaction):
         "value",
     ]
     schema.introspect_db()
+    if transaction.flavor == "mssql":
+        # We ignore table with array for mssql
+        tables.remove("parameter")
     assert sorted(schema.tables) == tables
     assert all(schema.tables[n].is_view for n in ["max_pop", "min_pop"])
 
@@ -172,16 +175,19 @@ def test_schema_from_nagra_db(transaction):
     # Check simple table
     person = schema.get("person")
     assert list(person.columns) == ["id", "name", "parent"]
-    if transaction.flavor == "postgresql":
-        expected = ["bigint", "str", "int"]
-    else:
+    if transaction.flavor == "sqlite":
         expected = ["int", "str", "int"]
+    else:
+        expected = ["bigint", "str", "bigint"]
+
     assert [c.dtype for c in person.columns.values()] == expected
     assert person.foreign_keys == {"parent": "person"}
     assert person.primary_key == "id"
     assert person.natural_key == ["name"]
 
     # Check table with arrays
+    if transaction.flavor == "mssql":
+        pytest.skip("MSSQL does not support array columns")
     parameter = schema.get("parameter")
     assert list(parameter.columns) == ["id", "name", "timestamps", "values"]
     if transaction.flavor == "postgresql":
@@ -214,7 +220,7 @@ def test_schema_from_db(transaction):
         # One column of the natural key is a foreign key
         """
         CREATE TABLE visit (
-           patient_id int primary key CONSTRAINT fk_patient REFERENCES patient(patient_id),
+           patient_id int primary key CONSTRAINT fk_visit_patient REFERENCES patient(patient_id),
            visit_date date
         )
         """,
@@ -243,6 +249,11 @@ def test_schema_from_db(transaction):
 
 
 def test_suspend_fk(transaction):
+    if transaction.flavor == "mssql":
+        pytest.skip(
+            "Support for disabling foreign keys with mssql not implemented"
+        )
+
     # Skip sqlite
     is_sqlite = transaction.flavor == "sqlite"
 

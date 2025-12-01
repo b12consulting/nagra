@@ -4,7 +4,7 @@ name = "nagra"
 description = "Nagra is a Python database toolkit"
 readme = "README.md"
 requires-python = ">=3.10"
-version = "0.8.1"
+version = "0.9"
 dependencies = [
  "jinja2",
  "rich",
@@ -23,9 +23,10 @@ nagra = "nagra.cli:run"
 [project.optional-dependencies]
 pandas = ["pandas"]
 polars = ["polars"]
+mssql = ["pyodbc"]
 pg = ["psycopg[binary]"]
 pydantic = ["pydantic"]
-all = ["nagra[pandas,polars,pg,pydantic]"]
+all = ["nagra[pandas,polars,pg,pydantic,mssql]"]
 
 [dependency-groups]
 dev = ["nagra[all]", "pytest", "typeguard", "ruff"]

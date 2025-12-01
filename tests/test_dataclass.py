@@ -5,7 +5,7 @@ from typing import Optional, get_args
 from nagra.select import clean_col, Select
 from nagra.upsert import Upsert
 from nagra.update import Update
-
+from nagra.schema import Schema
 
 
 def equivalent_classes(A, B):
