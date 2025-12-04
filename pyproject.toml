@@ -22,7 +22,7 @@ nagra = "nagra.cli:run"
 
 [project.optional-dependencies]
 pandas = ["pandas"]
-polars = ["polars"]
+polars = ["polars>=1.34.0"]
 mssql = ["pyodbc"]
 pg = ["psycopg[binary]"]
 pydantic = ["pydantic"]

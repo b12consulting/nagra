@@ -7,6 +7,7 @@ from typing import Optional, TYPE_CHECKING
 from warnings import warn
 
 import toml
+from nagra.exceptions import IncorrectSchema
 from nagra.statement import Statement
 from nagra.transaction import Transaction
 from nagra.utils import logger, snake_to_pascal, template
@@ -238,6 +239,16 @@ class Schema:
             if trn.flavor == "mssql" and table.has_array:
                 warn(MSSQL_ARRAY_MSG.format(table=table.name), RuntimeWarning)
                 continue
+            if (
+                trn.flavor != "postgresql"
+                and table.primary_key is None
+                and not table.natural_key
+            ):
+                msg = (
+                    f"Table '{table.name}' has no primary key nor natural key! "
+                    "Unable to create it on non-PostgreSQL databases."
+                )
+                raise IncorrectSchema(msg)
 
             # TODO use "KEY GENERATED ALWAYS AS IDENTITY" instead of
             # serials (see https://stackoverflow.com/a/55300741) ?

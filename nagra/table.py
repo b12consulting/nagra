@@ -96,7 +96,6 @@ _TYPE_ALIAS = {
     "uuid": "uuid",
     "int": "int",
     "bit": "bool",
-
     "uniqueidentifier": "uuid",
     "datetime2": "timestamp",
     "smalldatetime": "timestamp",
@@ -133,7 +132,7 @@ _DB_TYPE = {
         "blob": "BLOB",
     },
     "mssql": {
-        "str": "NVARCHAR(200)", # Could use MAX here but then it is not usable as index
+        "str": "NVARCHAR(200)",  # Could use MAX here but then it is not usable as index
         "int": "INT",
         "bigint": "BIGINT",
         "float": "FLOAT",
@@ -241,11 +240,10 @@ class Table:
                     " referenced in natural key"
                 )
 
-        # natural key and primary can't be both unset/empty
+        # natural key and primary can be both unset/empty,
+        # but it may be undesirable
         if not self.primary_key and not self.natural_key:
-            raise IncorrectSchema(
-                f"Table '{name}': at least one of natural key or primary key must be defined"
-            )
+            warnings.warn(f"Table '{name}': no primary key or natural key defined")
 
         # Add table to schema
         self.schema.add_table(self.name, self)
@@ -427,14 +425,12 @@ class Table:
         """
         Return True if at least one column is an array
         """
-        return any(
-            c.dims for c in self.columns.values()
-        )
+        return any(c.dims for c in self.columns.values())
 
     @property
     def primary_key_is_identity(self):
         col = self.columns.get(self.primary_key)
-        if not col and self.primary_key == 'id':
+        if not col and self.primary_key == "id":
             # TODO id type shouldn't be implicit
             return True
         return col.dtype in ("int", "bigint")
