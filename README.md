@@ -274,7 +274,7 @@ And in the sqlcmd shell, run:
     create database nagra
     go
 
-Note: when using podman on Apple Silicon, make the podman machine uses "Apple Hypervisor" as its provider (as opposed to `libkrun`), and make sure Rosetta emulation is activated in the settings of the "" extension.
+Note: when using Podman Desktop on Apple Silicon, make sure the podman machine uses "Apple Hypervisor" as its provider (as opposed to `libkrun`), and make sure Rosetta emulation is activated in the settings of the "Podman" extension (needs to be changed before creating the VM).
 
 You might also need to install the ODBC drivers for MSSQL using:
 
