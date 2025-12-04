@@ -6,7 +6,6 @@ from nagra.schema import Schema
 
 
 def test_dummy_transaction():
-
     with pytest.raises(NoActiveTransaction):
         dummy_transaction.execute("SELECT 1")
 
@@ -14,11 +13,11 @@ def test_dummy_transaction():
         dummy_transaction.executemany("SELECT 1")
 
 
-def test_concurrent_transaction(person):
+def test_concurrent_transaction(person, schema: Schema):
     uri = "postgresql:///nagra"
 
     with Transaction(uri):
-        Schema.default.create_tables()
+        schema.create_tables()
         # Cleanup
         person.delete()
 
@@ -36,7 +35,7 @@ def test_concurrent_transaction(person):
         assert records == [("Romeo",)]
 
         # Cleanup
-        for tbl in Schema.default.tables.values():
+        for tbl in schema.tables.values():
             if tbl.is_view:
                 continue
             tr.execute(f"DROP TABLE {tbl.name} CASCADE")

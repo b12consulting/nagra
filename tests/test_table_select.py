@@ -190,7 +190,7 @@ def test_o2m_stm(person, org):
     res = strip_lines(stm)
     expected = [
         "SELECT",
-        '"person"."name", "orgs_0"."name", "parent_1"."name", ' '"parent_2"."name"',
+        '"person"."name", "orgs_0"."name", "parent_1"."name", "parent_2"."name"',
         'FROM "person"',
         'LEFT JOIN "org" as "orgs_0" ON (',
         '"orgs_0"."person" = "person"."id"',
@@ -344,7 +344,6 @@ def test_agg(transaction, temperature):
 
 
 def test_date_op(transaction, temperature):
-
     temperature.upsert("timestamp", "city", "value").executemany(
         [
             ("1970-01-02", "Berlin", 10),
@@ -405,11 +404,7 @@ def test_select_alias(transaction, temperature):
             ("1970-01-02", "London", 12),
         ]
     )
-    select = (
-        temperature.select()
-        .orderby("city")
-        .aliases("t", "c", "v")
-    )
+    select = temperature.select().orderby("city").aliases("t", "c", "v")
 
     # Check record keys
     records = list(select.to_dict())
@@ -479,26 +474,28 @@ def test_any_and_values(transaction, person):
         assert res == [(1,)]
 
 
-
 def test_distinct_on(transaction, person):
     if transaction.flavor != "postgresql":
         pytest.skip("Disctinct on is only supported by PostgreSQL")
 
     person.insert("name").execute("one")
-    person.insert("name", "parent.name").executemany([
-        ("two", "one"),
-        ("three", "one"),
-    ])
+    person.insert("name", "parent.name").executemany(
+        [
+            ("two", "one"),
+            ("three", "one"),
+        ]
+    )
 
-    select = person.select(
-        "name"
-    ).distinct_on(
-        "parent.name"
-    ).orderby(
-        "parent.name",
-        "name",
-    ).where(
-        "(isnot parent null)",
+    select = (
+        person.select("name")
+        .distinct_on("parent.name")
+        .orderby(
+            "parent.name",
+            "name",
+        )
+        .where(
+            "(isnot parent null)",
+        )
     )
     assert list(select) == [("three",)]
 
@@ -507,10 +504,12 @@ def test_select_distinct(transaction, temperature):
     if transaction.flavor == "mssql":
         pytest.skip("Disctinct on is not supported by MSSQL")
 
-    temperature.insert("city", "timestamp", "value").executemany([
-        ("Brussels", "2025-10-03", 11),
-        ("Amsterdam", "2025-10-03", 11),
-    ])
+    temperature.insert("city", "timestamp", "value").executemany(
+        [
+            ("Brussels", "2025-10-03", 11),
+            ("Amsterdam", "2025-10-03", 11),
+        ]
+    )
 
     select = temperature.select_distinct(
         "timestamp",

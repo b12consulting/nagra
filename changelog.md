@@ -3,9 +3,9 @@
 
 ### Unreleased
 
-**Breaking changes:**
 - Table can now be defined without natural key or primary key. This
   makes it possible to insert rows into existing tables that do not have either.
+  Creating tables this way is only supported for PostgreSQL.
 
 ### 0.9 (released 2025-11-27)
 

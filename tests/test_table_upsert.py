@@ -68,6 +68,8 @@ def test_insert(cacheable_transaction, person):
 
 
 def test_insert_no_nk_pk(cacheable_transaction, temperature_no_nk_pk):
+    if cacheable_transaction.flavor != "postgresql":
+        pytest.skip("Sqlite not supported with polars")
     # First simple insert - should work even without nk/pk
     insert = temperature_no_nk_pk.insert("timestamp", "city", "value")
     records = [
