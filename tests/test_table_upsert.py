@@ -67,6 +67,23 @@ def test_insert(cacheable_transaction, person):
     assert rows == [("Big Bob", None), ("Bob", None)]
 
 
+def test_insert_no_nk_pk(cacheable_transaction, temperature_no_nk_pk):
+    # First simple insert - should work even without nk/pk
+    insert = temperature_no_nk_pk.insert("timestamp", "city", "value")
+    records = [
+        (datetime(1970, 1, 1, 0, 0), "Berlin", 10.0),
+        (datetime(1970, 1, 2, 0, 0), "London", 12.0),
+    ]
+    insert.executemany(records)
+    rows = list(temperature_no_nk_pk.select().orderby("city").execute())
+    assert rows == records
+
+    # Upsert should fail without nk/pk
+    upsert = temperature_no_nk_pk.upsert("timestamp", "city", "value")
+    with pytest.raises(ValidationError):
+        upsert.execute(datetime(1970, 1, 2, 0, 0), "Berlin", 11.0)
+
+
 def test_upsert_stmt_with_id(cacheable_transaction, person):
     if cacheable_transaction.flavor == "postgresql":
         # Test stmt with all columns
@@ -269,7 +286,7 @@ def test_return_ids(cacheable_transaction, person):
     assert insert_ids == [None, None]
 
     # Check db content
-    res = list(person.select("parent").where('(= name {})').execute("Papa"))
+    res = list(person.select("parent").where("(= name {})").execute("Papa"))
     assert res == [(None,)]
 
 

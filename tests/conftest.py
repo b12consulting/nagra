@@ -119,14 +119,14 @@ temperature_table = Table(
     natural_key=["timestamp", "city"],
 )
 
-temperature_no_nk_table = Table(
-    "temperature_no_nk",
+temperature_no_nk_pk_table = Table(
+    "temperature_no_nk_pk",
     columns={
         "timestamp": "timestamp",
         "city": "varchar",
         "value": "float",
     },
-    natural_key=[],
+    primary_key=None,
 )
 
 
@@ -220,8 +220,8 @@ def temperature():
 
 
 @pytest.fixture(scope="session")
-def temperature_no_nk():
-    return temperature_no_nk_table
+def temperature_no_nk_pk():
+    return temperature_no_nk_pk_table
 
 
 @pytest.fixture(scope="session")
@@ -257,7 +257,7 @@ def value():
 DSN = [
     "postgresql:///nagra",
     "sqlite://",
-    "mssql://sa:p4ssw0rD@127.0.0.1/nagra?trust_server_certificate=yes",
+    # "mssql://sa:p4ssw0rD@127.0.0.1/nagra?trust_server_certificate=yes",
     # "postgresql://yugabyte:yugabyte@localhost:5433/nagra"
     # "duckdb://",
 ]

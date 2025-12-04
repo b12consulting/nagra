@@ -156,7 +156,7 @@ def test_schema_from_nagra_db(transaction):
         "population",
         "skill",
         "temperature",
-        "temperature_no_nk",
+        "temperature_no_nk_pk",
         "value",
     ]
     schema.introspect_db()
@@ -250,9 +250,7 @@ def test_schema_from_db(transaction):
 
 def test_suspend_fk(transaction):
     if transaction.flavor == "mssql":
-        pytest.skip(
-            "Support for disabling foreign keys with mssql not implemented"
-        )
+        pytest.skip("Support for disabling foreign keys with mssql not implemented")
 
     # Skip sqlite
     is_sqlite = transaction.flavor == "sqlite"
