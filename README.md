@@ -282,6 +282,10 @@ You might also need to install the ODBC drivers for MSSQL using:
     brew update
     HOMEBREW_ACCEPT_EULA=Y brew install msodbcsql18 mssql-tools18
 
+To skip some database systems when running the tests, run e.g.:
+
+    pytest --skip-dsns mssql
+
 # Miscellaneous
 
 ## Changelog and roadmap

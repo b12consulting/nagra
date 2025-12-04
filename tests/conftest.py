@@ -254,16 +254,42 @@ def value():
     return value_table
 
 
-DSN = [
-    "postgresql:///nagra",
-    "sqlite://",
-    "mssql://sa:p4ssw0rD@127.0.0.1/nagra?trust_server_certificate=yes",
+DSNs = {
+    "postgres": "postgresql:///nagra",
+    "sqlite": "sqlite://",
+    "mssql": "mssql://sa:p4ssw0rD@127.0.0.1/nagra?trust_server_certificate=yes",
     # "postgresql://yugabyte:yugabyte@localhost:5433/nagra"
     # "duckdb://",
-]
+}
 
 
-@pytest.fixture(scope="function", params=DSN)
+def pytest_addoption(parser):
+    parser.addoption(
+        "--skip-dsns",
+        action="append",
+        default=[],
+        help="Skip DSN(s)",
+        choices=DSNs.keys(),
+    )
+
+
+def pytest_generate_tests(metafunc):
+    """
+    Parametrize fixtures based on CLI options.
+    """
+    skip_dsns = metafunc.config.getoption("--skip-dsns")
+    selected_dsns = [dsn for name, dsn in DSNs.items() if name not in skip_dsns]
+
+    if "empty_transaction" in metafunc.fixturenames:
+        metafunc.parametrize("empty_transaction", selected_dsns, indirect=True)
+
+    if "cacheable_transaction" in metafunc.fixturenames:
+        # Create product of DSNs and boolean flag [True, False]
+        params = list(product(selected_dsns, [True, False]))
+        metafunc.parametrize("cacheable_transaction", params, indirect=True)
+
+
+@pytest.fixture(scope="function")
 def empty_transaction(request):
     dsn = request.param
     with Transaction(dsn, rollback=True) as tr:
@@ -277,7 +303,7 @@ def transaction(request, empty_transaction):
     yield empty_transaction
 
 
-@pytest.fixture(scope="function", params=product(DSN, [(True, False)]))
+@pytest.fixture(scope="function")
 def cacheable_transaction(request):
     dsn, fk_cache = request.param
     with Transaction(dsn, rollback=True, fk_cache=fk_cache) as tr:
