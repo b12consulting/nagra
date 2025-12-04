@@ -267,13 +267,20 @@ instance, with an empty nagra db:
 You will also need a Sql Server, run it with docker:
 
     docker run --platform linux/amd64 --cap-add SYS_PTRACE  -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=p4ssw0rD" -p 1433:1433  -d mcr.microsoft.com/mssql/server
-    sqlcmd -S 127.0.0.1,1433 -d master -C -P p4ssw0rD -U sa
+    sqlcmd -S 127.0.0.1:1433 -d master -C -P p4ssw0rD -U sa
 
 And in the sqlcmd shell, run:
 
     create database nagra
     go
 
+Note: when using podman on Apple Silicon, make the podman machine uses "Apple Hypervisor" as its provider (as opposed to `libkrun`), and make sure Rosetta emulation is activated in the settings of the "" extension.
+
+You might also need to install the ODBC drivers for MSSQL using:
+
+    brew tap microsoft/mssql-release https://github.com/Microsoft/homebrew-mssql-release
+    brew update
+    HOMEBREW_ACCEPT_EULA=Y brew install msodbcsql18 mssql-tools18
 
 # Miscellaneous
 
