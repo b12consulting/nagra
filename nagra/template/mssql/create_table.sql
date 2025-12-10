@@ -1,8 +1,17 @@
 CREATE TABLE [{{ table.name }}] (
   [{{ table.primary_key }}] {{ pk_type or "BIGINT IDENTITY(1,1)" }} PRIMARY KEY
-  {%- if fk_table %}
-  , CONSTRAINT fk_{{ fk_table.name }} FOREIGN KEY ([{{ table.primary_key }}])
-    REFERENCES [{{ fk_table.name }}] ([{{ fk_table.primary_key }}])
-    ON DELETE CASCADE
-  {%- endif %}
+
+  {%- for column in columns %}
+   {{" , " if (not loop.first) or table.primary_key}}
+
+   [{{ column }}] {{ ctypes[column] }}
+
+   {%- if column in not_null %}
+    NOT NULL
+   {%- endif %}
+
+   {%- if column in table.default %}
+    DEFAULT {{ table.default[column] }}
+   {%- endif %}
+  {%- endfor %}
 );

@@ -3,17 +3,17 @@ CREATE TABLE  "{{table.name}}" (
    "{{table.primary_key}}" {{ctypes.get(table.primary_key, "BIGSERIAL")}} PRIMARY KEY
   {%- endif %}
 
-  {%- for column in table.columns.values() if column.name != table.primary_key %}
+  {%- for column in columns %}
    {{" , " if (not loop.first) or table.primary_key}}
 
-   "{{column.name}}" {{ctypes[column.name]}}
+   "{{column}}" {{ctypes[column]}}
 
-   {%- if column.name in not_null %}
+   {%- if column in not_null %}
     NOT NULL
    {%- endif %}
 
-   {%- if column.name in table.default %}
-    DEFAULT {{table.default[column.name]}}
+   {%- if column in table.default %}
+    DEFAULT {{table.default[column]}}
    {%- endif %}
   {%- endfor %}
 );

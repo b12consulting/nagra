@@ -250,12 +250,19 @@ class Schema:
                 msg = f"Table '{table.name}' has no primary key nor natural key! Make sure this is what you want."
                 warn(msg, RuntimeWarning)
 
+            columns_not_pk_fk = [
+                col
+                for col in table.columns
+                if col != table.primary_key and col not in table.foreign_keys
+            ]
+
             # TODO use "KEY GENERATED ALWAYS AS IDENTITY" instead of
             # serials (see https://stackoverflow.com/a/55300741) ?
             stmt = Statement(
                 "create_table",
                 trn.flavor,
                 table=table,
+                columns=columns_not_pk_fk,
                 ctypes=ctypes,
                 not_null=table.not_null,
                 default=table.default,
@@ -266,21 +273,37 @@ class Schema:
         self, db_columns: dict[str, dict[str, str]], trn: Transaction | DummyTransaction
     ):
         # Add remaining columns that were not created with the table
-        # This only happens when the table already existed in the DB
+        # This concerns:
+        # - columns that are foreign keys for tables that were just created
+        # - columns added to existing tables
         for name, table in self.tables.items():
             if table.is_view:
-                continue
-
-            # table was created by us, skip
-            if name not in db_columns:
                 continue
 
             ctypes = table.ctypes(trn.flavor, table.columns)
 
             for col_name, col_type in ctypes.items():
+                # table was created by us, skip unless it's a foreign key
+                if name not in db_columns:
+                    if col_name not in table.foreign_keys:
+                        continue
+                elif (
+                    col_name not in db_columns[name] and col_name in table.foreign_keys
+                ):
+                    raise RuntimeError(
+                        f"Cannot add foreign key column '{col_name}' in table '{name}'."
+                        " Foreign keys can only be added to newly created tables."
+                    )
+
                 if col_name in db_columns.get(table.name, {}):
                     # column already exists
                     continue
+
+                fk_table = (
+                    self.tables.get(table.foreign_keys[col_name])
+                    if col_name in table.foreign_keys
+                    else None
+                )
 
                 stmt = Statement(
                     "add_column",
@@ -290,40 +313,9 @@ class Schema:
                     col_def=col_type,
                     not_null=col_name in table.not_null,
                     default=table.default.get(col_name),
+                    fk_table=fk_table,
                 )
                 yield stmt()
-
-    def _add_foreign_keys(
-        self, db_columns: dict[str, dict[str, str]], trn: Transaction | DummyTransaction
-    ):
-        # Add columns
-        for table in self.tables.values():
-            if table.is_view:
-                continue
-
-            for fk_name, fk_table in table.foreign_keys.items():
-                if fk_name in db_columns.get(table.name, {}):
-                    # foreign key column already exists
-                    continue
-
-                if (
-                    foreign_column := cast("Table", self.get(fk_table)).primary_key
-                ) is None:
-                    msg = (
-                        f"Table '{table.name}' has a foreign key to table "
-                        f"'{fk_table.name}' but this table has no primary key!"
-                    )
-                    raise IncorrectSchema(msg)
-
-                fk = FKConstraint(
-                    name=f"{fk_table}_fk",
-                    table=table,
-                    column=fk_name,
-                    foreign_table=fk_table,
-                    foreign_column=foreign_column,
-                )
-
-                yield fk._stmt(trn.flavor)()
 
     def _create_indexes(self, db_indexes, trn):
         # Add index on natural keys
@@ -350,7 +342,6 @@ class Schema:
         db_indexes = self._db_indexes(trn)
 
         yield from self._create_tables(db_columns, trn)
-        yield from self._add_foreign_keys(db_columns, trn)
         yield from self._add_columns(db_columns, trn)
         yield from self._create_indexes(db_indexes, trn)
         yield from self._create_views(trn)
@@ -503,20 +494,15 @@ class FKConstraint:
         )
         trn.execute(stmt())
 
-    def _stmt(self, flavor):
-        fk_not_null = self.foreign_column in self.table.not_null
-        return Statement(
+    def add(self, trn=None):
+        trn = trn or Transaction.current()
+        stmt = Statement(
             "add_foreign_key",
-            flavor,
-            table=self.table.name,
+            trn.flavor,
+            table=self.table,
             column=self.column,
             name=self.name,
             foreign_table=self.foreign_table,
             foreign_column=self.foreign_column,
-            not_null=fk_not_null,
         )
-
-    def add(self, trn=None):
-        trn = trn or Transaction.current()
-        stmt = self._stmt(trn.flavor)
         trn.execute(stmt())
