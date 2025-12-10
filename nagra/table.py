@@ -213,7 +213,9 @@ class Table:
         is_view: Optional[bool] = False,
     ):
         self.name = name
-        self.columns = {name: Column(name, dtype) for name, dtype in columns.items()}
+        self.columns: dict[str, Column] = {
+            name: Column(name, dtype) for name, dtype in columns.items()
+        }
         self.natural_key = natural_key or []
         self.foreign_keys = foreign_keys or {}
         self.not_null = set(self.natural_key) | set(not_null or []) | set([primary_key])
