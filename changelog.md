@@ -1,6 +1,10 @@
 
 # Changelog
 
+### Unreleased
+
+- Table can now be defined without natural key or primary key. This
+  makes it possible to insert rows into existing tables that do not have either.
 
 ### 0.9 (released 2025-11-27)
 

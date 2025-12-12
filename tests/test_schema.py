@@ -5,6 +5,7 @@ import pytest
 from nagra import Table, Schema
 from nagra.table import Column
 from nagra.exceptions import IncorrectSchema
+from nagra.transaction import Transaction
 
 
 HERE = Path(__file__).parent
@@ -96,10 +97,7 @@ def test_incorrect_nk(empty_transaction):
         )
 
 
-def test_create_tables(empty_transaction):
-    # Associate schema with the transaction
-    schema = Schema.default
-
+def test_create_tables(schema, empty_transaction):
     # Make sure we start from empty db
     assert not schema._db_columns(trn=empty_transaction)
     schema.create_tables(trn=empty_transaction)
@@ -110,7 +108,7 @@ def test_create_tables(empty_transaction):
     assert sorted(post["person"]) == ["id", "name", "parent"]
 
     # Add a column to existing table
-    person = Table.get("person")
+    person = schema.tables["person"]
     person.columns["email"] = Column("email", "varchar")
     schema.create_tables(trn=empty_transaction)
     post = schema._db_columns(trn=empty_transaction)
@@ -139,11 +137,10 @@ def test_custom_id_type(empty_transaction):
     assert list(city.select()) == [("this-is-an-uuid", "test")]
 
 
-def test_schema_from_nagra_db(transaction):
+def test_schema_from_nagra_db(transaction: Transaction):
     """
     Check introspection of a nagra created tables.
     """
-    schema = Schema()
     tables = [
         "address",
         "country",
@@ -156,9 +153,10 @@ def test_schema_from_nagra_db(transaction):
         "population",
         "skill",
         "temperature",
-        "temperature_no_nk",
+        "temperature_no_nk_pk",
         "value",
     ]
+    schema = Schema()
     schema.introspect_db()
     if transaction.flavor == "mssql":
         # We ignore table with array for mssql
@@ -204,7 +202,7 @@ def test_schema_from_nagra_db(transaction):
     assert parameter.natural_key == ["name"]
 
 
-def test_schema_from_db(transaction):
+def test_schema_from_db(transaction: Transaction):
     """
     Check introspection on various coner cases
     """
@@ -248,11 +246,9 @@ def test_schema_from_db(transaction):
     assert visit.foreign_keys == {"patient_id": "patient"}
 
 
-def test_suspend_fk(transaction):
+def test_suspend_fk(transaction: Transaction):
     if transaction.flavor == "mssql":
-        pytest.skip(
-            "Support for disabling foreign keys with mssql not implemented"
-        )
+        pytest.skip("Support for disabling foreign keys with mssql not implemented")
 
     # Skip sqlite
     is_sqlite = transaction.flavor == "sqlite"
