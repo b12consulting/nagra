@@ -3,19 +3,41 @@ from typeguard import install_import_hook
 
 install_import_hook("nagra")
 
-from nagra import Table, Transaction, Schema, View
+from nagra import Table, Transaction, Schema, View  # noqa: E402
 
-DSN = [
-    "postgresql:///nagra",
-    "sqlite://",
-    # "mssql://sa:p4ssw0rD@127.0.0.1/nagra?trust_server_certificate=yes",
-    # "postgresql://yugabyte:yugabyte@localhost:5433/nagra"
-    # "duckdb://",
-]
+DSNs = {
+    "postgresql": "postgresql:///nagra",
+    "sqlite": "sqlite://",
+    "mssql": "mssql://sa:p4ssw0rD@127.0.0.1/nagra?trust_server_certificate=yes",
+    # "yugabyte": "postgresql://yugabyte:yugabyte@localhost:5433/nagra"
+    # "duckdb": "duckdb://",
+}
 
 
-@pytest.fixture(scope="session", params=DSN)
+def pytest_addoption(parser):
+    parser.addoption(
+        "--skip-dsns",
+        action="append",
+        default=[],
+        help="Skip DSN(s)",
+        choices=DSNs.keys(),
+    )
+
+
+def pytest_generate_tests(metafunc):
+    """
+    Parametrize fixtures based on CLI options.
+    """
+    skip_dsns = metafunc.config.getoption("--skip-dsns")
+    selected_dsns = [dsn for name, dsn in DSNs.items() if name not in skip_dsns]
+
+    if "dsn" in metafunc.fixturenames:
+        metafunc.parametrize("dsn", selected_dsns, indirect=True)
+
+
+@pytest.fixture(scope="session")
 def dsn(request):
+    # this fixture is parametrized in pytest_generate_tests
     return request.param
 
 
