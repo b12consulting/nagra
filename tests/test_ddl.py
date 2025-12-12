@@ -81,16 +81,9 @@ def test_create_table(empty_transaction):
 def test_create_table_pk_is_fk(empty_transaction):
     flavor = empty_transaction.flavor
     schema = Schema()
-    Table(  # Regular table
-        "concept",
-        columns={
-            "name": "varchar",
-        },
-        natural_key=["name"],
-        primary_key="concept_id",
-        schema=schema,
-    )
-    Table(  # Table with no natural key and a fk in the primary key
+    # Table with no natural key and a fk in the primary key
+    # It should be created second
+    Table(
         "score",
         columns={
             "concept": "bigint",
@@ -100,6 +93,15 @@ def test_create_table_pk_is_fk(empty_transaction):
         foreign_keys={
             "concept": "concept",
         },
+        schema=schema,
+    )
+    Table(  # Regular table
+        "concept",
+        columns={
+            "name": "varchar",
+        },
+        natural_key=["name"],
+        primary_key="concept_id",
         schema=schema,
     )
     lines = list(schema.setup_statements(trn=empty_transaction))
@@ -155,7 +157,7 @@ def test_create_table_no_pk(empty_transaction):
         natural_key=["name"],
         schema=schema,
     )
-    Table(  # Table with no primary key and a fk in the nk
+    Table(  #  Table with no primary key and a fk in the nk
         "score",
         columns={
             "concept": "bigint",
