@@ -1,6 +1,6 @@
 CREATE TABLE  "{{table.name}}" (
   {%- if table.primary_key %}
-   "{{table.primary_key}}" {{ctypes.get(table.primary_key, "BIGSERIAL")}} PRIMARY KEY
+   "{{table.primary_key}}" {{ctypes.get(table.primary_key, "INTEGER")}} PRIMARY KEY
    {%- if pk_fk_table %}
     CONSTRAINT fk_{{table.primary_key}} REFERENCES "{{pk_fk_table.name}}"("{{pk_fk_table.primary_key}}") ON DELETE CASCADE
    {%- endif %}

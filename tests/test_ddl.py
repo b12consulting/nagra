@@ -25,10 +25,23 @@ def test_create_table(empty_transaction):
     create_table, create_idx = map(strip_lines, lines)
 
     match flavor:
-        case "postgresql" | "sqlite":
+        case "postgresql":
             assert create_table == [
                 'CREATE TABLE  "my_table" (',
                 '"custom_id" BIGSERIAL PRIMARY KEY',
+                ",",
+                '"name" TEXT',
+                "NOT NULL",
+                ",",
+                '"score" INTEGER',
+                "NOT NULL",
+                "DEFAULT 0",
+                ");",
+            ]
+        case "sqlite":
+            assert create_table == [
+                'CREATE TABLE  "my_table" (',
+                '"custom_id" INTEGER PRIMARY KEY',
                 ",",
                 '"name" TEXT',
                 "NOT NULL",
@@ -92,7 +105,7 @@ def test_create_table_pk_is_fk(empty_transaction):
     lines = list(schema.setup_statements(trn=empty_transaction))
 
     match flavor:
-        case "postgresql" | "sqlite":
+        case "postgresql":
             assert lines == [
                 'CREATE TABLE  "concept" (\n   "concept_id" BIGSERIAL PRIMARY KEY\n'
                 '    , \n\n   "name" TEXT\n    NOT NULL\n);',
@@ -100,6 +113,17 @@ def test_create_table_pk_is_fk(empty_transaction):
                 '    CONSTRAINT fk_concept REFERENCES "concept"("concept_id") ON DELETE CASCADE\n'
                 '    , \n\n   "score" INTEGER\n);',
                 'ALTER TABLE "score"\n ADD COLUMN "concept" BIGINT NOT NULL\n'
+                ' CONSTRAINT fk_concept REFERENCES "concept"("concept_id") ON DELETE CASCADE;',
+                'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
+            ]
+        case "sqlite":
+            assert lines == [
+                'CREATE TABLE  "concept" (\n   "concept_id" INTEGER PRIMARY KEY\n'
+                '    , \n\n   "name" TEXT\n    NOT NULL\n);',
+                'CREATE TABLE  "score" (\n   "concept" INTEGER PRIMARY KEY\n'
+                '    CONSTRAINT fk_concept REFERENCES "concept"("concept_id") ON DELETE CASCADE\n'
+                '    , \n\n   "score" INTEGER\n);',
+                'ALTER TABLE "score"\n ADD COLUMN "concept" INTEGER NOT NULL\n'
                 ' CONSTRAINT fk_concept REFERENCES "concept"("concept_id") ON DELETE CASCADE;',
                 'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
             ]
@@ -154,7 +178,7 @@ def test_create_table_no_pk(empty_transaction):
     ) = map(strip_lines, lines)
 
     match flavor:
-        case "postgresql" | "sqlite":
+        case "postgresql":
             assert create_concept == [
                 'CREATE TABLE  "concept" (',
                 '"id" BIGSERIAL PRIMARY KEY',
@@ -163,15 +187,30 @@ def test_create_table_no_pk(empty_transaction):
                 "NOT NULL",
                 ");",
             ]
-            assert create_score == [
-                'CREATE TABLE  "score" (',
-                '"score" INTEGER',
-                ");",
-            ]
             assert add_score_concept_fk == [
                 'ALTER TABLE "score"',
                 'ADD COLUMN "concept" BIGINT NOT NULL',
                 'CONSTRAINT fk_concept REFERENCES "concept"("id") ON DELETE CASCADE;',
+            ]
+        case "sqlite":
+            assert create_concept == [
+                'CREATE TABLE  "concept" (',
+                '"id" INTEGER PRIMARY KEY',
+                ",",
+                '"name" TEXT',
+                "NOT NULL",
+                ");",
+            ]
+            assert add_score_concept_fk == [
+                'ALTER TABLE "score"',
+                'ADD COLUMN "concept" INTEGER NOT NULL',
+                'CONSTRAINT fk_concept REFERENCES "concept"("id") ON DELETE CASCADE;',
+            ]
+        case "postgresql" | "sqlite":
+            assert create_score == [
+                'CREATE TABLE  "score" (',
+                '"score" INTEGER',
+                ");",
             ]
         case "mssql":
             assert create_concept == [
