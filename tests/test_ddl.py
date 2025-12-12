@@ -252,6 +252,36 @@ def test_create_table_no_pk(empty_transaction):
             ]
 
 
+def test_create_table_no_pk_nk(empty_transaction):
+    flavor = empty_transaction.flavor
+    schema = Schema()
+    Table(  #  Table with no primary key or natural key
+        "score",
+        columns={
+            "score": "int",
+        },
+        natural_key=None,
+        primary_key=None,
+        schema=schema,
+    )
+    lines = list(schema.setup_statements(trn=empty_transaction))
+    (create_score,) = map(strip_lines, lines)
+
+    match flavor:
+        case "postgresql" | "sqlite":
+            assert create_score == [
+                'CREATE TABLE  "score" (',
+                '"score" INTEGER',
+                ");",
+            ]
+        case "mssql":
+            assert create_score == [
+                "CREATE TABLE [score] (",
+                "[score] INT",
+                ");",
+            ]
+
+
 def test_create_unique_index():
     stmt = Statement("create_unique_index").table("my_table").natural_key(["name"])
     doc = stmt()
