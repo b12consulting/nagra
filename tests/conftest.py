@@ -134,17 +134,16 @@ def schema(dsn):
         schema=schema,
     )
 
-    if "postgresql" in dsn:
-        temperature_no_nk_pk_table = Table(
-            "temperature_no_nk_pk",
-            columns={
-                "timestamp": "timestamp",
-                "city": "varchar",
-                "value": "float",
-            },
-            primary_key=None,
-            schema=schema,
-        )
+    temperature_no_nk_pk_table = Table(
+        "temperature_no_nk_pk",
+        columns={
+            "timestamp": "timestamp",
+            "city": "varchar",
+            "value": "float",
+        },
+        primary_key=None,
+        schema=schema,
+    )
 
     parameter_table = Table(
         "parameter",

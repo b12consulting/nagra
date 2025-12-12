@@ -98,10 +98,6 @@ def test_incorrect_nk(empty_transaction):
 
 
 def test_create_tables(schema, empty_transaction):
-    if empty_transaction.flavor != "postgresql":
-        # We ignore table without nk/pk for non-postgresql
-        schema.tables.pop("temperature_no_nk_pk", None)
-
     # Make sure we start from empty db
     assert not schema._db_columns(trn=empty_transaction)
     schema.create_tables(trn=empty_transaction)
@@ -165,9 +161,6 @@ def test_schema_from_nagra_db(transaction: Transaction):
     if transaction.flavor == "mssql":
         # We ignore table with array for mssql
         tables.remove("parameter")
-    if transaction.flavor != "postgresql":
-        # We ignore table without nk/pk for non-postgresql
-        tables.remove("temperature_no_nk_pk")
     assert sorted(schema.tables) == tables
     assert all(schema.tables[n].is_view for n in ["max_pop", "min_pop"])
 

@@ -68,11 +68,6 @@ def test_insert(cacheable_transaction, person):
 
 
 def test_insert_no_nk_pk(cacheable_transaction, temperature_no_nk_pk):
-    if cacheable_transaction.flavor != "postgresql":
-        pytest.skip(
-            "Test requires temperature_no_nk_pk table, only created for postgresql"
-        )
-
     # First simple insert - should work even without nk/pk
     insert = temperature_no_nk_pk.insert("timestamp", "city", "value")
     records = [
@@ -80,6 +75,10 @@ def test_insert_no_nk_pk(cacheable_transaction, temperature_no_nk_pk):
         (datetime(1970, 1, 2, 0, 0), "London", 12.0),
     ]
     insert.executemany(records)
+    if cacheable_transaction.flavor == "sqlite":
+        records = [
+            tuple(str(v) if isinstance(v, datetime) else v for v in r) for r in records
+        ]
     rows = list(temperature_no_nk_pk.select().orderby("city").execute())
     assert rows == records
 
