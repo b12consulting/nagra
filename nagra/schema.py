@@ -233,13 +233,18 @@ class Schema:
     def _create_tables(
         self, db_columns: dict[str, dict[str, str]], trn: Transaction | DummyTransaction
     ):
-        # Create tables with all columns that are not foreign keys
-        for name, table in self.tables.items():
+        # Create tables with all columns that are not foreign keys,
+        # except for tables for which the primary key is also a foreign key.
+        # These special tables need to be created after all other tables.
+        tables = sorted(
+            self.tables.values(), key=lambda t: t.primary_key in t.foreign_keys
+        )
+        for table in tables:
             if table.is_view:
                 continue
 
             # table already exists
-            if name in db_columns:
+            if table.name in db_columns:
                 continue
 
             ctypes = table.ctypes(trn.flavor, table.columns)
@@ -256,6 +261,13 @@ class Schema:
                 if col != table.primary_key and col not in table.foreign_keys
             ]
 
+            pk_fk_table = (
+                self.tables.get(table.foreign_keys[table.primary_key])
+                if table.primary_key in table.foreign_keys
+                and table.primary_key is not None
+                else None
+            )
+
             # TODO use "KEY GENERATED ALWAYS AS IDENTITY" instead of
             # serials (see https://stackoverflow.com/a/55300741) ?
             stmt = Statement(
@@ -266,6 +278,7 @@ class Schema:
                 ctypes=ctypes,
                 not_null=table.not_null,
                 default=table.default,
+                pk_fk_table=pk_fk_table,
             )
             yield stmt()
 
