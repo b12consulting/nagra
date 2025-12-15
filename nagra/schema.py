@@ -3,11 +3,10 @@ from contextlib import contextmanager
 from collections import defaultdict
 from pathlib import Path
 from io import IOBase
-from typing import Optional, TYPE_CHECKING, cast
+from typing import Optional, TYPE_CHECKING
 from warnings import warn
 
 import toml
-from nagra.exceptions import IncorrectSchema
 from nagra.statement import Statement
 from nagra.transaction import DummyTransaction, Transaction
 from nagra.utils import logger, snake_to_pascal, template
@@ -255,9 +254,6 @@ class Schema:
             if trn.flavor == "mssql" and table.has_array:
                 warn(MSSQL_ARRAY_MSG.format(table=table.name), RuntimeWarning)
                 continue
-            if table.primary_key is None and not table.natural_key:
-                msg = f"Table '{table.name}' has no primary key nor natural key! Make sure this is what you want."
-                warn(msg, RuntimeWarning)
 
             columns_not_pk_fk = [
                 col
