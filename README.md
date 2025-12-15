@@ -267,7 +267,7 @@ instance, with an empty nagra db:
 You will also need a Sql Server, run it with docker:
 
     docker run --platform linux/amd64 --cap-add SYS_PTRACE  -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=p4ssw0rD" -p 1433:1433  -d mcr.microsoft.com/mssql/server
-    sqlcmd -S 127.0.0.1:1433 -d master -C -P p4ssw0rD -U sa
+    sqlcmd -S 127.0.0.1,1433 -d master -C -P p4ssw0rD -U sa
 
 And in the sqlcmd shell, run:
 
