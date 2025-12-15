@@ -91,7 +91,9 @@ class Schema:
         return res
 
     @classmethod
-    def _db_columns(cls, trn=None, pg_schema="public") -> dict[str, dict[str, str]]:
+    def _db_columns(
+        cls, trn=None, pg_schema="public"
+    ) -> defaultdict[str, dict[str, str]]:
         """
         Return a mapping of table -> column -> type by introspecting the database
         """
@@ -141,7 +143,9 @@ class Schema:
         return res
 
     @classmethod
-    def _db_fk(cls, *whitelist, trn=None, pg_schema="public"):
+    def _db_fk(
+        cls, *whitelist, trn=None, pg_schema="public"
+    ) -> defaultdict[str, dict[str, "FKConstraint"]]:
         trn = trn or Transaction.current()
         res = defaultdict(dict)
         stmt = Statement(
@@ -283,7 +287,10 @@ class Schema:
             yield stmt()
 
     def _add_columns(
-        self, db_columns: dict[str, dict[str, str]], trn: Transaction | DummyTransaction
+        self,
+        db_columns: defaultdict[str, dict[str, str]],
+        db_fks: defaultdict[str, dict[str, "FKConstraint"]],
+        trn: Transaction | DummyTransaction,
     ):
         # Add remaining columns that were not created with the table
         # This concerns:
@@ -296,21 +303,26 @@ class Schema:
             ctypes = table.ctypes(trn.flavor, table.columns)
 
             for col_name, col_type in ctypes.items():
-                # table was created by us, skip unless it's a foreign key
-                if name not in db_columns:
-                    if col_name not in table.foreign_keys:
-                        continue
-                elif (
-                    col_name not in db_columns[name] and col_name in table.foreign_keys
+                # if table was created by us, skip unless it's a foreign key that's not a primary key
+                if name not in db_columns and (
+                    col_name not in table.foreign_keys or col_name == table.primary_key
                 ):
-                    raise RuntimeError(
-                        f"Cannot add foreign key column '{col_name}' in table '{name}'."
-                        " Foreign keys can only be added to newly created tables."
-                    )
-
-                if col_name in db_columns.get(table.name, {}):
-                    # column already exists
                     continue
+                elif col_name in db_columns.get(name, {}):
+                    # column already exists
+                    # it is not a foreign key in the DB, but is declared as such in the schema
+                    if (
+                        col_name
+                        not in [fk.column for fk in db_fks.get(name, {}).values()]
+                        and col_name in table.foreign_keys
+                    ):
+                        raise RuntimeError(
+                            f"Cannot add foreign key column '{col_name}' in table '{name}'."
+                            " Foreign keys can only be added to newly created tables."
+                        )
+                    # column already exists, we skip
+                    else:
+                        continue
 
                 fk_table = (
                     self.tables.get(table.foreign_keys[col_name])
@@ -352,10 +364,11 @@ class Schema:
         trn = trn or Transaction.current()
         # Find existing tables and columns
         db_columns = self._db_columns(trn)
+        db_fks = self._db_fk(trn=trn)
         db_indexes = self._db_indexes(trn)
 
         yield from self._create_tables(db_columns, trn)
-        yield from self._add_columns(db_columns, trn)
+        yield from self._add_columns(db_columns, db_fks=db_fks, trn=trn)
         yield from self._create_indexes(db_indexes, trn)
         yield from self._create_views(trn)
 

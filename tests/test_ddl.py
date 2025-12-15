@@ -114,8 +114,6 @@ def test_create_table_pk_is_fk(empty_transaction):
                 'CREATE TABLE  "score" (\n   "concept" BIGINT PRIMARY KEY\n'
                 '    CONSTRAINT fk_concept REFERENCES "concept"("concept_id") ON DELETE CASCADE\n'
                 '    , \n\n   "score" INTEGER\n);',
-                'ALTER TABLE "score"\n ADD COLUMN "concept" BIGINT NOT NULL\n'
-                ' CONSTRAINT fk_concept REFERENCES "concept"("concept_id") ON DELETE CASCADE;',
                 'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
             ]
         case "sqlite":
@@ -125,8 +123,6 @@ def test_create_table_pk_is_fk(empty_transaction):
                 'CREATE TABLE  "score" (\n   "concept" INTEGER PRIMARY KEY\n'
                 '    CONSTRAINT fk_concept REFERENCES "concept"("concept_id") ON DELETE CASCADE\n'
                 '    , \n\n   "score" INTEGER\n);',
-                'ALTER TABLE "score"\n ADD COLUMN "concept" INTEGER NOT NULL\n'
-                ' CONSTRAINT fk_concept REFERENCES "concept"("concept_id") ON DELETE CASCADE;',
                 'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
             ]
         case "mssql":
@@ -138,7 +134,8 @@ def test_create_table_pk_is_fk(empty_transaction):
                 "  [concept] BIGINT PRIMARY KEY\n"
                 "  , CONSTRAINT fk_concept FOREIGN KEY ([concept])\n"
                 "    REFERENCES [concept] ([concept_id])\n"
-                "    ON DELETE CASCADE\n"
+                "    ON DELETE CASCADE,\n"
+                "  [score] INT\n",
                 ");",
                 "ALTER TABLE [concept]\n ADD [name] NVARCHAR(200) NOT NULL\n;\n",
                 "ALTER TABLE [score]\n ADD [score] INT\n;\n",
