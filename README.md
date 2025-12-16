@@ -274,6 +274,16 @@ And in the sqlcmd shell, run:
     create database nagra
     go
 
+You might also need to install the ODBC drivers for MSSQL using:
+
+    brew tap microsoft/mssql-release https://github.com/Microsoft/homebrew-mssql-release
+    brew update
+    HOMEBREW_ACCEPT_EULA=Y brew install msodbcsql18 mssql-tools18
+
+To skip some database systems when running the tests, run e.g.:
+
+    pytest --skip-dsns mssql
+
 
 # Miscellaneous
 

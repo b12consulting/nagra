@@ -8,7 +8,7 @@ from warnings import warn
 
 import toml
 from nagra.statement import Statement
-from nagra.transaction import Transaction
+from nagra.transaction import DummyTransaction, Transaction
 from nagra.utils import logger, snake_to_pascal, template
 
 
@@ -24,12 +24,12 @@ MSSQL_ARRAY_MSG = (
 
 class Schema:
     def __init__(self, tables=None, views=None):
-        self.tables = tables or {}
-        self.views = views or {}
+        self.tables: dict[str, Table] = tables or {}
+        self.views: dict[str, View] = views or {}
 
     @classmethod
-    def from_toml(self, toml_src: IOBase | Path | str) -> "Schema":
-        schema = Schema()
+    def from_toml(cls, toml_src: IOBase | Path | str) -> "Schema":
+        schema = cls()
         schema.load_toml(toml_src)
         return schema
 
@@ -90,7 +90,12 @@ class Schema:
         return res
 
     @classmethod
-    def _db_columns(cls, trn=None, pg_schema="public"):
+    def _db_columns(
+        cls, trn=None, pg_schema="public"
+    ) -> defaultdict[str, dict[str, str]]:
+        """
+        Return a mapping of table -> column -> type by introspecting the database
+        """
         from nagra.table import _TYPE_ALIAS
 
         trn = trn or Transaction.current()
@@ -123,13 +128,13 @@ class Schema:
             res[tbl][col_name] = col_type
         return res
 
-    def _db_indexes(cls, trn=None, pg_schema="public"):
+    def _db_indexes(self, trn=None, pg_schema="public"):
         trn = trn or Transaction.current()
         stmt = Statement("find_indexes", trn.flavor, pg_schema=pg_schema)
         res = [n for (n,) in trn.execute(stmt())]
         return res
 
-    def _db_views(cls, trn=None, pg_schema="public") -> dict[str, str]:
+    def _db_views(self, trn=None, pg_schema="public") -> dict[str, str]:
         trn = trn or Transaction.current()
         stmt = Statement("find_views", trn.flavor, pg_schema=pg_schema)
         # The statement returns tuples of (name, view_def)
@@ -137,7 +142,9 @@ class Schema:
         return res
 
     @classmethod
-    def _db_fk(cls, *whitelist, trn=None, pg_schema="public"):
+    def _db_fk(
+        cls, *whitelist, trn=None, pg_schema="public"
+    ) -> defaultdict[str, dict[str, "FKConstraint"]]:
         trn = trn or Transaction.current()
         res = defaultdict(dict)
         stmt = Statement(
@@ -206,7 +213,7 @@ class Schema:
                 break
         return res
 
-    def _create_views(self, trn):
+    def _create_views(self, trn: Transaction):
         # Create tables
         for name, view in self.views.items():
             if trn.flavor == "sqlite":
@@ -226,96 +233,108 @@ class Schema:
             )
             yield stmt()
 
-    def _create_tables(self, db_columns, trn):
-        # Create tables
-        for name, table in self.tables.items():
+    def _create_tables(
+        self, db_columns: dict[str, dict[str, str]], trn: Transaction | DummyTransaction
+    ):
+        # Create tables with all columns that are not foreign keys,
+        # except for tables for which the primary key is also a foreign key.
+        # These special tables need to be created after all other tables.
+        tables = sorted(
+            self.tables.values(), key=lambda t: t.primary_key in t.foreign_keys
+        )
+        for table in tables:
             if table.is_view:
                 continue
 
-            if name in db_columns:
+            # table already exists
+            if table.name in db_columns:
                 continue
+
             ctypes = table.ctypes(trn.flavor, table.columns)
             if trn.flavor == "mssql" and table.has_array:
                 warn(MSSQL_ARRAY_MSG.format(table=table.name), RuntimeWarning)
                 continue
 
+            columns_not_pk_fk = [
+                col
+                for col in table.columns
+                if col != table.primary_key and col not in table.foreign_keys
+            ]
+
+            pk_fk_table = (
+                self.tables.get(table.foreign_keys[table.primary_key])
+                if table.primary_key in table.foreign_keys
+                and table.primary_key is not None
+                else None
+            )
+
             # TODO use "KEY GENERATED ALWAYS AS IDENTITY" instead of
             # serials (see https://stackoverflow.com/a/55300741) ?
-            if table.primary_key is None:
-                ctypes = table.ctypes(trn.flavor, table.columns)
-                # Create the list of natural key columns, respecting
-                # table definition order:
-                nk_cols = [c for c in table.columns if c in table.natural_key]
-
-                # Create tuples of (name, type, foreign_table, default)
-                natural_key = [
-                    (
-                        c,
-                        ctypes[c],
-                        table.foreign_keys.get(c),
-                        table.default.get(c),
-                    )
-                    for c in nk_cols
-                ]
-
-                fk_tables = {}
-                for nk_col, *_ in natural_key:
-                    if fk_table_name := table.foreign_keys.get(nk_col):
-                        fk_tables[nk_col] = self.get(fk_table_name)
-
-                stmt = Statement(
-                    "create_table_nk",
-                    trn.flavor,
-                    table=table,
-                    natural_key=natural_key,
-                    fk_tables=fk_tables,
-                )
-            else:
-                if fk_table_name := table.foreign_keys.get(table.primary_key):
-                    fk_table = self.get(fk_table_name)
-                else:
-                    fk_table = None
-                stmt = Statement(
-                    "create_table",
-                    trn.flavor,
-                    table=table,
-                    pk_type=ctypes.get(table.primary_key),
-                    fk_table=fk_table,
-                    not_null=table.primary_key in table.not_null,
-                )
+            stmt = Statement(
+                "create_table",
+                trn.flavor,
+                table=table,
+                columns=columns_not_pk_fk,
+                ctypes=ctypes,
+                not_null=table.not_null,
+                default=table.default,
+                pk_fk_table=pk_fk_table,
+            )
             yield stmt()
 
-    def _add_columns(self, db_columns, trn):
-        # Add columns
-        for table in self.tables.values():
+    def _add_columns(
+        self,
+        db_columns: defaultdict[str, dict[str, str]],
+        db_fks: defaultdict[str, dict[str, "FKConstraint"]],
+        trn: Transaction | DummyTransaction,
+    ):
+        # Add remaining columns that were not created with the table
+        # This concerns:
+        # - columns that are foreign keys for tables that were just created
+        # - columns added to existing tables
+        for name, table in self.tables.items():
             if table.is_view:
-                continue
-            if trn.flavor == "mssql" and table.has_array:
                 continue
 
             ctypes = table.ctypes(trn.flavor, table.columns)
-            for column in table.columns:
-                # The base table can contain either the pk either the nk
-                if column == table.primary_key:
+
+            for col_name, col_type in ctypes.items():
+                # if table was created by us, skip unless it's a foreign key that's not a primary key
+                if name not in db_columns and (
+                    col_name not in table.foreign_keys or col_name == table.primary_key
+                ):
                     continue
-                if table.primary_key is None and column in table.natural_key:
-                    continue
-                if column in db_columns.get(table.name, []):
-                    continue
-                if fk_table_name := table.foreign_keys.get(column):
-                    fk_table = self.get(fk_table_name)
-                else:
-                    fk_table = None
+                elif col_name in db_columns.get(name, {}):
+                    # column already exists
+                    # it is not a foreign key in the DB, but is declared as such in the schema
+                    if (
+                        col_name
+                        not in [fk.column for fk in db_fks.get(name, {}).values()]
+                        and col_name in table.foreign_keys
+                    ):
+                        raise RuntimeError(
+                            f"Cannot add foreign key column '{col_name}' in table '{name}'."
+                            " Foreign keys can only be added to newly created tables."
+                        )
+                    # column already exists, we skip
+                    else:
+                        continue
+
+                fk_table = (
+                    self.tables.get(table.foreign_keys[col_name])
+                    if col_name in table.foreign_keys
+                    else None
+                )
 
                 stmt = Statement(
                     "add_column",
-                    flavor=trn.flavor,
-                    table=table.name,
-                    column=column,
-                    col_def=ctypes[column],
-                    not_null=column in table.not_null,
+                    trn.flavor,
+                    table=name,
+                    column=col_name,
+                    col_def=col_type,
+                    not_null=col_name in table.not_null,
+                    default=table.default.get(col_name),
                     fk_table=fk_table,
-                    default=table.default.get(column),
                 )
                 yield stmt()
 
@@ -337,14 +356,15 @@ class Schema:
             )
             yield stmt()
 
-    def setup_statements(self, trn=None):
+    def setup_statements(self, trn: Optional[Transaction] = None):
         trn = trn or Transaction.current()
         # Find existing tables and columns
         db_columns = self._db_columns(trn)
+        db_fks = self._db_fk(trn=trn)
         db_indexes = self._db_indexes(trn)
 
         yield from self._create_tables(db_columns, trn)
-        yield from self._add_columns(db_columns, trn)
+        yield from self._add_columns(db_columns, db_fks=db_fks, trn=trn)
         yield from self._create_indexes(db_indexes, trn)
         yield from self._create_views(trn)
 

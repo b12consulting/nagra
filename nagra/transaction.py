@@ -71,7 +71,6 @@ class LRUGenerator:
 
 
 class Transaction:
-
     _stack_lock = threading.Lock()
     # _local_stack: ContextVar[list["Transaction"]] = ContextVar('_local_stack', default=[])
     _local = threading.local()
@@ -159,6 +158,7 @@ class Transaction:
 
     def _executemany_mssql(self, cursor, stmt, args):
         import pyodbc
+
         for params in args:
             cursor.execute(stmt, params)
             try:
@@ -210,7 +210,7 @@ class Transaction:
             # assert id(trn) == id(expected_trn), "Unexpected Transaction when leaving context"
 
     @classmethod
-    def current(cls):
+    def current(cls) -> "Transaction | DummyTransaction":
         try:
             with cls._stack_lock:
                 return cls._local.stack[-1]
@@ -269,17 +269,16 @@ class CursorMixin:
 
     @property
     def scalar(self):
-        res, = self.fetchone()
+        (res,) = self.fetchone()
         return res
 
     @property
     def scalars(self):
-        for res, in self:
+        for (res,) in self:
             yield res
 
 
 class ResultCursor(CursorMixin):
-
     def __init__(self, native_cursor, returning=False):
         self.native_cursor = native_cursor
         self.returning = returning
@@ -303,7 +302,6 @@ class ResultCursor(CursorMixin):
 
 
 class MSSQLCursor(ResultCursor):
-
     def __iter__(self):
         yield from (r and tuple(r) for r in self.native_cursor)
 

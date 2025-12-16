@@ -221,16 +221,16 @@ def test_nested_dataclasses(person):
 
     assert equivalent_classes(dclass, Person)
 
-def test_from_dataclass(person):
+
+def test_from_dataclass(person, schema: Schema):
     @dataclass
     class PersonLikeModel:
         __table__ = "person"
         name: str
         parent: str | None
 
-    select = Select.from_dataclass(PersonLikeModel)
+    select = Select.from_dataclass(PersonLikeModel, schema=schema)
     assert list(select.columns) == ["name", "parent"]
-
 
     @dataclass
     class PersonStub:
@@ -242,11 +242,11 @@ def test_from_dataclass(person):
         name: str
         parent: PersonStub
 
-    select = Select.from_dataclass(Person)
+    select = Select.from_dataclass(Person, schema=schema)
     assert list(select.columns) == ["name", "parent.name"]
     assert select.table.name == "person"
 
     for cls in [Upsert, Update]:
-        obj = cls.from_dataclass(Person)
+        obj = cls.from_dataclass(Person, schema=schema)
         assert list(obj.columns) == ["name", "parent.name"]
         assert obj.table.name == "person"

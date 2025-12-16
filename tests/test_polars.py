@@ -109,7 +109,7 @@ def test_from_polars(transaction, kitchensink, batch):
 
 
 @pytest.mark.parametrize("batch", [True, False])
-def test_with_chunking(transaction, temperature_no_nk, batch):
+def test_with_chunking(transaction, temperature_no_nk_pk, batch):
     if transaction.flavor != "postgresql":
         pytest.skip("Sqlite not supported with polars")
     df = polars.DataFrame(
@@ -121,7 +121,9 @@ def test_with_chunking(transaction, temperature_no_nk, batch):
             "value": 20.0,
         }
     )
-    temperature_no_nk.insert("timestamp", "city", "value").from_polars(df.lazy(), batch=batch)
-    result = temperature_no_nk.select().to_polars().sort("timestamp").collect()
+    temperature_no_nk_pk.insert("timestamp", "city", "value").from_polars(
+        df.lazy(), batch=batch
+    )
+    result = temperature_no_nk_pk.select().to_polars().sort("timestamp").collect()
 
     polars.testing.assert_frame_equal(result, df)
