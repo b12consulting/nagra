@@ -33,3 +33,12 @@ dev = ["nagra[all]", "pytest", "typeguard", "ruff"]
 
 [project.urls]
 Homepage = "https://github.com/b12consulting/nagra"
+
+[tool.pytest.ini_options]
+addopts = [
+ "-s",
+ "--tb=native",
+ "--maxfail=1",
+ "--show-capture=all",
+]
+testpaths = ["tests"]

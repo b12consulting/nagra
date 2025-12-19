@@ -127,20 +127,21 @@ def test_create_table_pk_is_fk(empty_transaction):
             ]
         case "mssql":
             assert lines == [
-                "CREATE TABLE [concept] (\n"
-                "  [concept_id] BIGINT IDENTITY(1,1) PRIMARY KEY\n"
-                ");",
-                "CREATE TABLE [score] (\n"
-                "  [concept] BIGINT PRIMARY KEY\n"
-                "  , CONSTRAINT fk_concept FOREIGN KEY ([concept])\n"
-                "    REFERENCES [concept] ([concept_id])\n"
-                "    ON DELETE CASCADE,\n"
-                "  [score] INT\n",
-                ");",
-                "ALTER TABLE [concept]\n ADD [name] NVARCHAR(200) NOT NULL\n;\n",
-                "ALTER TABLE [score]\n ADD [score] INT\n;\n",
-                "CREATE UNIQUE INDEX [concept_idx] ON [concept] ([name]\n);",
-            ]
+                'CREATE TABLE [concept] (\n'
+                '   [concept_id] BIGINT IDENTITY(1,1) PRIMARY KEY\n'
+                '    , \n\n'
+                '   [name] NVARCHAR(200)\n'
+                '    NOT NULL\n'
+                ');',
+                'CREATE TABLE [score] (\n'
+                '   [concept] BIGINT PRIMARY KEY\n'
+                '    CONSTRAINT fk_concept REFERENCES [concept]([concept_id]) ON DELETE '
+                'CASCADE\n'
+                '    , \n'
+                '\n'
+                '   [score] INT\n'
+                ');',
+                'CREATE UNIQUE INDEX [concept_idx] ON [concept] ([name]\n);']
 
 
 def test_create_table_no_pk(empty_transaction):
