@@ -147,7 +147,7 @@ class Transaction:
             case "mssql":
                 if not returning:
                     cursor.fast_executemany = True
-                    cursor.executemany(stmt, args, returning=returning)
+                    cursor.executemany(stmt, args)
                     return ResultCursor(cursor, returning=returning)
                 else:
                     rows = self._executemany_mssql(cursor, stmt, args)
@@ -303,7 +303,7 @@ class ResultCursor(CursorMixin):
 
 class MSSQLCursor(ResultCursor):
     def __iter__(self):
-        yield from (r and tuple(r) for r in self.native_cursor)
+        return (r and tuple(r) for r in super().__iter__())
 
     def __next__(self):
         return next(self.native_cursor)
@@ -336,6 +336,7 @@ class ExecMany:
     def __iter__(self):
         # Use a dedicated cursor to allow concurrent execution
         logger.debug(self.stm)
+        print("EXECMANY STMT", self.stm)
         match self.trn.flavor:
             case "sqlite":
                 cursor = self.trn.connection.cursor()

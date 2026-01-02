@@ -141,6 +141,7 @@ def test_upsert_exec_with_id(cacheable_transaction, person):
 
     # Add child
     upsert = person.upsert("id", "name", "parent.name")
+    print("UPSERT", cacheable_transaction.flavor, isinstance(cacheable_transaction._fk_cache, dict))
     upsert.execute(2, "Bob", "Big Bob")
     rows = list(person.select("name", "parent.name").orderby("name").execute())
     assert rows == [("Big Bob", None), ("Bob", "Big Bob")]

@@ -9,6 +9,7 @@ def test_resolver(transaction, person):
         values,
         trn=transaction,
     )
+
     results = list(rsv)
     assert results == [(0,), (1,), (2,), (3,), (4,)]
 
