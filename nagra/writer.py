@@ -84,8 +84,11 @@ class WriterMixin:
                 case "sqlite" | "mssql":
                     for item in chunk:
                         cursor = self.trn.execute(stm, item)
-                        new_id = cursor.fetchone()
-                        ids.append(new_id[0] if new_id else None)
+                        if returning:
+                            new_id = cursor.fetchone()
+                            ids.append(new_id[0] if new_id else None)
+                        cursor.close()
+
                 case "postgresql":
                     cursor = self.trn.executemany(stm, chunk, returning)
                     if returning:
@@ -115,7 +118,6 @@ class WriterMixin:
         # a given value (we could also enforce that we only resolve
         # columns with unique constraints) ?
         stm = self.resolve_stm[col]
-        print("RESOLVE STM", stm)
         exm = ExecMany(stm, values, trn=self.trn)
         for res, vals in zip(exm, values):
             if res is not None:

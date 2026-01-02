@@ -119,7 +119,7 @@ class Transaction:
         else:
             raise ValueError(f"Invalid dsn string: {dsn}")
 
-    def execute(self, stmt, args=tuple()):
+    def execute(self, stmt, args=tuple()) -> "ResultCursor":
         logger.debug(stmt)
         cursor = self.connection.cursor()
         cursor.execute(stmt, args)
@@ -132,7 +132,7 @@ class Transaction:
                 msg = f"Unsupported flavor for execute: {self.flavor}"
                 raise RuntimeError(msg)
 
-    def executemany(self, stmt, args=None, returning=False):
+    def executemany(self, stmt, args=None, returning=False) -> "ResultCursor | RowCursor":
         logger.debug(stmt)
         cursor = self.connection.cursor()
         args = args or []
@@ -300,6 +300,9 @@ class ResultCursor(CursorMixin):
     def __next__(self):
         return next(iter(self))
 
+    def close(self):
+        self.native_cursor.close()
+
 
 class MSSQLCursor(ResultCursor):
     def __iter__(self):
@@ -336,7 +339,6 @@ class ExecMany:
     def __iter__(self):
         # Use a dedicated cursor to allow concurrent execution
         logger.debug(self.stm)
-        print("EXECMANY STMT", self.stm)
         match self.trn.flavor:
             case "sqlite":
                 cursor = self.trn.connection.cursor()
