@@ -1,7 +1,7 @@
 import pytest
 
 from nagra.transaction import dummy_transaction, Transaction
-from nagra.exceptions import NoActiveTransaction
+from nagra.exceptions import NoActiveTransaction, TransactionReenterError
 from nagra.schema import Schema
 
 
@@ -11,6 +11,14 @@ def test_dummy_transaction():
 
     with pytest.raises(NoActiveTransaction):
         dummy_transaction.executemany("SELECT 1")
+
+
+def test_transaction_reuse():
+    with pytest.raises(TransactionReenterError):
+        trn = Transaction("postgresql:///nagra")
+        with trn:
+            with trn:
+                pass
 
 
 def test_concurrent_transaction(person, schema: Schema):

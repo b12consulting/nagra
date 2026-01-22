@@ -4,7 +4,7 @@ from itertools import islice
 from typing import Callable
 
 from nagra.utils import logger, UNSET, mssql_connection_string
-from nagra.exceptions import NoActiveTransaction
+from nagra.exceptions import NoActiveTransaction, TransactionReenterError
 
 
 class LRUGenerator:
@@ -132,7 +132,9 @@ class Transaction:
                 msg = f"Unsupported flavor for execute: {self.flavor}"
                 raise RuntimeError(msg)
 
-    def executemany(self, stmt, args=None, returning=False) -> "ResultCursor | RowCursor":
+    def executemany(
+        self, stmt, args=None, returning=False
+    ) -> "ResultCursor | RowCursor":
         logger.debug(stmt)
         cursor = self.connection.cursor()
         args = args or []
@@ -193,6 +195,10 @@ class Transaction:
         with cls._stack_lock:
             if not hasattr(cls._local, "stack"):
                 cls._local.stack = []
+            if transaction in cls._local.stack:
+                raise TransactionReenterError(
+                    "Transaction already in stack. Are you entering a context with the same transaction twice?"
+                )
             cls._local.stack.append(transaction)
             # stack = cls._local_stack.get()
             # stack.append(transaction)
