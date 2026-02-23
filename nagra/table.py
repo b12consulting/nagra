@@ -167,6 +167,11 @@ class Column:
                 f"Type '{dtype}' not supported (for column '{name}'), falling back to string type."
             )
 
+    def eq(self, other):
+        if not isinstance(other, Column):
+            return False
+        return self.name == other.name and self.dtype == other.dtype
+
     def python_type(self):
         res = None
         match self.dtype:
@@ -218,7 +223,7 @@ class Table:
         }
         self.natural_key = natural_key or []
         self.foreign_keys = foreign_keys or {}
-        self.not_null = set(self.natural_key) | set(not_null or []) | set([primary_key])
+        self.not_null = set(not_null or [])
         self.one2many = one2many or {}
         self.default = default or {}
         self.primary_key = primary_key
@@ -442,6 +447,31 @@ class Table:
 
     def __repr__(self):
         return f"<Table {self.name}>"
+
+    def eq(self, other):
+        """
+        Return True is `self` is equivalent to `other`, so if all
+        attributes themselves are equivalent.
+        """
+        if id(self) == id(other):
+            return True
+        if not isinstance(other, Table):
+            return False
+
+        ok = all((
+            self.name == other.name,
+            all(a.eq(b) for a, b in zip(
+                self.columns.values(), other.columns.values()
+            )),
+            self.primary_key == other.primary_key,
+            self.natural_key == other.natural_key,
+            self.foreign_keys == other.foreign_keys,
+            self.not_null == other.not_null,
+            self.one2many == other.one2many,
+            self.default == other.default,
+            self.is_view == other.is_view,
+        ))
+        return ok
 
 
 class Env:

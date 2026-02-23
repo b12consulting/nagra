@@ -68,8 +68,15 @@ def test_toml_loader():
     assert test_schema.tables == {}
 
 
-def test_setup():
-    pass  # TODO test generated sql
+def test_toml_generation():
+    # Start from schema
+    src = HERE / "assets" / "sample_schema.toml"
+    test_schema = Schema.from_toml(src)
+
+    clone_toml = test_schema.generate_toml()
+    clone_schema = Schema()
+    clone_schema.load_toml(clone_toml)
+    assert test_schema.eq(clone_schema)
 
 
 def test_bogus_fk(empty_transaction):

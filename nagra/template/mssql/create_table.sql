@@ -11,7 +11,7 @@ CREATE TABLE [{{ table.name }}] (
 
    [{{ column }}] {{ ctypes[column] }}
 
-   {%- if column in not_null %}
+   {%- if column in not_null or column in natural_key%}
     NOT NULL
    {%- endif %}
 

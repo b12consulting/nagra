@@ -38,6 +38,10 @@ def delete(args, schema):
     delete.execute()
 
 
+def init(args, schema):
+    schema.create_tables()
+
+
 def print_schema(args, schema):
     if args.fmt == "d2":
         print(schema.generate_d2())
@@ -132,6 +136,10 @@ def run():
     parser_delete.add_argument("table")
     parser_delete.add_argument("--where", "-W", type=str, action="append", nargs="*")
     parser_delete.set_defaults(func=delete)
+
+    parser_init = subparsers.add_parser("init")
+    parser_init.set_defaults(func=init)
+
 
     parser_schema = subparsers.add_parser("schema")
     parser_schema.add_argument(

@@ -1,8 +1,14 @@
 [{{table.name}}]
 natural_key = [{{ table.natural_key | map('autoquote') |join(', ') }}]
+{%- if not table.primary_key %}
+primary_key = ""
+{%- endif %}
+{%- if table.not_null %}
+not_null = [{{ table.not_null | map('autoquote') |join(', ') }}]
+{%- endif %}
 [{{table.name}}.columns]
 {% for col_name, col in table.columns.items() -%}
-{{col_name}} = {{col.dtype}}
+{{col_name}} = "{{col.dtype}}"
 {% endfor -%}
 {% if table.foreign_keys -%}
 [{{table.name}}.foreign_keys]
