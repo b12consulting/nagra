@@ -6,10 +6,11 @@ import re
 import sys
 from contextlib import contextmanager
 from dataclasses import dataclass, fields, is_dataclass
+from enum import StrEnum
+from itertools import filterfalse, tee
 from pathlib import Path
 from time import perf_counter
 from typing import Iterator, TYPE_CHECKING, get_args
-from enum import StrEnum
 from urllib.parse import parse_qs, unquote_plus, urlparse
 
 from jinja2 import FileSystemLoader, Environment, StrictUndefined
@@ -196,3 +197,9 @@ def mssql_connection_string(dsn: str) -> str:
         parts.append(f"PWD={unquote_plus(parsed.password)}")
 
     return ";".join(parts)
+
+
+def partition(pred, iterable):
+    # partition(is_odd, range(10)) --> 0 2 4 6 8   and  1 3 5 7 9
+    t1, t2 = tee(iterable)
+    return list(filter(pred, t2)), list(filterfalse(pred, t1))
