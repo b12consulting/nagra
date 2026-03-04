@@ -38,6 +38,7 @@
 - Fix string escape of field aliases
 - Fixed duplicates when inserting from polars in a table with no natural key.
 
+
 ### 0.8 (released 2025-09-24)
 
 **Operators support** S-expression module now infer operator signature
