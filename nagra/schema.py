@@ -23,6 +23,8 @@ MSSQL_ARRAY_MSG = (
 
 
 class Schema:
+    default: "Schema" = None
+
     def __init__(self, tables=None, views=None):
         self.tables: dict[str, Table] = tables or {}
         self.views: dict[str, View] = views or {}
@@ -84,6 +86,8 @@ class Schema:
         """
         Return the view or the table with name `name`
         """
+        # We must get() on views first, since each view is also
+        # registered as a table
         res = self.views.get(name) or self.tables[name]
         if not res:
             raise KeyError(f"No view or table named {name}")
@@ -279,6 +283,7 @@ class Schema:
                 not_null=table.not_null,
                 default=table.default,
                 pk_fk_table=pk_fk_table,
+                natural_key=table.natural_key,
             )
             yield stmt()
 
@@ -332,9 +337,10 @@ class Schema:
                     table=name,
                     column=col_name,
                     col_def=col_type,
-                    not_null=col_name in table.not_null,
+                    not_null=table.required(col_name),
                     default=table.default.get(col_name),
                     fk_table=fk_table,
+                    primary_key=col_name == table.primary_key,
                 )
                 yield stmt()
 
@@ -461,9 +467,14 @@ class Schema:
         return res
 
     def generate_toml(self):
-        tpl = template("misc/schema.toml")
+        tpl = template("misc/schema-table.toml")
         tables = self.tables.values()
-        res = "\n".join(tpl.render(table=t) for t in tables)
+        res = "\n".join(tpl.render(table=t) for t in tables if not t.is_view)
+
+        tpl = template("misc/schema-view.toml")
+        views = self.views.values()
+        res += "\n".join(tpl.render(view=v) for v in views)
+
         return res
 
     @contextmanager
@@ -491,7 +502,16 @@ class Schema:
         for fk in all_fks:
             fk.add()
 
-    default: "Schema" = None
+    def eq(self, other):
+        if not isinstance(other, Schema):
+            return False
+        checks = (
+            sorted(self.tables) == sorted(other.tables),
+            sorted(self.views) == sorted(other.views),
+            # self.tables also contains views
+            *(self.get(name).eq(other.get(name)) for name in self.tables),
+        )
+        return all(checks)
 
 
 # Define default schema

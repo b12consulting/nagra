@@ -358,12 +358,12 @@ class VarToken(Token):
             while "." in value:
                 # If any item in the chain is nullable, the all chain is
                 head, value = value.split(".", 1)
-                if head not in table.not_null:
+                if not table.required(head):
                     return True
                 table = table.schema.get(table.foreign_keys[head])
             # No nullable column in the dotted chain
             return False
-        return self.value not in env.table.not_null
+        return not env.table.required(self.value)
 
 
 class OpToken(Token):

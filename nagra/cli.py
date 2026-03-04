@@ -60,6 +60,10 @@ def init(args, schema):
     schema.create_tables()
 
 
+def init(args, schema):
+    schema.create_tables()
+
+
 def print_schema(args, schema):
     if args.fmt == "d2":
         print(schema.generate_d2())
