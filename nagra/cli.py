@@ -1,10 +1,9 @@
 import argparse
 import os
-import sys
 from itertools import chain
 
-from nagra import Transaction, Schema, View, __version__
-from nagra.utils import print_table
+from nagra import Transaction, Schema,  __version__
+from nagra.utils import print_table, partition
 
 
 def select(args, schema):
@@ -15,16 +14,26 @@ def select(args, schema):
         # Ignore blob col by default
         cols = [n for n, c in table.columns.items() if c.dtype != "blob"]
 
+    # Allow key=value syntax for positional args
+    eq_conds, cols = partition(lambda c: "=" in c, cols)
+    eq_where = []
+    eq_args = []
+    for cond in eq_conds:
+        k, v = cond.split("=", 1)
+        eq_where.append("(= %s {})" % k)
+        eq_args.append(v)
+
     select = table.select(*cols)
-    if args.where:
-        where = chain.from_iterable(args.where)
+    # Chain all where conditions (we allow multiple --where args)
+    where = eq_where + args.where
+    if where:
         select = select.where(*where)
     if args.limit:
         select = select.limit(args.limit)
     if args.orderby:
         orderby = chain.from_iterable(args.orderby)
         select = select.orderby(*orderby)
-    rows = list(select.execute())
+    rows = list(select.execute(*eq_args))
     headers = [d[0] for d in select.dtypes()]
 
     print_table(rows, headers, args.pivot, format=args.table_fmt)
@@ -32,10 +41,23 @@ def select(args, schema):
 
 def delete(args, schema):
     delete = schema.get(args.table).delete()
-    if args.where:
-        where = chain.from_iterable(args.where)
+    # Allow key=value syntax for positional args
+    eq_conds, cols = partition(lambda c: "=" in c, args.eq_cond)
+    eq_where = []
+    eq_args = []
+    for cond in eq_conds:
+        k, v = cond.split("=", 1)
+        eq_where.append("(= %s {})" % k)
+        eq_args.append(v)
+
+    where = eq_where + args.where
+    if where:
         delete = delete.where(*where)
-    delete.execute()
+    delete.execute(*eq_args)
+
+
+def init(args, schema):
+    schema.create_tables()
 
 
 def init(args, schema):
@@ -120,7 +142,7 @@ def run():
     parser_select = subparsers.add_parser("select")
     parser_select.add_argument("table")
     parser_select.add_argument("columns", nargs="*")
-    parser_select.add_argument("--where", "-W", type=str, action="append", nargs="*")
+    parser_select.add_argument("--where", "-W", type=str, action="append", default=[])
     parser_select.add_argument("--limit", "-L", type=int)
     parser_select.add_argument(
         "--orderby",
@@ -134,7 +156,8 @@ def run():
 
     parser_delete = subparsers.add_parser("delete")
     parser_delete.add_argument("table")
-    parser_delete.add_argument("--where", "-W", type=str, action="append", nargs="*")
+    parser_delete.add_argument("eq_cond", nargs="*", help="Simplified filters (eg: id=123)")
+    parser_delete.add_argument("--where", "-W", type=str, action="append", default=[])
     parser_delete.set_defaults(func=delete)
 
     parser_init = subparsers.add_parser("init")

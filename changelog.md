@@ -6,6 +6,9 @@
 - Raise error if attempting to reuse the same transaction in nested context managers.
 - Table can now be defined without natural key or primary key. This
   makes it possible to insert rows into existing tables that do not have either.
+- Add support for simple filters in cli: `nagra select user -W '(=
+  name "Doe")'` you can also now write `nagra select user name=Doe`.
+
 
 ### 0.9 (released 2025-11-27)
 
@@ -34,6 +37,7 @@
 - Fixed bug in select when joining with foreign key that is not lowercase.
 - Fix string escape of field aliases
 - Fixed duplicates when inserting from polars in a table with no natural key.
+
 
 ### 0.8 (released 2025-09-24)
 
