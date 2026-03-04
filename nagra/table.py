@@ -345,7 +345,7 @@ class Table:
             or col_name == self.primary_key
         )
 
-    def default_columns(self, compact: bool = False):
+    def default_columns(self, compact: bool = False, skip_pk=False, skip_blob=False):
         """
         Return the list of default column for the current
         table. Used by `Table.select` and `Table.upsert` when no
@@ -357,6 +357,12 @@ class Table:
             columns = self.columns
 
         for column in columns:
+            # Skip pk if asked
+            if skip_pk and column in self.primary_key:
+                continue
+            # Skip blobs
+            if skip_blob and self.column[column].dtype == "blob":
+                continue
             # Escape literals (nul, true, false)
             if column in AST.literals:
                 yield f".{column}"
