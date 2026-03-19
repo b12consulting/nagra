@@ -469,7 +469,11 @@ class Schema:
     def generate_toml(self):
         tpl = template("misc/schema-table.toml")
         tables = self.tables.values()
-        res = "\n".join(tpl.render(table=t) for t in tables if not t.is_view)
+
+        res = "\n".join(tpl.render(
+            table=t,
+            skip_col=lambda c: c == "id" and t.primary_key == "id",
+        ) for t in tables if not t.is_view)
 
         tpl = template("misc/schema-view.toml")
         views = self.views.values()
