@@ -11,8 +11,8 @@ def select(args, schema):
     if args.columns:
         cols = args.columns
     else:
-        # Ignore blob col by default
-        cols = [n for n, c in table.columns.items() if c.dtype != "blob"]
+        # Ignore pk and blob col by default
+        cols = table.default_columns(skip_pk=True, skip_blob=True)
 
     # Allow key=value syntax for positional args
     eq_conds, cols = partition(lambda c: "=" in c, cols)
