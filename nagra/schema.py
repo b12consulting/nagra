@@ -157,11 +157,17 @@ class Schema:
             pg_schema=pg_schema,  # FIXME put schema on transaction
             mssql_schema="dbo",  # should come from the dsn
         )
+        skip_fk = []
         for name, tbl, col, ftable, fcol in trn.execute(stmt()):
             if whitelist and tbl not in whitelist:
                 continue
+            if name in skip_fk:
+                continue
             if name in res[tbl]:
-                raise RuntimeError("Unexpected multi-columns foreign key")
+                warn(f"Unexpected multi-columns foreign key in table {tbl}", RuntimeWarning)
+                skip_fk.append(name)
+                res[tbl].pop(name)
+                continue
             res[tbl][name] = FKConstraint(name, tbl, col, ftable, fcol)
         return res
 
@@ -170,10 +176,17 @@ class Schema:
         trn = trn or Transaction.current()
         res = {}
         stmt = Statement("find_primary_keys", trn.flavor, pg_schema=pg_schema)
+        skip_tables = []
         for tbl, pk_col in trn.execute(stmt()):
+            if tbl in skip_tables:
+                continue
             if tbl in res:
-                raise RuntimeError("Unexpected multi-columns primary key")
+                warn("Unexpected multi-columns primary key", RuntimeWarning)
+                skip_tables.append(tbl)
+                res.pop(tbl)
+                continue
             res[tbl] = pk_col
+
         return res
 
     @classmethod
