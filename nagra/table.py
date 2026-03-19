@@ -366,7 +366,7 @@ class Table:
             if skip_pk and column in self.primary_key:
                 continue
             # Skip blobs
-            if skip_blob and self.column[column].dtype == "blob":
+            if skip_blob and self.columns[column].dtype == "blob":
                 continue
             # Escape literals (nul, true, false)
             if column in AST.literals:
