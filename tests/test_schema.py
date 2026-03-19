@@ -277,3 +277,24 @@ def test_suspend_fk(transaction: Transaction):
     assert sorted(after) == ["person", "skill"]
     assert sorted(before["person"]) == ["fk_parent"]
     assert sorted(after["person"]) == ["fk_parent"]
+
+
+def test_default_columns():
+    schema = Schema()
+    table = Table(
+        "my_table",
+        columns={
+            "id": "bigint",
+            "name": "varchar",
+            "description": "text",
+            "data": "blob",
+        },
+        primary_key="id",
+        natural_key=["name"],
+        schema=schema,
+    )
+
+    assert list(table.default_columns()) == ["id", "name", "description", "data"]
+    assert list(table.default_columns(skip_pk=True)) == ["name", "description", "data"]
+    assert list(table.default_columns(skip_blob=True)) == ["id", "name", "description"]
+    assert list(table.default_columns(skip_pk=True, skip_blob=True)) == ["name", "description"]
