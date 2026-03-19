@@ -8,6 +8,9 @@
   makes it possible to insert rows into existing tables that do not have either.
 - Add support for simple filters in cli: `nagra select user -W '(=
   name "Doe")'` you can also now write `nagra select user name=Doe`.
+- The command line now support the `init` action provided that either
+  NAGRA_SCHEMA if defined, or `--schema` argument is provided.
+- Toml generation: export views, preserve not_null, and omit default id primary keys.
 
 
 ### 0.9 (released 2025-11-27)
