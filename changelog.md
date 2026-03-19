@@ -3,6 +3,8 @@
 
 ### Unreleased
 
+### 0.10 (released 2025-11-27)
+
 - Raise error if attempting to reuse the same transaction in nested context managers.
 - Table can now be defined without natural key or primary key. This
   makes it possible to insert rows into existing tables that do not have either.
