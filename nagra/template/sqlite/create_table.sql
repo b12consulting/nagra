@@ -19,4 +19,4 @@ CREATE TABLE  "{{table.name}}" (
     DEFAULT {{table.default[column]}}
    {%- endif %}
   {%- endfor %}
-);
+) STRICT;

@@ -49,7 +49,7 @@ def test_create_table(empty_transaction):
                 '"score" INTEGER',
                 "NOT NULL",
                 "DEFAULT 0",
-                ");",
+                ") STRICT;",
             ]
         case "mssql":
             assert create_table == [
@@ -119,10 +119,10 @@ def test_create_table_pk_is_fk(empty_transaction):
         case "sqlite":
             assert lines == [
                 'CREATE TABLE  "concept" (\n   "concept_id" INTEGER PRIMARY KEY\n'
-                '    , \n\n   "name" TEXT\n    NOT NULL\n);',
+                '    , \n\n   "name" TEXT\n    NOT NULL\n) STRICT;',
                 'CREATE TABLE  "score" (\n   "concept" INTEGER PRIMARY KEY\n'
                 '    CONSTRAINT fk_concept REFERENCES "concept"("concept_id") ON DELETE CASCADE\n'
-                '    , \n\n   "score" INTEGER\n);',
+                '    , \n\n   "score" INTEGER\n) STRICT;',
                 'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
             ]
         case "mssql":
@@ -199,18 +199,24 @@ def test_create_table_no_pk(empty_transaction):
                 ",",
                 '"name" TEXT',
                 "NOT NULL",
-                ");",
+                ") STRICT;",
             ]
             assert add_score_concept_fk == [
                 'ALTER TABLE "score"',
                 'ADD COLUMN "concept" INTEGER NOT NULL',
                 'CONSTRAINT fk_concept REFERENCES "concept"("id") ON DELETE CASCADE;',
             ]
-        case "postgresql" | "sqlite":
+        case "postgresql":
             assert create_score == [
                 'CREATE TABLE  "score" (',
                 '"score" INTEGER',
                 ");",
+            ]
+        case "sqlite":
+            assert create_score == [
+                'CREATE TABLE  "score" (',
+                '"score" INTEGER',
+                ") STRICT;",
             ]
         case "mssql":
             assert create_concept == [
@@ -266,11 +272,17 @@ def test_create_table_no_pk_nk(empty_transaction):
     (create_score,) = map(strip_lines, lines)
 
     match flavor:
-        case "postgresql" | "sqlite":
+        case "postgresql":
             assert create_score == [
                 'CREATE TABLE  "score" (',
                 '"score" INTEGER',
                 ");",
+            ]
+        case "sqlite":
+            assert create_score == [
+                'CREATE TABLE  "score" (',
+                '"score" INTEGER',
+                ") STRICT;",
             ]
         case "mssql":
             assert create_score == [

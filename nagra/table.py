@@ -122,13 +122,13 @@ _DB_TYPE = {
         "str": "TEXT",
         "int": "INTEGER",
         "bigint": "INTEGER",
-        "float": "FLOAT",
-        "timestamp": "DATETIME",
-        "timestamptz": "DATETIME",
-        "date": "DATE",
-        "bool": "BOOL",
+        "float": "REAL",
+        "timestamp": "TEXT",
+        "timestamptz": "TEXT",
+        "date": "TEXT",
+        "bool": "INTEGER",
         "uuid": "TEXT",
-        "json": "JSON",
+        "json": "ANY",
         "blob": "BLOB",
     },
     "mssql": {
@@ -428,7 +428,7 @@ class Table:
             col = self.columns[name]
             if flavor == "sqlite" and col.dims:
                 # sqlite does not support arrays
-                res[name] = "json"
+                res[name] = db_type["json"]
             else:
                 res[name] = db_type[col.dtype] + col.dims
         return res

@@ -196,13 +196,14 @@ def test_schema_from_nagra_db(transaction: Transaction):
     parameter = schema.get("parameter")
     assert list(parameter.columns) == ["id", "name", "timestamps", "values"]
     if transaction.flavor == "postgresql":
-        expected_types = ["bigint", "str", "timestamp", "float"]
-        assert [c.dtype for c in parameter.columns.values()] == expected_types
         expected_dims = ["", "", "[]", "[]"]
         assert [c.dims for c in parameter.columns.values()] == expected_dims
+        expected_types = ["bigint", "str", "timestamp", "float"]
+    elif transaction.flavor == "sqlite":
+        expected_types = ["int", "str", "str", "str"]
     else:
         expected_types = ["int", "str", "json", "json"]
-        assert [c.dtype for c in parameter.columns.values()] == expected_types
+    assert [c.dtype for c in parameter.columns.values()] == expected_types
 
     assert parameter.foreign_keys == {}
     assert parameter.primary_key == "id"
