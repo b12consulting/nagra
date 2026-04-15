@@ -81,6 +81,10 @@ class Upsert(WriterMixin):
 
         columns = self.groups
         do_update = False if self._insert_only else len(columns) > len(conflict_key)
+
+        # FIXME we should raise an explicit exception when we do
+        # ON-CONFLICT and no nk or pk is given
+
         set_identity = (
             self.trn.flavor == "mssql"
             and with_pk
