@@ -3,6 +3,13 @@
 
 ### Unreleased
 
+- PostgreSQL transactions now share a connection pool per DSN.
+  Connections are checked out from the pool on first use and returned
+  when the transaction closes.
+- Add `Transaction.shutdown_pools()` to explicitly close managed
+  PostgreSQL pools.
+   
+    
 ### 0.10 (released 2025-11-27)
 
 - Raise error if attempting to reuse the same transaction in nested context managers.

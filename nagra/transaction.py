@@ -71,6 +71,8 @@ class LRUGenerator:
 
 
 class Transaction:
+    _pool_cache = {}
+    _pool_lock = threading.Lock()
     _stack_lock = threading.Lock()
     # _local_stack: ContextVar[list["Transaction"]] = ContextVar('_local_stack', default=[])
     _local = threading.local()
@@ -79,45 +81,79 @@ class Transaction:
     def __init__(self, dsn, rollback=False, fk_cache=False):
         self.auto_rollback = rollback
         self._fk_cache = {} if fk_cache else None
+        self._connection = None
+        self._pool = None
 
         if dsn.startswith("postgresql://"):
-            try:
-                import psycopg
-            except ImportError as exc:  # pragma: no cover - optional dependency
-                msg = "Postgresql support requires the 'psycopg' package. Install nagra[pg]."
-                raise ImportError(msg) from exc
+            self._init_pg(dsn)
 
-            # TODO use Connection Pool
-            self.flavor = "postgresql"
-            self.connection = psycopg.connect(dsn)
         elif dsn.startswith("sqlite://"):
-            self.flavor = "sqlite"
-            filename = dsn[9:]
-            self.connection = sqlite3.connect(filename)
-            self.connection.execute("PRAGMA foreign_keys = 1")
+            self._init_sqlite(dsn)
+
         elif dsn.startswith("mssql://"):
-            try:
-                import pyodbc
-            except ImportError as exc:  # pragma: no cover - optional dependency
-                msg = "SQL Server support requires the 'pyodbc' package. Install nagra[mssql]."
-                raise ImportError(msg) from exc
+            self._init_mssql(dsn)
 
-            self.flavor = "mssql"
-            conn_str = mssql_connection_string(dsn)
-            self.connection = pyodbc.connect(conn_str, autocommit=False)
-            cursor = self.connection.cursor()
-            cursor.execute("SET QUOTED_IDENTIFIER ON")
-            cursor.execute("SET XACT_ABORT ON")  # Enforce atomicity
-            cursor.close()
         elif dsn.startswith("duckdb://"):
-            import duckdb
+            self._init_duckdb(dsn)
 
-            self.flavor = "duckdb"
-            filename = dsn[9:]
-            self.connection = duckdb.connect(filename)
-            self.connection.begin()
         else:
             raise ValueError(f"Invalid dsn string: {dsn}")
+
+    def _init_pg(self, dsn):
+        try:
+            from psycopg_pool import ConnectionPool
+        except ImportError as exc:  # pragma: no cover - optional dependency
+            msg = "Postgresql support requires the 'psycopg' package. Install nagra[pg]."
+            raise ImportError(msg) from exc
+
+        self.flavor = "postgresql"
+
+        with self._pool_lock:
+            if dsn not in Transaction._pool_cache:
+                Transaction._pool_cache[dsn] = ConnectionPool(
+                    dsn,
+                    min_size=0,
+                    max_size=10,  # TODO should be configurable
+                )
+            self._pool = Transaction._pool_cache[dsn]
+
+    def _init_sqlite(self, dsn):
+        self.flavor = "sqlite"
+        filename = dsn[9:]
+        self._connection = sqlite3.connect(filename)
+        self.connection.execute("PRAGMA foreign_keys = 1")
+
+    def _init_mssql(self, dsn):
+        try:
+            import pyodbc
+        except ImportError as exc:  # pragma: no cover - optional dependency
+            msg = "SQL Server support requires the 'pyodbc' package. Install nagra[mssql]."
+            raise ImportError(msg) from exc
+
+        self.flavor = "mssql"
+        conn_str = mssql_connection_string(dsn)
+        self._connection = pyodbc.connect(conn_str, autocommit=False)
+        cursor = self._connection.cursor()
+        cursor.execute("SET QUOTED_IDENTIFIER ON")
+        cursor.execute("SET XACT_ABORT ON")  # Enforce atomicity
+        cursor.close()
+
+    def _init_duckdb(self, dsn):
+        import duckdb
+
+        self.flavor = "duckdb"
+        filename = dsn[9:]
+        self._connection = duckdb.connect(filename)
+        self.connection.begin()
+
+    @property
+    def connection(self):
+        """
+        Unified accessor for all backends.
+        """
+        if self._connection is None and self.flavor == "postgresql":
+            self._connection = self._pool.getconn()
+        return self._connection
 
     def execute(self, stmt, args=tuple()) -> "ResultCursor":
         logger.debug(stmt)
@@ -188,7 +224,15 @@ class Transaction:
         self.close()
 
     def close(self):
-        self.connection.close()
+        match self.flavor:
+            case "postgresql":
+                # Return the borrowed connection to pg pool
+                if self._connection is not None:
+                    self._pool.putconn(self._connection)
+                    self._connection = None
+            case _:
+                # Close direct connections for other backends
+                self._connection.close()
 
     @classmethod
     def push(cls, transaction):
@@ -200,20 +244,12 @@ class Transaction:
                     "Transaction already in stack. Are you entering a context with the same transaction twice?"
                 )
             cls._local.stack.append(transaction)
-            # stack = cls._local_stack.get()
-            # stack.append(transaction)
-            # cls._local_stack.set(stack)
 
     @classmethod
     def pop(cls, expected_trn):
         with cls._stack_lock:
             trn = cls._local.stack.pop()
             assert trn is expected_trn, "Unexpected Transaction when leaving context"
-
-            # stack = cls._local_stack.get()
-            # trn = stack.pop()
-            # cls._local_stack.set(stack)
-            # assert id(trn) == id(expected_trn), "Unexpected Transaction when leaving context"
 
     @classmethod
     def current(cls) -> "Transaction | DummyTransaction":
@@ -225,7 +261,7 @@ class Transaction:
             return dummy_transaction
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} {self.flavor}>"
+        return f"<Transaction {self.flavor}>"
 
     def get_fk_cache(
         self, cache_key: tuple[str, ...], fn: Callable
@@ -243,6 +279,14 @@ class Transaction:
         lru = LRUGenerator(fn)
         self._fk_cache[cache_key] = lru
         return lru
+
+    @classmethod
+    def shutdown_pools(cls):
+        """Gracefully close all managed PostgreSQL pools."""
+        with cls._pool_lock:
+            for pool in cls._pool_cache.values():
+                pool.close()
+            cls._pool_cache.clear()
 
 
 def yield_from_cursor(cursor):
