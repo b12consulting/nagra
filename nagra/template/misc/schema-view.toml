@@ -1,0 +1,14 @@
+[{{view.name}}]
+as_select = """
+{{view.as_select}}
+"""
+[{{view.name}}.columns]
+{% for col_name, col in view.columns.items() -%}
+{{col_name}} = "{{col.dtype}}"
+{% endfor -%}
+{% if view.foreign_keys -%}
+[{{view.name}}.foreign_keys]
+{% for fk_col, fk_table in view.foreign_keys.items() -%}
+{{fk_col}} = "{{fk_table}}"
+{% endfor -%}
+{% endif -%}

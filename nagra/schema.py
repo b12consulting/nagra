@@ -489,8 +489,7 @@ class Schema:
         ) for t in tables if not t.is_view)
 
         tpl = template("misc/schema-view.toml")
-        views = self.views.values()
-        res += "\n".join(tpl.render(view=v) for v in views)
+        res += "\n".join(tpl.render(view=v) for v in self.views.values())
 
         return res
 
