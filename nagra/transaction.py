@@ -85,55 +85,66 @@ class Transaction:
         self._pool = None
 
         if dsn.startswith("postgresql://"):
-            try:
-                from psycopg_pool import ConnectionPool
-            except ImportError as exc:  # pragma: no cover - optional dependency
-                msg = "Postgresql support requires the 'psycopg' package. Install nagra[pg]."
-                raise ImportError(msg) from exc
-
-            self.flavor = "postgresql"
-
-            with self._pool_lock:
-                if dsn not in Transaction._pool_cache:
-                    Transaction._pool_cache[dsn] = ConnectionPool(
-                        dsn,
-                        min_size=0,
-                        max_size=10,  # TODO should be configurable
-                    )
-                self._pool = Transaction._pool_cache[dsn]
+            self._init_pg(dsn)
 
         elif dsn.startswith("sqlite://"):
-            self.flavor = "sqlite"
-            filename = dsn[9:]
-            self._connection = sqlite3.connect(filename)
-            self.connection.execute("PRAGMA foreign_keys = 1")
+            self._init_sqlite(dsn)
 
         elif dsn.startswith("mssql://"):
-            try:
-                import pyodbc
-            except ImportError as exc:  # pragma: no cover - optional dependency
-                msg = "SQL Server support requires the 'pyodbc' package. Install nagra[mssql]."
-                raise ImportError(msg) from exc
-
-            self.flavor = "mssql"
-            conn_str = mssql_connection_string(dsn)
-            self._connection = pyodbc.connect(conn_str, autocommit=False)
-            cursor = self._connection.cursor()
-            cursor.execute("SET QUOTED_IDENTIFIER ON")
-            cursor.execute("SET XACT_ABORT ON")  # Enforce atomicity
-            cursor.close()
+            self._init_mssql(dsn)
 
         elif dsn.startswith("duckdb://"):
-            import duckdb
-
-            self.flavor = "duckdb"
-            filename = dsn[9:]
-            self._connection = duckdb.connect(filename)
-            self.connection.begin()
+            self._init_duckdb(dsn)
 
         else:
             raise ValueError(f"Invalid dsn string: {dsn}")
 
+    def _init_pg(self, dsn):
+        try:
+            from psycopg_pool import ConnectionPool
+        except ImportError as exc:  # pragma: no cover - optional dependency
+            msg = "Postgresql support requires the 'psycopg' package. Install nagra[pg]."
+            raise ImportError(msg) from exc
+
+        self.flavor = "postgresql"
+
+        with self._pool_lock:
+            if dsn not in Transaction._pool_cache:
+                Transaction._pool_cache[dsn] = ConnectionPool(
+                    dsn,
+                    min_size=0,
+                    max_size=10,  # TODO should be configurable
+                )
+            self._pool = Transaction._pool_cache[dsn]
+
+    def _init_sqlite(self, dsn):
+        self.flavor = "sqlite"
+        filename = dsn[9:]
+        self._connection = sqlite3.connect(filename)
+        self.connection.execute("PRAGMA foreign_keys = 1")
+
+    def _init_mssql(self, dsn):
+        try:
+            import pyodbc
+        except ImportError as exc:  # pragma: no cover - optional dependency
+            msg = "SQL Server support requires the 'pyodbc' package. Install nagra[mssql]."
+            raise ImportError(msg) from exc
+
+        self.flavor = "mssql"
+        conn_str = mssql_connection_string(dsn)
+        self._connection = pyodbc.connect(conn_str, autocommit=False)
+        cursor = self._connection.cursor()
+        cursor.execute("SET QUOTED_IDENTIFIER ON")
+        cursor.execute("SET XACT_ABORT ON")  # Enforce atomicity
+        cursor.close()
+
+    def _init_duckdb(self, dsn):
+        import duckdb
+
+        self.flavor = "duckdb"
+        filename = dsn[9:]
+        self._connection = duckdb.connect(filename)
+        self.connection.begin()
 
     @property
     def connection(self):
