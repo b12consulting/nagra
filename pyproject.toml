@@ -24,7 +24,7 @@ nagra = "nagra.cli:run"
 pandas = ["pandas"]
 polars = ["polars>=1.34.0"]
 mssql = ["pyodbc"]
-pg = ["psycopg[binary]"]
+pg = ["psycopg[binary]", "psycopg-pool"]
 pydantic = ["pydantic"]
 all = ["nagra[pandas,polars,pg,pydantic,mssql]"]
 
