@@ -83,76 +83,99 @@ class Transaction:
         self._fk_cache = {} if fk_cache else None
         self._connection = None
         self._pool = None
+        self._dsn = dsn
 
         if dsn.startswith("postgresql://"):
-            self._init_pg(dsn)
+            try:
+                from psycopg_pool import ConnectionPool
+            except ImportError as exc:  # pragma: no cover - optional dependency
+                msg = "Postgresql support requires the 'psycopg' package. Install nagra[pg]."
+                raise ImportError(msg) from exc
+
+            self.flavor = "postgresql"
+            pool_key = self._pool_key(dsn)
+
+            with self._pool_lock:
+                if pool_key not in Transaction._pool_cache:
+                    Transaction._pool_cache[pool_key] = ConnectionPool(
+                        dsn,
+                        min_size=0,
+                        max_size=10,  # TODO should be configurable
+                    )
+                self._pool = Transaction._pool_cache[pool_key]
 
         elif dsn.startswith("sqlite://"):
-            self._init_sqlite(dsn)
+            self.flavor = "sqlite"
+            self._filename = dsn[9:]
 
         elif dsn.startswith("mssql://"):
-            self._init_mssql(dsn)
+            try:
+                import pyodbc
+            except ImportError as exc:  # pragma: no cover - optional dependency
+                msg = "SQL Server support requires the 'pyodbc' package. Install nagra[mssql]."
+                raise ImportError(msg) from exc
+
+            self.flavor = "mssql"
+            self._conn_str = mssql_connection_string(dsn)
 
         elif dsn.startswith("duckdb://"):
-            self._init_duckdb(dsn)
+            import duckdb
+
+            self.flavor = "duckdb"
+            self._filename = dsn[9:]
 
         else:
             raise ValueError(f"Invalid dsn string: {dsn}")
 
-    def _init_pg(self, dsn):
-        try:
-            from psycopg_pool import ConnectionPool
-        except ImportError as exc:  # pragma: no cover - optional dependency
-            msg = "Postgresql support requires the 'psycopg' package. Install nagra[pg]."
-            raise ImportError(msg) from exc
+    @staticmethod
+    def _pool_key(dsn):
+        from psycopg.conninfo import conninfo_to_dict
 
-        self.flavor = "postgresql"
+        return tuple(sorted(conninfo_to_dict(dsn).items()))
 
-        with self._pool_lock:
-            if dsn not in Transaction._pool_cache:
-                Transaction._pool_cache[dsn] = ConnectionPool(
-                    dsn,
-                    min_size=0,
-                    max_size=10,  # TODO should be configurable
-                )
-            self._pool = Transaction._pool_cache[dsn]
+    def _connect_pg(self):
+        return self._pool.getconn()
 
-    def _init_sqlite(self, dsn):
-        self.flavor = "sqlite"
-        filename = dsn[9:]
-        self._connection = sqlite3.connect(filename)
-        self.connection.execute("PRAGMA foreign_keys = 1")
+    def _connect_sqlite(self):
+        connection = sqlite3.connect(self._filename)
+        connection.execute("PRAGMA foreign_keys = 1")
+        return connection
 
-    def _init_mssql(self, dsn):
-        try:
-            import pyodbc
-        except ImportError as exc:  # pragma: no cover - optional dependency
-            msg = "SQL Server support requires the 'pyodbc' package. Install nagra[mssql]."
-            raise ImportError(msg) from exc
+    def _connect_mssql(self):
+        import pyodbc
 
-        self.flavor = "mssql"
-        conn_str = mssql_connection_string(dsn)
-        self._connection = pyodbc.connect(conn_str, autocommit=False)
-        cursor = self._connection.cursor()
+        connection = pyodbc.connect(
+            self._conn_str,
+            autocommit=False,
+        )
+        cursor = connection.cursor()
         cursor.execute("SET QUOTED_IDENTIFIER ON")
         cursor.execute("SET XACT_ABORT ON")  # Enforce atomicity
         cursor.close()
+        return connection
 
-    def _init_duckdb(self, dsn):
+    def _connect_duckdb(self):
         import duckdb
 
-        self.flavor = "duckdb"
-        filename = dsn[9:]
-        self._connection = duckdb.connect(filename)
-        self.connection.begin()
+        connection = duckdb.connect(self._filename)
+        connection.begin()
+        return connection
 
     @property
     def connection(self):
         """
         Unified accessor for all backends.
         """
-        if self._connection is None and self.flavor == "postgresql":
-            self._connection = self._pool.getconn()
+        if self._connection is None:
+            match self.flavor:
+                case "postgresql":
+                    self._connection = self._connect_pg()
+                case "sqlite":
+                    self._connection = self._connect_sqlite()
+                case "mssql":
+                    self._connection = self._connect_mssql()
+                case "duckdb":
+                    self._connection = self._connect_duckdb()
         return self._connection
 
     def execute(self, stmt, args=tuple()) -> "ResultCursor":
@@ -207,9 +230,11 @@ class Transaction:
 
     def rollback(self):
         self.connection.rollback()
+        self.return_connection()
 
     def commit(self):
         self.connection.commit()
+        self.return_connection()
 
     def __enter__(self):
         Transaction.push(self)
@@ -217,22 +242,33 @@ class Transaction:
 
     def __exit__(self, exc_type, exc_value, traceback):
         Transaction.pop(self)
-        if self.auto_rollback or exc_type is not None:
-            self.rollback()
-        else:
-            self.commit()
-        self.close()
+        try:
+            if self._connection is not None:
+                if self.auto_rollback or exc_type is not None:
+                    self.rollback()
+                else:
+                    self.commit()
+        finally:
+            self.return_connection()
+            self.close()
+
+    def return_connection(self):
+        if self.flavor == "postgresql" and self._connection is not None:
+            self._pool.putconn(self._connection)
+            self._connection = None
 
     def close(self):
         match self.flavor:
             case "postgresql":
-                # Return the borrowed connection to pg pool
-                if self._connection is not None:
-                    self._pool.putconn(self._connection)
-                    self._connection = None
+                # Pooled PostgreSQL connections are returned to the
+                # pool with return_connection(); individual
+                # connections are not closed.
+                pass
             case _:
                 # Close direct connections for other backends
-                self._connection.close()
+                if self._connection is not None:
+                    self._connection.close()
+                    self._connection = None
 
     @classmethod
     def push(cls, transaction):
@@ -282,7 +318,14 @@ class Transaction:
 
     @classmethod
     def shutdown_pools(cls):
-        """Gracefully close all managed PostgreSQL pools."""
+        """
+        Close all cached PostgreSQL pools.
+
+        Callers must ensure no PostgreSQL transactions are active when
+        this runs. Existing Transaction instances may still reference a
+        closed pool or hold a checked-out connection; later getconn() or
+        putconn() calls on those instances can fail.
+        """
         with cls._pool_lock:
             for pool in cls._pool_cache.values():
                 pool.close()
