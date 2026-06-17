@@ -116,9 +116,12 @@ def test_postgresql_empty_context_does_not_borrow_connection():
         trn = Transaction(POSTGRESQL_DSN)
 
         with trn:
-            pass
-
-        assert trn._connection is None
+            # test lazy connection creation
+            assert trn._connection is None
+            # test we have one (empty) pool
+            assert len(Transaction._pool_cache) == 1
+            stats = Transaction._pool_cache[('dbname', 'nagra')].get_stats()
+            assert stats["pool_size"] == 0
     finally:
         Transaction.shutdown_pools()
 
@@ -127,7 +130,8 @@ def test_sqlite_empty_context_does_not_open_connection(tmp_path):
     trn = Transaction(f"sqlite://{tmp_path / 'empty.db'}")
 
     with trn:
-        pass
+        # test lazy connection creation
+        assert trn._connection is None
 
     assert trn._connection is None
 
@@ -254,7 +258,7 @@ def test_postgresql_close_without_borrowed_connection_does_not_touch_pool():
         trn.close()
 
         assert trn._connection is None
-        assert Transaction._pool_cache[POSTGRESQL_DSN] is pool
+        assert Transaction._pool_cache[('dbname', 'nagra')] is pool
     finally:
         Transaction.shutdown_pools()
 

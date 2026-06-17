@@ -1,6 +1,6 @@
 import sqlite3
 import threading
-from itertools import islice
+from itertools import islice, chain
 from typing import Callable
 
 from nagra.utils import logger, UNSET, mssql_connection_string
@@ -101,6 +101,7 @@ class Transaction:
                         dsn,
                         min_size=0,
                         max_size=10,  # TODO should be configurable
+                        open=True,
                     )
                 self._pool = Transaction._pool_cache[pool_key]
 
@@ -130,8 +131,9 @@ class Transaction:
     @staticmethod
     def _pool_key(dsn):
         from psycopg.conninfo import conninfo_to_dict
-
-        return tuple(sorted(conninfo_to_dict(dsn).items()))
+        return tuple(chain(
+            *sorted(conninfo_to_dict(dsn).items())
+        ))
 
     def _connect_pg(self):
         return self._pool.getconn()
