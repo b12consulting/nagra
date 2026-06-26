@@ -3,29 +3,38 @@
 
 ### Unreleased
 
+**PostgreSQL**
 - PostgreSQL transactions now share a connection pool per DSN.
   Connections are checked out from the pool on first use and returned
   when the transaction closes.
 - Add `Transaction.shutdown_pools()` to explicitly close managed
   PostgreSQL pools.
-   
-    
+
+**New features**
+- Add support for simple filter in the cli. Now `nagra select user -W
+  '(=id 42)'` can now be written `nagra select user id=42`. See also
+  the new guide for the command line in <examples/cli.md>
+
 ### 0.10 (released 2025-11-27)
 
-- Raise error if attempting to reuse the same transaction in nested context managers.
+- Raise error if attempting to reuse the same transaction in nested
+  context managers.
 - Table can now be defined without natural key or primary key. This
-  makes it possible to insert rows into existing tables that do not have either.
+  makes it possible to insert rows into existing tables that do not
+  have either.
 - Add support for simple filters in cli: `nagra select user -W '(=
   name "Doe")'` you can also now write `nagra select user name=Doe`.
 - The command line now support the `init` action provided that either
   NAGRA_SCHEMA if defined, or `--schema` argument is provided.
-- Toml generation: export views, preserve not_null, and omit default id primary keys.
+- Toml generation: export views, preserve not_null, and omit default
+  id primary keys.
 
 
 ### 0.9 (released 2025-11-27)
 
 **Polars**:
-- select: specify schema based on database schema and on inferred derived column types.
+- select: specify schema based on database schema and on inferred
+  derived column types.
 - select: allow overriding inferred schema.
 
 **MSSQL**
@@ -45,14 +54,12 @@
   configuration, this behavior was always implemented but hidden by a
   bug.
 
-**New features**
-- Add support for simple filter in the cli. Now `nagra select user -W
-  '(=id 42)'` can now be written `nagra select user id=42`.
-
 **Misc**:
-- Fixed bug in select when joining with foreign key that is not lowercase.
+- Fixed bug in select when joining with foreign key that is not
+  lowercase.
 - Fix string escape of field aliases
-- Fixed duplicates when inserting from polars in a table with no natural key.
+- Fixed duplicates when inserting from polars in a table with no
+  natural key.
 
 
 
@@ -75,13 +82,14 @@ introspecing existing tables.
 - Fix pydantic schema generation (cli usag)
 - ` Upsert.from_dict` now support dotted notation when receiving
   records.
-- Fixed bug in schema introspection for PostgreSQL for non-lowercase names
-- Fixed bug in dataclass generation in the presence of a mix
-  of required and nullable fields.
+- Fixed bug in schema introspection for PostgreSQL for non-lowercase
+  names
+- Fixed bug in dataclass generation in the presence of a mix of
+  required and nullable fields.
 
 **Breaking change**
-- `Table.get` raise an exception when the table is
-not found (instead of returning `None`)
+- `Table.get` raise an exception when the table is not found (instead
+of returning `None`)
 
 ### 0.6 (released 2025-07-18)
 
@@ -156,7 +164,8 @@ key resolution before db insertion.
 **Fixes:**
 - Support for blob type: `Select.dtype` failed to resolve data
   type. Now nagra will ignore blob column in select by default.
-- `Select.to_pandas` now returns correct dataframe when resultset is empty
+- `Select.to_pandas` now returns correct dataframe when resultset is
+  empty
 - Fix parenthesization for OR expressions
 - Raise error on malformed natural key
 
@@ -164,7 +173,8 @@ key resolution before db insertion.
 - Add `length`, `upper` and `lower` operators
 - Python >= 3.11 compat (end of support of class properties):
   `Schema.default` is now a class member
-- Timescaledb compat: Do not rely on `IF NOT EXISTS` stanza when creating indexes
+- Timescaledb compat: Do not rely on `IF NOT EXISTS` stanza when
+  creating indexes
 
 
 ### 0.4 (released 2024-01-28)
@@ -207,17 +217,17 @@ Table(
 words like `null`, `max` or `select`.
 
 **Fixes:**
-- Add support for tables using reserved word like `transaction`, `limit`,
-etc.
+- Add support for tables using reserved word like `transaction`,
+`limit`, etc.
 - Fix returning in with SQLite for tables with custom primary key
   (thanks @JonathanSamelsonB12).
 - Python 3.13, `Transaction.current` is not a property anymore, it is
   now a function.
 
-**New feature:** Add `LRUGenerator` for `WriterMixin._resolve`. This will
-cache foreign keys resolution within the duration of a transaction. It
-has to be enabled through the `fk_cache` parameter when the
-transaction is created:
+**New feature:** Add `LRUGenerator` for `WriterMixin._resolve`. This
+will cache foreign keys resolution within the duration of a
+transaction. It has to be enabled through the `fk_cache` parameter
+when the transaction is created:
 
 ``` python
 with Transaction(dsn, fk_cache=True): # default is False
@@ -232,7 +242,8 @@ natural key changes, but this kind of operation is discouraged.
 
 
 **Various:**
-- New `empty` property on `Schema`, return true if no table are present.
+- New `empty` property on `Schema`, return true if no table are
+  present.
 - New `sync.py` in `examples/`, demonstrate how to synchonise two
   databases with the help of Nagra.
 - New `substr`, `isnot` and `match` operators
@@ -260,10 +271,10 @@ with Transaction('sqlite://examples/weather/weather.db'):
 ```
 
 
-**New feature:** Temporary suppression of foreign keys constraints. The
-`Schema.suspend_fk` context manager is able to drop foreign keys
-constraints and re-add them at the end of the block. This allows to
-load more complex datasets with cross-references.
+**New feature:** Temporary suppression of foreign keys
+constraints. The `Schema.suspend_fk` context manager is able to drop
+foreign keys constraints and re-add them at the end of the block. This
+allows to load more complex datasets with cross-references.
 
 **New feature:** The method `Schema.setup_statement` can be used to
 generate the simple migration statements without executing them
@@ -285,9 +296,10 @@ generate the simple migration statements without executing them
 
 **New feature:** Cli: Add csv export on select, with `--csv` flag
 
-**Fix:**  Add proper quotes around column names on postgresql upsert
+**Fix:** Add proper quotes around column names on postgresql upsert
 
-**New feature:** Add array support: So one can now declare a table like:
+**New feature:** Add array support: So one can now declare a table
+like:
 
 ``` python
 parameter_table = Table(
@@ -391,11 +403,12 @@ updated
 
 ## 0.0.3 (released: 2024-02-29)
 
-**Breaking change:** `load_schema()` now accept a io object or a path object or a toml
-payload. A simple file name is not accepted anymore
+**Breaking change:** `load_schema()` now accept a io object or a path
+object or a toml payload. A simple file name is not accepted anymore
 
-**New feature:** Add one to many support in select queries: Table constructor now
-accepts a `one2many` parameters that can be used like this:
+**New feature:** Add one to many support in select queries: Table
+constructor now accepts a `one2many` parameters that can be used like
+this:
 
 ``` python
 person_table = Table(
