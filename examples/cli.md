@@ -144,7 +144,7 @@ London,1.0
 ```
 
 
-**TODO:** Add `schema.toml` to repo and explain advanced usage.
+**TODO:** Add `schema.toml` to repo and explain advanced usage (one-to-many, init)
 
 ## Delete
 
