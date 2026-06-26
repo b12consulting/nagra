@@ -1,4 +1,7 @@
-SELECT
+SELECT {%- if distinct %} DISTINCT {% endif -%}
+{%- if distinct_on %}
+ DISTINCT ON ({{ distinct_on | map('autoquote') |join(', ') }})
+{%- endif %}
   {{ columns | join(', ') }}
 FROM "{{table}}"
 

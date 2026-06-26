@@ -3,16 +3,16 @@ from collections import defaultdict
 from collections.abc import Iterable
 from functools import partial
 from itertools import islice
+from typing import TYPE_CHECKING
 
 from nagra.exceptions import UnresolvedFK, ValidationError
 from nagra.utils import logger
 from nagra.transaction import ExecMany
 
-try:
+
+if TYPE_CHECKING:
     from pandas import DataFrame
     from polars import LazyFrame
-except ImportError:
-    DataFrame = None
 
 
 class WriterMixin:
@@ -75,24 +75,24 @@ class WriterMixin:
         # Work by chunks
         stm = self.stm()
         ids = []
+        returning = self.table.primary_key is not None
         while True:
             chunk = list(islice(args, 1000))
             if not chunk:
                 break
-            if self.trn.flavor == "sqlite":
-                for item in chunk:
-                    cursor = self.trn.execute(stm, item)
-                    new_id = cursor.fetchone()
-                    ids.append(new_id[0] if new_id else None)
-            else:
-                returning = self.table.primary_key is not None
-                cursor = self.trn.executemany(stm, chunk, returning)
-                if returning:
-                    while True:
-                        new_id = cursor.fetchone()
-                        ids.append(new_id[0] if new_id else None)
-                        if not cursor.nextset():
-                            break
+            match self.trn.flavor:
+                case "sqlite" | "mssql":
+                    for item in chunk:
+                        cursor = self.trn.execute(stm, item)
+                        if returning:
+                            new_id = cursor.fetchone()
+                            ids.append(new_id[0] if new_id else None)
+                        cursor.close()
+
+                case "postgresql":
+                    cursor = self.trn.executemany(stm, chunk, returning)
+                    if returning:
+                        ids.extend(r and r[0] for r in cursor)
 
         # If conditions are present, enforce those
         if self._check:
@@ -139,20 +139,32 @@ class WriterMixin:
         return self.executemany(records)
 
     def from_pandas(self, df: "DataFrame"):
+        if df.empty:
+            return self.executemany([])
+
         # Convert non-basic types to string
         is_copy = False
         for col in self.columns:
             if df[col].dtype in ("int", "float", "bool", "str"):
                 continue
+            if df[col].dtype == "object":
+                # bytes is not a dedicated type, we rely on the first
+                # value and hope the column type is consistent
+                if isinstance(df[col].iloc[0], bytes):
+                    continue
             if not is_copy:
                 df = df.copy()
                 is_copy = True
-            df[col] = df[col].astype(str)
+            df[col] = df[col].astype(str)  # Fixme, may create "None" strings in db
 
         rows = df[self.columns].values
         return self.executemany(rows)
 
-    def from_polars(self, df: "LazyFrame"):
+    def from_polars(self, df: "LazyFrame", batch: bool = False):
+        """
+        Write data from a polars LazyFrame. Set `batch` to True
+        to enable streaming through the collect_batches() method
+        """
         from polars import Struct, col
 
         # Ignore extra columns
@@ -161,13 +173,15 @@ class WriterMixin:
         # Convert non-basic types to string
         for name, dtype in schema.items():
             if dtype == Struct:
-                df = df.with_columns(col("json").struct.json_encode())
+                df = df.with_columns(col(name).struct.json_encode())
+
+        if batch:
+            chunks = df.collect_batches()
+        else:
+            chunks = [df.collect()]
 
         res = []
-        for start, stop in _slicer():
-            chunk = df.slice(start, stop).collect()
-            if chunk.is_empty():
-                break
+        for chunk in chunks:
             rows = chunk.iter_rows()
             res += self.executemany(rows)
         return res
@@ -178,8 +192,11 @@ class WriterMixin:
         field_names = [f.name for f in dataclasses.fields(select.to_dataclass())]
 
         # Extract dict values - allows for field names or dotted column format
-        f_or_c = zip(field_names, self.columns)
-        rows = (tuple(getter(record, field, col) for col, field in f_or_c) for record in records)
+        f_or_c = list(zip(field_names, self.columns))
+        rows = (
+            tuple(getter(record, field, col) for col, field in f_or_c)
+            for record in records
+        )
         return self.executemany(rows)
 
 
@@ -193,6 +210,7 @@ def getter(record, field, col):
     if col in record:
         return record[col]
     raise KeyError(f"KeyError: neither {field} or {col} found")
+
 
 def _slicer(chunk_size=10_000):
     start = 0

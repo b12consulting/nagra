@@ -24,6 +24,7 @@ class View:
         self.as_select = as_select
         self.view_select = view_select
         self.schema = schema
+        self.foreign_keys = foreign_keys or {}
 
         # Create underlying table
         if not columns:
@@ -75,3 +76,14 @@ class View:
         Return view object for the given `name`
         """
         return schema.views.get(name)
+
+    def eq(self, other):
+        if not isinstance(other, View):
+            return False
+        if id(self) == id(other):
+            return True
+        ok = (
+            self.name == other.name and
+            self.view_def().strip() == other.view_def().strip()
+        )
+        return ok

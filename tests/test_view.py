@@ -1,4 +1,5 @@
 from nagra import View
+from nagra.schema import Schema
 
 
 def test_select_views(transaction, country, population, max_pop, min_pop):
@@ -22,7 +23,9 @@ def test_select_views(transaction, country, population, max_pop, min_pop):
     assert res == [("Belgium", 11), ("Netherlands", 14)]
 
     res = list(
-        max_pop.select("max",).orderby(
+        max_pop.select(
+            "max",
+        ).orderby(
             ("country", "desc"),
         )
     )
@@ -33,12 +36,14 @@ def test_select_views(transaction, country, population, max_pop, min_pop):
     assert res == [("Belgium", 10), ("Netherlands", 12)]
 
     res = list(
-        min_pop.select("min",).orderby(
+        min_pop.select(
+            "min",
+        ).orderby(
             "country",
         )
     )
     assert res == [(10,), (12,)]
 
 
-def test_get_view(min_pop):
-    assert min_pop == View.get("min_pop")
+def test_get_view(min_pop, schema: Schema):
+    assert min_pop == View.get("min_pop", schema=schema)

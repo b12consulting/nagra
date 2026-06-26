@@ -67,6 +67,27 @@ def test_insert(cacheable_transaction, person):
     assert rows == [("Big Bob", None), ("Bob", None)]
 
 
+def test_insert_no_nk_pk(cacheable_transaction, temperature_no_nk_pk):
+    # First simple insert - should work even without nk/pk
+    insert = temperature_no_nk_pk.insert("timestamp", "city", "value")
+    records = [
+        (datetime(1970, 1, 1, 0, 0), "Berlin", 10.0),
+        (datetime(1970, 1, 2, 0, 0), "London", 12.0),
+    ]
+    insert.executemany(records)
+    if cacheable_transaction.flavor == "sqlite":
+        records = [
+            tuple(str(v) if isinstance(v, datetime) else v for v in r) for r in records
+        ]
+    rows = list(temperature_no_nk_pk.select().orderby("city").execute())
+    assert rows == records
+
+    # Upsert should fail without nk/pk
+    upsert = temperature_no_nk_pk.upsert("timestamp", "city", "value")
+    with pytest.raises(ValidationError):
+        upsert.execute(datetime(1970, 1, 2, 0, 0), "Berlin", 11.0)
+
+
 def test_upsert_stmt_with_id(cacheable_transaction, person):
     if cacheable_transaction.flavor == "postgresql":
         # Test stmt with all columns
@@ -254,13 +275,23 @@ def test_return_ids(cacheable_transaction, person):
     assert insert_ids == update_ids
     assert insert_ids != [None, None]
 
-    # Create an "on conflict do nothing" upsert
+    # Create an "on conflict do nothing" upsert (because we only write
+    # nk)
     upsert = person.upsert("name")
     records = [("Papa",), ("Quebec",)]
     insert_ids = upsert.executemany(records)
     assert insert_ids != [None, None]
     update_ids = upsert.executemany(records)
     assert update_ids == [None, None]
+
+    # This time pass other columns but with an insert
+    records = [("Papa", 1), ("Quebec", 1)]
+    insert_ids = person.insert("name", "parent").executemany(records)
+    assert insert_ids == [None, None]
+
+    # Check db content
+    res = list(person.select("parent").where("(= name {})").execute("Papa"))
+    assert res == [(None,)]
 
 
 def test_double_insert(cacheable_transaction, person):
@@ -322,6 +353,9 @@ def test_default_value(transaction, org):
 
 
 def test_mixed_cursor(cacheable_transaction, person):
+    if cacheable_transaction.flavor == "mssql":
+        pytest.skip("MSSQL does not support multiple live cursors")
+
     # First upsert
     upsert = person.upsert("name")
     records = [("Romeo",), ("Sierra",), ("Tango",)]
@@ -343,6 +377,8 @@ def test_mixed_cursor(cacheable_transaction, person):
 
 
 def test_arrays(cacheable_transaction, parameter):
+    if cacheable_transaction.flavor == "mssql":
+        pytest.skip("MSSQL does not support array columns")
     # First upsert
     upsert = parameter.upsert()
     records = [
@@ -401,8 +437,30 @@ def test_from_dict(transaction, person):
     # Upserting will also support dotted notation
     new_records = [
         {"name": "Big Bob", "parent.name": None},
-        {"name": "Bob", "parent.name": "Big Bob"},
+        {"name": "Other Bob", "parent.name": "Big Bob"},
     ]
     person.upsert("name", "parent.name").from_dict(new_records)
-    records_bis = list(person.select().to_dict())
-    assert records_bis == records
+    records_bis = list(person.select().orderby("id").to_dict())
+    assert records_bis == [
+        {"name": "Big Bob", "parent_name": None},
+        {"name": "Bob", "parent_name": "Big Bob"},
+        {"name": "Other Bob", "parent_name": "Big Bob"},
+    ]
+
+
+def test_nk_less_table(transaction, value):
+    # Simple insert
+    upsert = value.insert("value")
+    ids = upsert.execute(1)
+    assert ids == 1
+
+    # Update work if id is given
+    upsert = value.update("id", "value")
+    ids = upsert.execute(1, 1.1)
+    assert ids == 1
+
+    # Upsert should fail if id is not given
+    upsert = value.upsert("value")
+    with pytest.raises(ValidationError):
+        upsert.execute(1)
+    # return

@@ -24,12 +24,20 @@ def clean_col(name):
 
 
 class Select:
-    def __init__(self, table: "Table", *columns: str, trn: "Transaction", env: "Env"):
+    def __init__(
+        self,
+        table: "Table",
+        *columns: str,
+        distinct: bool = False,
+        trn: "Transaction",
+        env: "Env",
+    ):
         self.table = table
         self.env = env
         self.where_asts = tuple()
         self._offset = None
         self._limit = None
+        self.distinct_on_ast = tuple()
         self._aliases = tuple()
         self.groupby_ast = tuple()
         self.order_ast = tuple()
@@ -37,6 +45,7 @@ class Select:
         self.columns = tuple()
         self.columns_ast = tuple()
         self.query_columns = tuple()
+        self.distinct = distinct
         self.trn = trn
         self._add_columns(columns)
 
@@ -60,6 +69,8 @@ class Select:
         cln._limit = self._limit
         cln._offset = self._offset
         cln._aliases = self._aliases
+        cln.distinct_on_ast = self.distinct_on_ast
+        cln.distinct = self.distinct
         return cln
 
     def where(self, *conditions: str):
@@ -70,6 +81,15 @@ class Select:
     def aliases(self, *names: str):
         cln = self.clone()
         cln._aliases += names
+        return cln
+
+    def distinct_on(self, *names: str):
+        assert self.trn.flavor == "postgresql", (
+            "distinct_on is only supported with Postgresql"
+        )
+        assert not self.distinct, "distinct and distinct_on can not be combined"
+        cln = self.clone()
+        cln.distinct_on_ast += tuple(AST.parse(n) for n in names)
         return cln
 
     def select(self, *columns: str):
@@ -138,8 +158,7 @@ class Select:
                         tails.append(sub_col.removeprefix(prefix))
                 # trigger a select on foreign table and generate dataclass
                 sub_class = ftable.select(*tails).to_dataclass(
-                    nest=True,
-                    model_name=model_name + snake_to_pascal(head)
+                    nest=True, model_name=model_name + snake_to_pascal(head)
                 )
                 nullable = not self.table.required(head)
                 if nullable:
@@ -162,9 +181,7 @@ class Select:
                     field_def += (None,)
                 fields[name] = field_def
 
-        return make_dataclass(
-            model_name, fields=fields.values(), kw_only=True
-        )
+        return make_dataclass(model_name, fields=fields.values(), kw_only=True)
 
     @staticmethod
     def from_dataclass(cls: dataclass, schema: Schema = Schema.default) -> "Select":
@@ -229,6 +246,10 @@ class Select:
         where_conditions = [
             ast.eval(self.env, self.trn.flavor) for ast in self.where_asts
         ]
+        # Eval distinct on
+        distinct_on = [
+            ast.eval(self.env, self.trn.flavor) for ast in self.distinct_on_ast
+        ]
         # Eval Groupby
         groupby_ast = self.groupby_ast or self.infer_groupby()
         groupby = [a.eval(self.env, self.trn.flavor) for a in groupby_ast]
@@ -245,7 +266,7 @@ class Select:
 
         if self._aliases:
             query_columns = [
-                f"{c} AS {a}" for c, a in zip(self.query_columns, self._aliases)
+                f'{c} AS "{a}"' for c, a in zip(self.query_columns, self._aliases)
             ]
         else:
             query_columns = self.query_columns
@@ -260,20 +281,33 @@ class Select:
             offset=self._offset,
             groupby=groupby,
             orderby=orderby,
+            distinct_on=distinct_on,
+            distinct=self.distinct,
         )
         return stm()
 
-    def to_polars(self, *args) -> "LazyFrame":
+    def to_polars(self, *args, schema_overrides: dict | None = None) -> "LazyFrame":
+        """
+        Execute the query with given args and return a polars
+        LazyFrame. Optionally, `schema_overrides` can be provided to
+        override the column types inferred from the database schema
+        and the query operations.
+
+        Only supported with PostgreSQL.
+        """
         assert self.trn.flavor != "sqlite", "Polars is only supported with Postgresql"
         import polars
 
         schema = self.dtypes(with_optional=False)
         cursor = self.execute(*args)
-        columns = [c for c, _ in schema]
-        df = polars.LazyFrame(cursor, schema=columns)
+        pl_schema = dict(schema)
         if self._aliases:
-            mapping = dict(zip((n for n, _ in schema), self._aliases))
-            df = df.rename(mapping)
+            mapping = zip((n for n, _ in schema), self._aliases)
+            for old, new in mapping:
+                pl_schema[new] = pl_schema.pop(old)
+        if schema_overrides:
+            pl_schema.update(schema_overrides)
+        df = polars.LazyFrame(cursor, schema=pl_schema)
         return df
 
     def to_pandas(
@@ -335,9 +369,9 @@ class Select:
                 raise ValidationError(msg)
             yield from self.to_nested_dict(*args)
         else:
-            columns = [f.name for f in dataclass_fields(
-                self.to_dataclass(*self._aliases)
-            )]
+            columns = [
+                f.name for f in dataclass_fields(self.to_dataclass(*self._aliases))
+            ]
             for row in self.execute(*args):
                 yield dict(zip(columns, row))
 
@@ -368,9 +402,7 @@ def autonest(record: dict) -> dict:
         head, _ = key.split(".", 1)
         prefix = f"{head}."
         sub_dict = {
-            k.removeprefix(prefix): v
-            for k, v in record.items()
-            if k.startswith(prefix)
+            k.removeprefix(prefix): v for k, v in record.items() if k.startswith(prefix)
         }
         if all(v is None for v in sub_dict.values()):
             # We only collect sub_dict if not fully null

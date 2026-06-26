@@ -1,8 +1,49 @@
 
 # Changelog
 
+### Unreleased
 
-### 0.9 (to be released)
+- PostgreSQL transactions now share a connection pool per DSN.
+  Connections are checked out from the pool on first use and returned
+  when the transaction closes.
+- Add `Transaction.shutdown_pools()` to explicitly close managed
+  PostgreSQL pools.
+   
+    
+### 0.10 (released 2025-11-27)
+
+- Raise error if attempting to reuse the same transaction in nested context managers.
+- Table can now be defined without natural key or primary key. This
+  makes it possible to insert rows into existing tables that do not have either.
+- Add support for simple filters in cli: `nagra select user -W '(=
+  name "Doe")'` you can also now write `nagra select user name=Doe`.
+- The command line now support the `init` action provided that either
+  NAGRA_SCHEMA if defined, or `--schema` argument is provided.
+- Toml generation: export views, preserve not_null, and omit default id primary keys.
+
+
+### 0.9 (released 2025-11-27)
+
+**Polars**:
+- select: specify schema based on database schema and on inferred derived column types.
+- select: allow overriding inferred schema.
+
+**MSSQL**
+- First release with support of MSSQL. While all the test suite pass,
+  this was never put into action in a real project, consider this
+  support as beta-quality.
+- Array columns are not supported, table containing array columns are
+  simply ignored.
+- String columns (nvarchar) are limited to 200 characters.
+
+**Breaking changes:**
+- Table can now be defined without natural key: this replace the
+  inconvenient previous behavour to fall back to all columns as
+  natural key.
+- For foreign keys columns that are required (not null), their
+  definition will now automatically come with and `ON DELETE CASCADE`
+  configuration, this behavior was always implemented but hidden by a
+  bug.
 
 **New features**
 - Add support for simple filter in the cli. Now `nagra select user -W
@@ -10,6 +51,9 @@
 
 **Misc**:
 - Fixed bug in select when joining with foreign key that is not lowercase.
+- Fix string escape of field aliases
+- Fixed duplicates when inserting from polars in a table with no natural key.
+
 
 
 ### 0.8 (released 2025-09-24)
