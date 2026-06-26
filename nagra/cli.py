@@ -159,7 +159,6 @@ def run():
     parser_init = subparsers.add_parser("init")
     parser_init.set_defaults(func=init)
 
-
     parser_schema = subparsers.add_parser("schema")
     parser_schema.add_argument(
         "--d2",
