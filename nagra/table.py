@@ -211,6 +211,7 @@ class Table:
         natural_key: Optional[list[str]] = None,
         foreign_keys: Optional[dict[str, str]] = None,
         not_null: Optional[list[str]] = None,
+        nullable: Optional[list[str]] = None,
         one2many: Optional[dict] = None,
         default: Optional[dict[str, str]] = None,
         primary_key: Optional[str] = "id",
@@ -224,6 +225,7 @@ class Table:
         self.natural_key = natural_key or []
         self.foreign_keys = foreign_keys or {}
         self.not_null = set(not_null or [])
+        self.nullable = set(nullable or [])
         self.one2many = one2many or {}
         self.default = default or {}
         self.primary_key = primary_key
@@ -246,6 +248,11 @@ class Table:
                     f"Table '{name}': unknown column name '{nk_name}'"
                     " referenced in natural key"
                 )
+
+        if overlap := self.not_null.intersection(self.nullable):
+            raise IncorrectSchema(
+                f"Table '{name}': columns {overlap} cannot be both not null and nullable"
+            )
 
         # natural key and primary can be both unset/empty,
         # but it may be undesirable
@@ -343,11 +350,11 @@ class Table:
         stmt = Statement("drop_table", trn.flavor, name=self.name)
         trn.execute(stmt())
 
-    def required(self, col_name):
+    def required(self, col_name: str) -> bool:
         return (
-            col_name in self.natural_key
-            or col_name in self.not_null
+            col_name in self.not_null
             or col_name == self.primary_key
+            or col_name in set(self.natural_key) - self.nullable
         )
 
     def default_columns(self, compact: bool = False, skip_pk=False, skip_blob=False):
@@ -464,19 +471,22 @@ class Table:
         if not isinstance(other, Table):
             return False
 
-        ok = all((
-            self.name == other.name,
-            all(a.eq(b) for a, b in zip(
-                self.columns.values(), other.columns.values()
-            )),
-            self.primary_key == other.primary_key,
-            self.natural_key == other.natural_key,
-            self.foreign_keys == other.foreign_keys,
-            self.not_null == other.not_null,
-            self.one2many == other.one2many,
-            self.default == other.default,
-            self.is_view == other.is_view,
-        ))
+        ok = all(
+            (
+                self.name == other.name,
+                all(
+                    a.eq(b)
+                    for a, b in zip(self.columns.values(), other.columns.values())
+                ),
+                self.primary_key == other.primary_key,
+                self.natural_key == other.natural_key,
+                self.foreign_keys == other.foreign_keys,
+                self.not_null == other.not_null,
+                self.one2many == other.one2many,
+                self.default == other.default,
+                self.is_view == other.is_view,
+            )
+        )
         return ok
 
 

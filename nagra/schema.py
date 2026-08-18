@@ -7,6 +7,7 @@ from typing import Optional, TYPE_CHECKING
 from warnings import warn
 
 import toml
+from nagra.exceptions import IncorrectSchema
 from nagra.statement import Statement
 from nagra.transaction import DummyTransaction, Transaction
 from nagra.utils import logger, snake_to_pascal, template
@@ -164,7 +165,10 @@ class Schema:
             if name in skip_fk:
                 continue
             if name in res[tbl]:
-                warn(f"Unexpected multi-columns foreign key in table {tbl}", RuntimeWarning)
+                warn(
+                    f"Unexpected multi-columns foreign key in table {tbl}",
+                    RuntimeWarning,
+                )
                 skip_fk.append(name)
                 res[tbl].pop(name)
                 continue
@@ -272,11 +276,17 @@ class Schema:
                 warn(MSSQL_ARRAY_MSG.format(table=table.name), RuntimeWarning)
                 continue
 
+            if table.nullable and trn.flavor != "postgresql":
+                raise IncorrectSchema(
+                    f"Table '{table.name}': nullable natural key columns are only supported for postgresql"
+                )
+
             columns_not_pk_fk = [
                 col
                 for col in table.columns
                 if col != table.primary_key and col not in table.foreign_keys
             ]
+            required = filter(lambda c: table.required(c), columns_not_pk_fk)
 
             pk_fk_table = (
                 self.tables.get(table.foreign_keys[table.primary_key])
@@ -293,7 +303,7 @@ class Schema:
                 table=table,
                 columns=columns_not_pk_fk,
                 ctypes=ctypes,
-                not_null=table.not_null,
+                not_null=required,
                 default=table.default,
                 pk_fk_table=pk_fk_table,
                 natural_key=table.natural_key,
@@ -366,12 +376,18 @@ class Schema:
                 continue
             if not table.natural_key:
                 continue
+            kwargs = {}
+            if trn.flavor == "postgresql":
+                kwargs["nulls_not_distinct"] = any(
+                    not table.required(col) for col in table.natural_key
+                )
 
             stmt = Statement(
                 "create_unique_index",
                 trn.flavor,
                 table=name,
                 natural_key=table.natural_key,
+                **kwargs,
             )
             yield stmt()
 
@@ -483,10 +499,14 @@ class Schema:
         tpl = template("misc/schema-table.toml")
         tables = self.tables.values()
 
-        res = "\n".join(tpl.render(
-            table=t,
-            skip_col=lambda c: c == "id" and t.primary_key == "id",
-        ) for t in tables if not t.is_view)
+        res = "\n".join(
+            tpl.render(
+                table=t,
+                skip_col=lambda c: c == "id" and t.primary_key == "id",
+            )
+            for t in tables
+            if not t.is_view
+        )
 
         tpl = template("misc/schema-view.toml")
         res += "\n".join(tpl.render(view=v) for v in self.views.values())
