@@ -104,6 +104,19 @@ def test_incorrect_nk(empty_transaction):
         )
 
 
+def test_inconsistent_nullable(empty_transaction):
+    with pytest.raises(IncorrectSchema):
+        Table(
+            "bad_nullable",
+            columns={
+                "key": "uuid",
+                "name": "varchar",
+            },
+            not_null=["key"],
+            nullable=["key"],
+        )
+
+
 def test_create_tables(schema, empty_transaction):
     # Make sure we start from empty db
     assert not schema._db_columns(trn=empty_transaction)
@@ -168,7 +181,10 @@ def test_schema_from_nagra_db(transaction: Transaction):
     if transaction.flavor == "mssql":
         # We ignore table with array for mssql
         tables.remove("parameter")
-    assert sorted(schema.tables) == tables
+    if transaction.flavor == "postgresql":
+        # add table with nullable natural key columns
+        tables.append("temperature_nullable_nk")
+    assert sorted(schema.tables) == sorted(tables)
     assert all(schema.tables[n].is_view for n in ["max_pop", "min_pop"])
 
     views = [
@@ -297,4 +313,7 @@ def test_default_columns():
     assert list(table.default_columns()) == ["id", "name", "description", "data"]
     assert list(table.default_columns(skip_pk=True)) == ["name", "description", "data"]
     assert list(table.default_columns(skip_blob=True)) == ["id", "name", "description"]
-    assert list(table.default_columns(skip_pk=True, skip_blob=True)) == ["name", "description"]
+    assert list(table.default_columns(skip_pk=True, skip_blob=True)) == [
+        "name",
+        "description",
+    ]

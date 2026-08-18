@@ -167,6 +167,21 @@ def schema(dsn):
         schema=schema,
     )
 
+    if "postgresql" in dsn:
+        temperature_nullable_nk_table = Table(
+            "temperature_nullable_nk",
+            columns={
+                "timestamp": "timestamp",
+                "city": "varchar",
+                "value": "float",
+            },
+            primary_key=None,
+            not_null=["value"],
+            natural_key=["timestamp", "city"],
+            nullable=["timestamp", "city"],
+            schema=schema,
+        )
+
     parameter_table = Table(
         "parameter",
         columns={
