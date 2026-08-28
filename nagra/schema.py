@@ -23,7 +23,7 @@ MSSQL_ARRAY_MSG = (
 
 
 class Schema:
-    default: "Schema" = None
+    default: "Schema"
 
     def __init__(self, tables=None, views=None):
         self.tables: dict[str, Table] = tables or {}
@@ -88,9 +88,27 @@ class Schema:
         """
         # We must get() on views first, since each view is also
         # registered as a table
-        res = self.views.get(name) or self.tables[name]
+        res = self.views.get(name) or self.tables.get(name)
         if not res:
             raise KeyError(f"No view or table named {name}")
+        return res
+
+    def get_table(self, name: str) -> "Table":
+        """
+        Return the table with name `name`
+        """
+        res = self.tables.get(name)
+        if not res:
+            raise KeyError(f"No table named {name}")
+        return res
+
+    def get_view(self, name: str) -> "View":
+        """
+        Return the view with name `name`
+        """
+        res = self.views.get(name)
+        if not res:
+            raise KeyError(f"No view named {name}")
         return res
 
     @classmethod
@@ -164,7 +182,10 @@ class Schema:
             if name in skip_fk:
                 continue
             if name in res[tbl]:
-                warn(f"Unexpected multi-columns foreign key in table {tbl}", RuntimeWarning)
+                warn(
+                    f"Unexpected multi-columns foreign key in table {tbl}",
+                    RuntimeWarning,
+                )
                 skip_fk.append(name)
                 res[tbl].pop(name)
                 continue
@@ -483,10 +504,14 @@ class Schema:
         tpl = template("misc/schema-table.toml")
         tables = self.tables.values()
 
-        res = "\n".join(tpl.render(
-            table=t,
-            skip_col=lambda c: c == "id" and t.primary_key == "id",
-        ) for t in tables if not t.is_view)
+        res = "\n".join(
+            tpl.render(
+                table=t,
+                skip_col=lambda c: c == "id" and t.primary_key == "id",
+            )
+            for t in tables
+            if not t.is_view
+        )
 
         tpl = template("misc/schema-view.toml")
         res += "\n".join(tpl.render(view=v) for v in self.views.values())

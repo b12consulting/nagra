@@ -4,8 +4,9 @@ import pytest
 
 from nagra import Table, Schema
 from nagra.table import Column
-from nagra.exceptions import IncorrectSchema
+from nagra.exceptions import IncorrectSchema, InvalidTableName
 from nagra.transaction import Transaction
+from nagra.view import View
 
 
 HERE = Path(__file__).parent
@@ -28,6 +29,13 @@ def test_toml_loader():
     user_table = Table.get("user", schema=test_schema)
     blog_table = Table.get("blog", schema=test_schema)
     assert user_table is not None
+
+    # accessors
+    assert test_schema.get_table("user") == user_table
+    with pytest.raises(KeyError):
+        test_schema.get_table("does_not_exist")
+    with pytest.raises(KeyError):
+        test_schema.get_view("user")
 
     assert list(user_table.columns) == [
         "first_name",
@@ -62,6 +70,11 @@ def test_toml_loader():
             natural_key=["name"],
             schema=test_schema,
         )
+
+    # Views
+    top_user_view = test_schema.get_view("top_user")
+    assert list(top_user_view.columns) == ["user"]
+    assert isinstance(top_user_view, View)
 
     # Test reset
     test_schema.reset()
@@ -297,4 +310,7 @@ def test_default_columns():
     assert list(table.default_columns()) == ["id", "name", "description", "data"]
     assert list(table.default_columns(skip_pk=True)) == ["name", "description", "data"]
     assert list(table.default_columns(skip_blob=True)) == ["id", "name", "description"]
-    assert list(table.default_columns(skip_pk=True, skip_blob=True)) == ["name", "description"]
+    assert list(table.default_columns(skip_pk=True, skip_blob=True)) == [
+        "name",
+        "description",
+    ]
