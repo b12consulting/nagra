@@ -15,6 +15,11 @@
   '(=id 42)'` can now be written `nagra select user id=42`. See also
   the new guide for the command line in <examples/cli.md>
 
+**Misc**:
+- Bug fix: When default value is provided for a column, it was ignored
+  when the default value was false-ish (for example `0` or `""`).
+
+
 ### 0.10 (released 2025-11-27)
 
 - Raise error if attempting to reuse the same transaction in nested

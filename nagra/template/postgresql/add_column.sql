@@ -1,6 +1,6 @@
 ALTER TABLE "{{table}}"
  ADD COLUMN "{{column}}" {{col_def}} {{- " NOT NULL" if not_null else "" }}
-{%- if default %}
+{%- if default is not none %}
  DEFAULT {{default}}
 {%- endif %}
 {%- if fk_table %}
