@@ -6,6 +6,9 @@ primary_key = ""
 {%- if table.not_null %}
 not_null = [{{ table.not_null | map('autoquote') |join(', ') }}]
 {%- endif %}
+{%- if table.nullable %}
+nullable = [{{ table.nullable | map('autoquote') |join(', ') }}]
+{%- endif %}
 [{{table.name}}.columns]
 {% for col_name, col in table.columns.items() if not skip_col(col_name)-%}
 {{col_name}} = "{{col.dtype}}"

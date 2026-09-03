@@ -72,6 +72,13 @@ def test_toml_generation():
     # Start from schema
     src = HERE / "assets" / "sample_schema.toml"
     test_schema = Schema.from_toml(src)
+    Table(
+        "nullable_table",
+        columns={"key": "uuid"},
+        natural_key=["key"],
+        nullable=["key"],
+        schema=test_schema,
+    )
 
     clone_toml = test_schema.generate_toml()
     clone_schema = Schema()
