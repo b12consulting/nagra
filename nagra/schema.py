@@ -281,6 +281,7 @@ class Schema:
                     f"Table '{table.name}': nullable natural key columns are only supported for postgresql"
                 )
 
+            # Columns that are neither primary key nor foreign keys.
             columns_not_pk_fk = [
                 col
                 for col in table.columns
