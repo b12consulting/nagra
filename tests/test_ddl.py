@@ -1,6 +1,7 @@
 import pytest
 
 from nagra import Statement
+from nagra.exceptions import IncorrectSchema
 from nagra.utils import strip_lines
 from nagra.schema import Schema
 from nagra.table import Table
@@ -80,6 +81,23 @@ def test_create_table(empty_transaction):
                 ")",
                 ";",
             ]
+
+
+def test_nullable_natural_key_backend_support(empty_transaction):
+    schema = Schema()
+    Table(
+        "nullable_table",
+        columns={"key": "uuid"},
+        natural_key=["key"],
+        nullable=["key"],
+        schema=schema,
+    )
+
+    if empty_transaction.flavor == "postgresql":
+        list(schema.setup_statements(trn=empty_transaction))
+    else:
+        with pytest.raises(IncorrectSchema, match="only supported for postgresql"):
+            list(schema.setup_statements(trn=empty_transaction))
 
 
 def test_create_table_pk_is_fk(empty_transaction):

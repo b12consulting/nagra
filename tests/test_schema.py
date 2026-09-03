@@ -117,6 +117,39 @@ def test_inconsistent_nullable(empty_transaction):
         )
 
 
+def test_nullable_not_in_natural_key(empty_transaction):
+    with pytest.raises(IncorrectSchema):
+        Table(
+            "bad_nullable_nk",
+            columns={
+                "key": "uuid",
+                "name": "varchar",
+            },
+            natural_key=["key"],
+            nullable=["name"],
+        )
+
+
+def test_table_eq_includes_nullable():
+    nullable_schema = Schema()
+    nullable_table = Table(
+        "nullable_table",
+        columns={"key": "uuid", "name": "varchar"},
+        natural_key=["key"],
+        nullable=["key"],
+        schema=nullable_schema,
+    )
+    required_schema = Schema()
+    required_table = Table(
+        "nullable_table",
+        columns={"key": "uuid", "name": "varchar"},
+        natural_key=["key"],
+        schema=required_schema,
+    )
+
+    assert nullable_table.eq(required_table) is False
+
+
 def test_create_tables(schema, empty_transaction):
     # Make sure we start from empty db
     assert not schema._db_columns(trn=empty_transaction)
