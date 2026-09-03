@@ -218,6 +218,21 @@ class Table:
         schema: Schema = Schema.default,
         is_view: Optional[bool] = False,
     ):
+        """Define a table and add it to a schema.
+
+        Args:
+            name: Table name.
+            columns: Mapping of column names to Nagra type declarations.
+            natural_key: Columns forming the table's unique natural key.
+            foreign_keys: Mapping of local column names to referenced table names.
+            not_null: Columns that must not contain NULL values.
+            nullable: Natural-key columns allowed to contain NULL values.
+            one2many: Mapping of aliases to related table and column paths.
+            default: Mapping of column names to default values or expressions.
+            primary_key: Primary-key column name, or ``None`` for no primary key.
+            schema: Schema to which the table is added.
+            is_view: Whether this definition represents a database view.
+        """
         self.name = name
         self.columns: dict[str, Column] = {
             name: Column(name, dtype) for name, dtype in columns.items()
@@ -249,10 +264,21 @@ class Table:
                     " referenced in natural key"
                 )
 
+        if unknown := self.nullable.difference(self.natural_key):
+            raise IncorrectSchema(
+                f"Table '{name}': columns {unknown} marked nullable but not in natural key"
+            )
+
         if overlap := self.not_null.intersection(self.nullable):
             raise IncorrectSchema(
                 f"Table '{name}': columns {overlap} cannot be both not null and nullable"
             )
+
+        self._required = (
+            self.not_null
+            | ({self.primary_key} if self.primary_key else set())
+            | (set(self.natural_key) - self.nullable)
+        )
 
         # natural key and primary can be both unset/empty,
         # but it may be undesirable
@@ -351,11 +377,7 @@ class Table:
         trn.execute(stmt())
 
     def required(self, col_name: str) -> bool:
-        return (
-            col_name in self.not_null
-            or col_name == self.primary_key
-            or col_name in set(self.natural_key) - self.nullable
-        )
+        return col_name in self._required
 
     def default_columns(self, compact: bool = False, skip_pk=False, skip_blob=False):
         """
@@ -482,6 +504,7 @@ class Table:
                 self.natural_key == other.natural_key,
                 self.foreign_keys == other.foreign_keys,
                 self.not_null == other.not_null,
+                self.nullable == other.nullable,
                 self.one2many == other.one2many,
                 self.default == other.default,
                 self.is_view == other.is_view,
