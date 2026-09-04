@@ -9,6 +9,10 @@
   when the transaction closes.
 - Add `Transaction.shutdown_pools()` to explicitly close managed
   PostgreSQL pools.
+- Support unique indexes (natural keys) with nullable columns
+  through the `NULLS NOT DISTINCT` parameter (requires PostgreSQL>=15).
+  Overriding the default behaviour that natural key colums are non-nullable
+  is achieved through the `nullable = [..]` array in a table schema.
 
 **New features**
 - Add support for simple filter in the cli. Now `nagra select user -W

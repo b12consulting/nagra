@@ -1,4 +1,7 @@
+import pytest
+
 from nagra import Statement
+from nagra.exceptions import IncorrectSchema
 from nagra.utils import strip_lines
 from nagra.schema import Schema
 from nagra.table import Table
@@ -69,13 +72,32 @@ def test_create_table(empty_transaction):
             assert create_idx == [
                 'CREATE UNIQUE INDEX my_table_idx ON "my_table" (',
                 '"name"',
-                ");",
+                ")",
+                ";",
             ]
         case "mssql":
             assert create_idx == [
                 "CREATE UNIQUE INDEX [my_table_idx] ON [my_table] ([name]",
-                ");",
+                ")",
+                ";",
             ]
+
+
+def test_nullable_natural_key_backend_support(empty_transaction):
+    schema = Schema()
+    Table(
+        "nullable_table",
+        columns={"key": "uuid"},
+        natural_key=["key"],
+        nullable=["key"],
+        schema=schema,
+    )
+
+    if empty_transaction.flavor == "postgresql":
+        list(schema.setup_statements(trn=empty_transaction))
+    else:
+        with pytest.raises(IncorrectSchema, match="only supported for postgresql"):
+            list(schema.setup_statements(trn=empty_transaction))
 
 
 def test_create_table_pk_is_fk(empty_transaction):
@@ -114,7 +136,7 @@ def test_create_table_pk_is_fk(empty_transaction):
                 'CREATE TABLE  "score" (\n   "concept" BIGINT PRIMARY KEY\n'
                 '    CONSTRAINT fk_concept REFERENCES "concept"("concept_id") ON DELETE CASCADE\n'
                 '    , \n\n   "score" INTEGER\n);',
-                'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
+                'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n)\n;',
             ]
         case "sqlite":
             assert lines == [
@@ -123,25 +145,26 @@ def test_create_table_pk_is_fk(empty_transaction):
                 'CREATE TABLE  "score" (\n   "concept" INTEGER PRIMARY KEY\n'
                 '    CONSTRAINT fk_concept REFERENCES "concept"("concept_id") ON DELETE CASCADE\n'
                 '    , \n\n   "score" INTEGER\n);',
-                'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
+                'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n)\n;',
             ]
         case "mssql":
             assert lines == [
-                'CREATE TABLE [concept] (\n'
-                '   [concept_id] BIGINT IDENTITY(1,1) PRIMARY KEY\n'
-                '    , \n\n'
-                '   [name] NVARCHAR(200)\n'
-                '    NOT NULL\n'
-                ');',
-                'CREATE TABLE [score] (\n'
-                '   [concept] BIGINT PRIMARY KEY\n'
-                '    CONSTRAINT fk_concept REFERENCES [concept]([concept_id]) ON DELETE '
-                'CASCADE\n'
-                '    , \n'
-                '\n'
-                '   [score] INT\n'
-                ');',
-                'CREATE UNIQUE INDEX [concept_idx] ON [concept] ([name]\n);']
+                "CREATE TABLE [concept] (\n"
+                "   [concept_id] BIGINT IDENTITY(1,1) PRIMARY KEY\n"
+                "    , \n\n"
+                "   [name] NVARCHAR(200)\n"
+                "    NOT NULL\n"
+                ");",
+                "CREATE TABLE [score] (\n"
+                "   [concept] BIGINT PRIMARY KEY\n"
+                "    CONSTRAINT fk_concept REFERENCES [concept]([concept_id]) ON DELETE "
+                "CASCADE\n"
+                "    , \n"
+                "\n"
+                "   [score] INT\n"
+                ");",
+                "CREATE UNIQUE INDEX [concept_idx] ON [concept] ([name]\n)\n;",
+            ]
 
 
 def test_create_table_no_pk(empty_transaction):
@@ -232,36 +255,41 @@ def test_create_table_no_pk(empty_transaction):
             assert create_concept_idx == [
                 'CREATE UNIQUE INDEX concept_idx ON "concept" (',
                 '"name"',
-                ");",
+                ")",
+                ";",
             ]
             assert create_score_idx == [
                 'CREATE UNIQUE INDEX score_idx ON "score" (',
                 '"concept"',
-                ");",
+                ")",
+                ";",
             ]
         case "mssql":
             assert create_concept_idx == [
                 "CREATE UNIQUE INDEX [concept_idx] ON [concept] ([name]",
-                ");",
+                ")",
+                ";",
             ]
             assert create_score_idx == [
                 "CREATE UNIQUE INDEX [score_idx] ON [score] ([concept]",
-                ");",
+                ")",
+                ";",
             ]
 
 
 def test_create_table_no_pk_nk(empty_transaction):
     flavor = empty_transaction.flavor
     schema = Schema()
-    Table(  #  Table with no primary key or natural key
-        "score",
-        columns={
-            "score": "int",
-        },
-        natural_key=None,
-        primary_key=None,
-        schema=schema,
-    )
+    with pytest.warns(UserWarning):
+        Table(  #  Table with no primary key or natural key
+            "score",
+            columns={
+                "score": "int",
+            },
+            natural_key=None,
+            primary_key=None,
+            schema=schema,
+        )
     lines = list(schema.setup_statements(trn=empty_transaction))
     (create_score,) = map(strip_lines, lines)
 
@@ -287,5 +315,29 @@ def test_create_unique_index():
     assert lines == [
         'CREATE UNIQUE INDEX my_table_idx ON "my_table" (',
         '"name"',
-        ");",
+        ")",
+        ";",
     ]
+
+
+def test_create_nullable_unique_index(dsn):
+    stmt = Statement("create_unique_index").table("my_table").natural_key(["name"])
+    if "postgresql" in dsn:
+        stmt = stmt.nulls_not_distinct(True)
+    doc = stmt()
+    lines = strip_lines(doc)
+    if "postgresql" in dsn:
+        assert lines == [
+            'CREATE UNIQUE INDEX my_table_idx ON "my_table" (',
+            '"name"',
+            ")",
+            "NULLS NOT DISTINCT",
+            ";",
+        ]
+    else:
+        assert lines == [
+            'CREATE UNIQUE INDEX my_table_idx ON "my_table" (',
+            '"name"',
+            ")",
+            ";",
+        ]

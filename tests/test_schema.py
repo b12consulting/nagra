@@ -85,6 +85,13 @@ def test_toml_generation():
     # Start from schema
     src = HERE / "assets" / "sample_schema.toml"
     test_schema = Schema.from_toml(src)
+    Table(
+        "nullable_table",
+        columns={"key": "uuid"},
+        natural_key=["key"],
+        nullable=["key"],
+        schema=test_schema,
+    )
 
     clone_toml = test_schema.generate_toml()
     clone_schema = Schema()
@@ -115,6 +122,52 @@ def test_incorrect_nk(empty_transaction):
             },
             natural_key=["i_do_not_exist"],
         )
+
+
+def test_inconsistent_nullable(empty_transaction):
+    with pytest.raises(IncorrectSchema):
+        Table(
+            "bad_nullable",
+            columns={
+                "key": "uuid",
+                "name": "varchar",
+            },
+            not_null=["key"],
+            nullable=["key"],
+        )
+
+
+def test_nullable_not_in_natural_key(empty_transaction):
+    with pytest.raises(IncorrectSchema):
+        Table(
+            "bad_nullable_nk",
+            columns={
+                "key": "uuid",
+                "name": "varchar",
+            },
+            natural_key=["key"],
+            nullable=["name"],
+        )
+
+
+def test_table_eq_includes_nullable():
+    nullable_schema = Schema()
+    nullable_table = Table(
+        "nullable_table",
+        columns={"key": "uuid", "name": "varchar"},
+        natural_key=["key"],
+        nullable=["key"],
+        schema=nullable_schema,
+    )
+    required_schema = Schema()
+    required_table = Table(
+        "nullable_table",
+        columns={"key": "uuid", "name": "varchar"},
+        natural_key=["key"],
+        schema=required_schema,
+    )
+
+    assert nullable_table.eq(required_table) is False
 
 
 def test_create_tables(schema, empty_transaction):
@@ -181,7 +234,10 @@ def test_schema_from_nagra_db(transaction: Transaction):
     if transaction.flavor == "mssql":
         # We ignore table with array for mssql
         tables.remove("parameter")
-    assert sorted(schema.tables) == tables
+    if transaction.flavor == "postgresql":
+        # add table with nullable natural key columns
+        tables.append("temperature_nullable_nk")
+    assert sorted(schema.tables) == sorted(tables)
     assert all(schema.tables[n].is_view for n in ["max_pop", "min_pop"])
 
     views = [
