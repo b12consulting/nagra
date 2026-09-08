@@ -3,6 +3,9 @@
 
 ### Unreleased
 
+
+### 0.11 (released 2026-09-08)
+
 **PostgreSQL**
 - PostgreSQL transactions now share a connection pool per DSN.
   Connections are checked out from the pool on first use and returned
@@ -25,6 +28,7 @@
 **Misc**:
 - Bug fix: When default value is provided for a column, it was ignored
   when the default value was false-ish (for example `0` or `""`).
+- Documentation for the command line usage: see [cli.md](examples/cli.md).
 
 
 ### 0.10 (released 2025-11-27)
