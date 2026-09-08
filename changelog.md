@@ -1,7 +1,7 @@
 
 # Changelog
 
-### Unreleased
+<!-- ### Unreleased -->
 
 
 ### 0.11 (released 2026-09-08)
