@@ -11,7 +11,8 @@ from nagra import Statement, Schema
 from nagra.exceptions import ValidationError
 from nagra.transaction import Transaction
 from nagra.writer import WriterMixin
-from nagra.utils import snake_to_pascal, get_table_from_dataclass, iter_dataclass_cols
+from nagra.utils import get_table_from_dataclass, iter_dataclass_cols
+
 
 if TYPE_CHECKING:
     from nagra.table import Table, Env

@@ -4,7 +4,7 @@ import pytest
 
 from nagra import Table, Schema
 from nagra.table import Column
-from nagra.exceptions import IncorrectSchema, InvalidTableName
+from nagra.exceptions import IncorrectSchema
 from nagra.transaction import Transaction
 from nagra.view import View
 

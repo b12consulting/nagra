@@ -19,7 +19,7 @@
   '(=id 42)'` can now be written `nagra select user id=42`. See also
   the new guide for the command line in <examples/cli.md>
 - New methods in `Schema`: `get_table` and `get_view` explicitly
-  return a table and view, respectively. This avois the type ambiguity
+  return a table and view, respectively. This avoid the type ambiguity
   of the `get` method.
 
 **Misc**:
