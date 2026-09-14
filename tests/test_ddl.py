@@ -83,6 +83,42 @@ def test_create_table(empty_transaction):
             ]
 
 
+def test_create_table_with_vector(empty_transaction):
+    if empty_transaction.flavor != "postgresql":
+        pytest.skip("pgvector is only supported by PostgreSQL")
+
+    schema = Schema()
+    Table(
+        "vector_documents",
+        columns={
+            "name": "varchar",
+            "embedding": "vector(1536)",
+        },
+        natural_key=["name"],
+        schema=schema,
+    )
+
+    create_table, create_idx = map(
+        strip_lines, schema.setup_statements(trn=empty_transaction)
+    )
+    assert create_table == [
+        'CREATE TABLE  "vector_documents" (',
+        '"id" BIGSERIAL PRIMARY KEY',
+        ",",
+        '"name" TEXT',
+        "NOT NULL",
+        ",",
+        '"embedding" VECTOR(1536)',
+        ");",
+    ]
+    assert create_idx == [
+        'CREATE UNIQUE INDEX vector_documents_idx ON "vector_documents" (',
+        '"name"',
+        ")",
+        ";",
+    ]
+
+
 def test_nullable_natural_key_backend_support(empty_transaction):
     schema = Schema()
     Table(
