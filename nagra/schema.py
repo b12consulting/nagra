@@ -410,6 +410,28 @@ class Schema:
             )
             yield stmt()
 
+    def _create_vector_indexes(self, db_indexes, trn):
+        if trn.flavor != "postgresql":
+            return
+
+        for table in self.tables.values():
+            if table.is_view:
+                continue
+            for column in table.columns.values():
+                if column.dtype != "vector":
+                    continue
+                index_name = f"{table.name}_{column.name}_hnsw_idx"
+                if index_name in db_indexes:
+                    continue
+                stmt = Statement(
+                    "create_vector_index",
+                    trn.flavor,
+                    index_name=index_name,
+                    table=table.name,
+                    column=column.name,
+                )
+                yield stmt()
+
     def setup_statements(self, trn: Optional[Transaction] = None):
         trn = trn or Transaction.current()
         # Find existing tables and columns
@@ -417,10 +439,18 @@ class Schema:
         db_fks = self._db_fk(trn=trn)
         db_indexes = self._db_indexes(trn)
 
+        if trn.flavor == "postgresql" and any(
+            column.dtype == "vector"
+            for table in self.tables.values()
+            for column in table.columns.values()
+        ):
+            yield Statement("create_vector_extension", trn.flavor)()
+
         yield from self._create_tables(db_columns, trn)
         yield from self._add_columns(db_columns, db_fks=db_fks, trn=trn)
         yield from self._create_indexes(db_indexes, trn)
         yield from self._create_views(trn)
+        yield from self._create_vector_indexes(db_indexes, trn)
 
     def create_tables(self, trn=None):
         """

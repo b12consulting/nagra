@@ -98,9 +98,10 @@ def test_create_table_with_vector(empty_transaction):
         schema=schema,
     )
 
-    create_table, create_idx = map(
+    extension, create_table, create_idx, vector_idx = map(
         strip_lines, schema.setup_statements(trn=empty_transaction)
     )
+    assert extension == ["CREATE EXTENSION IF NOT EXISTS vector;"]
     assert create_table == [
         'CREATE TABLE  "vector_documents" (',
         '"id" BIGSERIAL PRIMARY KEY',
@@ -116,6 +117,10 @@ def test_create_table_with_vector(empty_transaction):
         '"name"',
         ")",
         ";",
+    ]
+    assert vector_idx == [
+        'CREATE INDEX "vector_documents_embedding_hnsw_idx" ON "vector_documents" USING HNSW',
+        '("embedding" vector_cosine_ops);',
     ]
 
 
