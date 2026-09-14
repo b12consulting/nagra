@@ -237,6 +237,7 @@ def test_schema_from_nagra_db(transaction: Transaction):
     if transaction.flavor == "postgresql":
         # add table with nullable natural key columns
         tables.append("temperature_nullable_nk")
+        tables.append("vector_document")
     assert sorted(schema.tables) == sorted(tables)
     assert all(schema.tables[n].is_view for n in ["max_pop", "min_pop"])
 

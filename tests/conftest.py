@@ -193,6 +193,17 @@ def schema(dsn):
         schema=schema,
     )
 
+    if "postgresql" in dsn:
+        vector_document_table = Table(
+            "vector_document",
+            columns={
+                "name": "varchar",
+                "embedding": "vector(3)",
+            },
+            natural_key=["name"],
+            schema=schema,
+        )
+
     population_table = Table(
         "population",
         columns={
@@ -302,6 +313,11 @@ def max_pop(schema: Schema):
 @pytest.fixture(scope="session")
 def parameter(schema: Schema):
     return schema.tables["parameter"]
+
+
+@pytest.fixture(scope="session")
+def vector_document(schema: Schema):
+    return schema.tables.get("vector_document")
 
 
 @pytest.fixture(scope="session")

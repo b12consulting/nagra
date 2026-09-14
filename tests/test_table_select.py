@@ -5,6 +5,34 @@ from nagra import Transaction
 from nagra.utils import strip_lines
 
 
+def test_vector_cosine_distance(transaction, vector_document):
+    if transaction.flavor != "postgresql":
+        pytest.skip("pgvector is only supported by PostgreSQL")
+
+    vector_document.insert("name", "embedding").executemany(
+        [
+            ("identical", "[1,0,0]"),
+            ("orthogonal", "[0,1,0]"),
+            ("opposite", "[-1,0,0]"),
+        ]
+    )
+
+    query = "[1,0,0]"
+    rows = list(
+        vector_document
+        .select("name", "(<=> embedding {})")
+        .orderby("(<=> embedding {})")
+        .execute(query, query)
+    )
+
+    assert [name for name, _distance in rows] == [
+        "identical",
+        "orthogonal",
+        "opposite",
+    ]
+    assert [distance for _name, distance in rows] == pytest.approx([0.0, 1.0, 2.0])
+
+
 def test_simple_select(person):
     stm = person.select("name").stm()
     res = " ".join(strip_lines(stm))
