@@ -5,7 +5,7 @@
 - Add support for AI embeddings indexes with PGVector.
   You can now define a table like this:
 
-  """ python
+  ``` python
   [chunk]
   natural_key = ["document", "position"]
   [chunk.columns]
@@ -14,7 +14,7 @@
   embeddings = "vector(1536)"
   [chunk.foreign_keys]
   document = "document"
-  """
+  ```
 
   It will automatically trigger the activation of the `vector`
   extension. And when that table will be created, an HNSW index will
