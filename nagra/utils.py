@@ -77,6 +77,30 @@ def template(name):
     return jinja_env.get_template(name)
 
 
+def resolve_args(args, kwargs, placeholder_names):
+    """Resolve positional and named query arguments in placeholder order."""
+    used = {name for name in placeholder_names if name is not None}
+    unknown = set(kwargs) - used
+    if unknown:
+        names = ", ".join(sorted(unknown))
+        raise TypeError(f"Unknown query argument: {names}")
+
+    positional = iter(args)
+    for name in placeholder_names:
+        if name is None:
+            try:
+                yield next(positional)
+            except StopIteration as exc:
+                raise TypeError("Missing positional query argument") from exc
+        else:
+            try:
+                yield kwargs[name]
+            except KeyError as exc:
+                raise TypeError(f"Missing query argument: {name}") from exc
+
+    yield from positional
+
+
 def strip_lines(stmt):
     res = []
     for r in stmt.splitlines():

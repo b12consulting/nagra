@@ -8,7 +8,12 @@ from typing import Optional, Union, TYPE_CHECKING
 from nagra import Statement, Schema
 from nagra.exceptions import ValidationError
 from nagra.sexpr import AST, AggToken, ParamToken
-from nagra.utils import snake_to_pascal, get_table_from_dataclass, iter_dataclass_cols
+from nagra.utils import (
+    snake_to_pascal,
+    get_table_from_dataclass,
+    iter_dataclass_cols,
+    resolve_args,
+)
 
 if TYPE_CHECKING:
     from nagra.table import Env, Table
@@ -83,7 +88,6 @@ class Select:
         return cln
 
     def args(self, *args, **kwargs):
-        """Bind positional and named arguments to this select."""
         cln = self.clone()
         cln._args += args
         cln._kwargs.update(kwargs)
@@ -392,7 +396,10 @@ class Select:
             yield autonest(record)
 
     def _placeholder_names(self):
-        """Return parameter names in the order used by the rendered SQL."""
+        """
+        Return placeholder names in SQL order; ``None`` represents
+        `{}`.
+        """
         groupby_ast = tuple(self.groupby_ast or self.infer_groupby())
         asts = (
             self.distinct_on_ast
@@ -408,41 +415,20 @@ class Select:
             if isinstance(token, ParamToken)
         ]
 
-    def _execute_args(self, args):
-        positional = iter(self._args + args)
-        named = self._kwargs
-        result = []
-        for name in self._placeholder_names():
-            if name is None:
-                try:
-                    result.append(next(positional))
-                except StopIteration as exc:
-                    raise TypeError("Missing positional query argument") from exc
-            else:
-                try:
-                    result.append(named[name])
-                except KeyError as exc:
-                    raise TypeError(f"Missing query argument: {name}") from exc
-
-        extra = tuple(positional)
-        if extra:
-            result.extend(extra)
-        if named:
-            used = set(name for name in self._placeholder_names() if name is not None)
-            unknown = set(named) - used
-            if unknown:
-                names = ", ".join(sorted(unknown))
-                raise TypeError(f"Unknown query argument: {names}")
-        return tuple(result)
-
     def execute(self, *args):
-        return self.trn.execute(self.stm(), self._execute_args(args))
+        names = self._placeholder_names()
+        resolved = tuple(resolve_args(self._args + args, self._kwargs, names))
+        return self.trn.execute(self.stm(), resolved)
 
     def executemany(self, args):
         return self.trn.executemany(self.stm(), args)
 
     def one(self, *args):
-        return self.trn.execute(self.stm(), self._execute_args(args)).fetchone()
+        names = self._placeholder_names()
+        resolved = tuple(resolve_args(self._args + args, self._kwargs, names))
+        return self.trn.execute(
+            self.stm(), resolved,
+        ).fetchone()
 
     def __iter__(self):
         return iter(self.execute())

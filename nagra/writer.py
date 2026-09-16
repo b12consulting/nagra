@@ -6,7 +6,7 @@ from itertools import islice
 from typing import TYPE_CHECKING
 
 from nagra.exceptions import UnresolvedFK, ValidationError
-from nagra.utils import logger
+from nagra.utils import logger, resolve_args
 from nagra.transaction import ExecMany
 
 
@@ -22,6 +22,17 @@ class WriterMixin:
 
     def __init__(self):
         self.groups, self.resolve_stm = self.prepare()
+
+    def _resolve_values(self, values):
+        if not self._kwargs:
+            return self._args + values
+
+        placeholder_names = [
+            column if column in self._kwargs else None for column in self.columns
+        ]
+        return tuple(
+            resolve_args(self._args + values, self._kwargs, placeholder_names)
+        )
 
     def prepare(self):
         """
@@ -47,7 +58,7 @@ class WriterMixin:
         return groups, resolve_stm
 
     def execute(self, *values):
-        ids = self.executemany([values])
+        ids = self.executemany([self._resolve_values(values)])
         if ids:
             return ids[0]
 

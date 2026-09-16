@@ -36,6 +36,8 @@ class Upsert(WriterMixin):
         self._check = list(check)
         self.trn = trn
         self.env = env
+        self._args = tuple()
+        self._kwargs = {}
         super().__init__()
 
     def clone(
@@ -59,6 +61,14 @@ class Upsert(WriterMixin):
             insert_only=insert_only,
             check=check,
         )
+        cln._args = self._args
+        cln._kwargs = self._kwargs.copy()
+        return cln
+
+    def args(self, *args, **kwargs):
+        cln = self.clone()
+        cln._args += args
+        cln._kwargs.update(kwargs)
         return cln
 
     def insert_only(self):
