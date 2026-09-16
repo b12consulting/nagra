@@ -21,6 +21,9 @@
                             # values below zero for Brussels
   ```
 
+  Write queries also accept keyword values directly, as in
+  `city_table.upsert(sunny, name="Madrid").execute("yes")`.
+
 
 ### 0.11 (released 2026-09-08)
 

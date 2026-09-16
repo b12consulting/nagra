@@ -69,6 +69,16 @@ def test_write_queries_support_chainable_named_args(transaction, person):
     ]
 
 
+def test_write_factory_accepts_keyword_values(transaction, person):
+    parent_id = person.upsert(name="Parent").execute()
+    person.upsert("name", parent=parent_id).execute("Child")
+
+    assert list(person.select("name", "parent.name")) == [
+        ("Parent", None),
+        ("Child", "Parent"),
+    ]
+
+
 def test_insert(cacheable_transaction, person):
     # First upsert
     upsert = person.upsert("name")

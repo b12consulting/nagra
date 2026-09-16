@@ -317,6 +317,7 @@ class Table:
         *columns,
         trn: Optional[Transaction] = None,
         lenient: Union[bool, list[str]] = False,
+        **values,
     ):
         """
         Create an upsert object based on the given columns, if
@@ -329,34 +330,45 @@ class Table:
 
         If lenient is set to True all foreign keys will be treated as such.
         """
-        if not columns:
+        if values:
+            columns = tuple(columns) + tuple(c for c in values if c not in columns)
+        elif not columns:
             columns = self.default_columns()
         trn = trn or Transaction.current()
-        return Upsert(self, *columns, trn=trn, env=Env(self), lenient=lenient)
+        upsert = Upsert(self, *columns, trn=trn, env=Env(self), lenient=lenient)
+        return upsert.args(**values) if values else upsert
 
     def update(
         self,
         *columns,
         trn: Optional[Transaction] = None,
         lenient: Union[bool, list[str]] = False,
+        **values,
     ):
-        if not columns:
+        if values:
+            columns = tuple(columns) + tuple(c for c in values if c not in columns)
+        elif not columns:
             columns = self.default_columns()
         trn = trn or Transaction.current()
-        return Update(self, *columns, trn=trn, lenient=lenient)
+        update = Update(self, *columns, trn=trn, lenient=lenient)
+        return update.args(**values) if values else update
 
     def insert(
         self,
         *columns,
         trn: Optional[Transaction] = None,
         lenient: Union[bool, list[str]] = False,
+        **values,
     ):
         """
         Provide an insert-only statement (won't raise error if
         record already exists). See `Table.upsert` for `lenient` role.
         """
         trn = trn or Transaction.current()
-        return self.upsert(*columns, trn=trn, lenient=lenient).insert_only()
+        insert = self.upsert(
+            *columns, trn=trn, lenient=lenient, **values
+        ).insert_only()
+        return insert
 
     def copy_from(
         self,
