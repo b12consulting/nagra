@@ -1,7 +1,25 @@
 
 # Changelog
 
-<!-- ### Unreleased -->
+### Unreleased
+
+- Add chainable `.args()` support with positional and named parameters for
+  select, delete, upsert, insert, and update queries, e.g.
+
+  ``` python
+  temp = Table.get("temperature")
+  select = temp.select(
+      "value",
+  ).where(
+      "(< value {})",
+      "(= city.name {name})",
+  ).args(
+      0,
+      name="Brussels",
+  )
+  result = select.execute() # Result will contain the all
+                            # values below zero for Brussels
+  ```
 
 
 ### 0.11 (released 2026-09-08)
