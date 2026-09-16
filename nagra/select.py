@@ -7,7 +7,7 @@ from typing import Optional, Union, TYPE_CHECKING
 
 from nagra import Statement, Schema
 from nagra.exceptions import ValidationError
-from nagra.sexpr import AST, AggToken
+from nagra.sexpr import AST, AggToken, ParamToken
 from nagra.utils import snake_to_pascal, get_table_from_dataclass, iter_dataclass_cols
 
 if TYPE_CHECKING:
@@ -43,6 +43,7 @@ class Select:
         self.order_ast = tuple()
         self.order_directions = tuple()
         self._args = tuple()
+        self._kwargs = {}
         self.columns = tuple()
         self.columns_ast = tuple()
         self.query_columns = tuple()
@@ -68,6 +69,7 @@ class Select:
         cln.order_ast = self.order_ast
         cln.order_directions = self.order_directions
         cln._args = self._args
+        cln._kwargs = self._kwargs.copy()
         cln._limit = self._limit
         cln._offset = self._offset
         cln._aliases = self._aliases
@@ -80,10 +82,11 @@ class Select:
         cln.where_asts += tuple(AST.parse(cond) for cond in conditions)
         return cln
 
-    def args(self, *args):
-        """Bind arguments to this select for subsequent execution."""
+    def args(self, *args, **kwargs):
+        """Bind positional and named arguments to this select."""
         cln = self.clone()
         cln._args += args
+        cln._kwargs.update(kwargs)
         return cln
 
     def aliases(self, *names: str):
@@ -388,14 +391,58 @@ class Select:
             record = dict(zip(self.columns, row))
             yield autonest(record)
 
+    def _placeholder_names(self):
+        """Return parameter names in the order used by the rendered SQL."""
+        groupby_ast = tuple(self.groupby_ast or self.infer_groupby())
+        asts = (
+            self.distinct_on_ast
+            + self.columns_ast
+            + self.where_asts
+            + groupby_ast
+            + self.order_ast
+        )
+        return [
+            token.value or None
+            for ast in asts
+            for token in ast.chain()
+            if isinstance(token, ParamToken)
+        ]
+
+    def _execute_args(self, args):
+        positional = iter(self._args + args)
+        named = self._kwargs
+        result = []
+        for name in self._placeholder_names():
+            if name is None:
+                try:
+                    result.append(next(positional))
+                except StopIteration as exc:
+                    raise TypeError("Missing positional query argument") from exc
+            else:
+                try:
+                    result.append(named[name])
+                except KeyError as exc:
+                    raise TypeError(f"Missing query argument: {name}") from exc
+
+        extra = tuple(positional)
+        if extra:
+            result.extend(extra)
+        if named:
+            used = set(name for name in self._placeholder_names() if name is not None)
+            unknown = set(named) - used
+            if unknown:
+                names = ", ".join(sorted(unknown))
+                raise TypeError(f"Unknown query argument: {names}")
+        return tuple(result)
+
     def execute(self, *args):
-        return self.trn.execute(self.stm(), self._args + args)
+        return self.trn.execute(self.stm(), self._execute_args(args))
 
     def executemany(self, args):
         return self.trn.executemany(self.stm(), args)
 
     def one(self, *args):
-        return self.trn.execute(self.stm(), self._args + args).fetchone()
+        return self.trn.execute(self.stm(), self._execute_args(args)).fetchone()
 
     def __iter__(self):
         return iter(self.execute())

@@ -118,6 +118,19 @@ def test_select_args_are_chainable_and_append_to_execute_args(transaction, perso
     ]
 
 
+def test_select_args_support_named_and_mixed_arguments(transaction, person):
+    person.upsert("name").executemany([("Alice",), ("Bob",)])
+
+    named = person.select("name").where("(= name {name})")
+    assert list(named.args(name="Bob").execute()) == [("Bob",)]
+
+    mixed = person.select("name").where("(or (= name {name}) (= name {}))")
+    assert sorted(row[0] for row in mixed.args("Alice", name="Bob").execute()) == [
+        "Alice",
+        "Bob",
+    ]
+
+
 def test_select_where_and_join(person):
     select = person.select("name").where("(= parent.name 'foo')")
     stm = select.stm()
