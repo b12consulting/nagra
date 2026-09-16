@@ -42,6 +42,7 @@ class Select:
         self.groupby_ast = tuple()
         self.order_ast = tuple()
         self.order_directions = tuple()
+        self._args = tuple()
         self.columns = tuple()
         self.columns_ast = tuple()
         self.query_columns = tuple()
@@ -66,6 +67,7 @@ class Select:
         cln.groupby_ast = self.groupby_ast
         cln.order_ast = self.order_ast
         cln.order_directions = self.order_directions
+        cln._args = self._args
         cln._limit = self._limit
         cln._offset = self._offset
         cln._aliases = self._aliases
@@ -76,6 +78,12 @@ class Select:
     def where(self, *conditions: str):
         cln = self.clone()
         cln.where_asts += tuple(AST.parse(cond) for cond in conditions)
+        return cln
+
+    def args(self, *args):
+        """Bind arguments to this select for subsequent execution."""
+        cln = self.clone()
+        cln._args += args
         return cln
 
     def aliases(self, *names: str):
@@ -381,13 +389,13 @@ class Select:
             yield autonest(record)
 
     def execute(self, *args):
-        return self.trn.execute(self.stm(), args)
+        return self.trn.execute(self.stm(), self._args + args)
 
     def executemany(self, args):
         return self.trn.executemany(self.stm(), args)
 
     def one(self, *args):
-        return self.trn.execute(self.stm(), args).fetchone()
+        return self.trn.execute(self.stm(), self._args + args).fetchone()
 
     def __iter__(self):
         return iter(self.execute())

@@ -105,6 +105,19 @@ def test_select_with_where(person):
     ]
 
 
+def test_select_args_are_chainable_and_append_to_execute_args(transaction, person):
+    person.upsert("name").executemany([("Alice",), ("Bob",)])
+
+    select = person.select("name").where("(or (= name {}) (= name {}))")
+    bound = select.args("Alice").args("Nobody")
+
+    assert [row[0] for row in bound.execute()] == ["Alice"]
+    assert sorted(row[0] for row in select.args("Alice").execute("Bob")) == [
+        "Alice",
+        "Bob",
+    ]
+
+
 def test_select_where_and_join(person):
     select = person.select("name").where("(= parent.name 'foo')")
     stm = select.stm()
