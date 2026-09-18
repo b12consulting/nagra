@@ -33,6 +33,15 @@ def test_vector_cosine_distance(transaction, vector_document):
     assert [distance for _name, distance in rows] == pytest.approx([0.0, 1.0, 2.0])
 
 
+def test_vector_cosine_distance_with_list(transaction, vector_document):
+    if transaction.flavor != "postgresql":
+        pytest.skip("pgvector is only supported by PostgreSQL")
+
+    vector_document.insert("name", "embedding").execute(
+        "list", [1.0, 0.0, 0.0]
+    )
+
+
 def test_simple_select(person):
     stm = person.select("name").stm()
     res = " ".join(strip_lines(stm))
