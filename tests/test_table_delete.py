@@ -64,3 +64,11 @@ def test_delete_supports_chainable_named_args(transaction, person):
     person.delete("(= name {name})").args(name="Alice").execute()
 
     assert list(person.select("name")) == [("Bob",)]
+
+
+def test_delete_execute_supports_named_args(transaction, person):
+    person.upsert("name").executemany([("Alice",), ("Bob",)])
+
+    person.delete("(= name {name})").execute(name="Alice")
+
+    assert list(person.select("name")) == [("Bob",)]

@@ -131,6 +131,14 @@ def test_select_args_support_named_and_mixed_arguments(transaction, person):
     ]
 
 
+def test_select_execute_supports_named_arguments(transaction, person):
+    person.upsert("name").executemany([("Alice",), ("Bob",)])
+
+    select = person.select("name").where("(= name {name})")
+
+    assert list(select.execute(name="Bob")) == [("Bob",)]
+
+
 def test_select_where_and_join(person):
     select = person.select("name").where("(= parent.name 'foo')")
     stm = select.stm()

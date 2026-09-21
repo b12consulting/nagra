@@ -69,6 +69,17 @@ def test_write_queries_support_chainable_named_args(transaction, person):
     ]
 
 
+def test_write_queries_execute_supports_named_args(transaction, person):
+    person.upsert("name").execute(name="Alice")
+    person.update("name", "parent").execute(name="Alice", parent=None)
+    person.insert("name").execute(name="Charly")
+
+    assert sorted(row[0] for row in person.select("name")) == [
+        "Alice",
+        "Charly",
+    ]
+
+
 def test_write_factory_accepts_keyword_values(transaction, person):
     parent_id = person.upsert(name="Parent").execute()
     person.upsert("name", parent=parent_id).execute("Child")
