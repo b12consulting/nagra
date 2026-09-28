@@ -77,7 +77,7 @@ _TYPE_ALIAS = {
     "tinyint": "int",
     "varchar": "str",
     "bigint": "bigint",
-    "vector": "float []",
+    "vector": "vector",
     "bytea": "blob",
     "bytes": "blob",
     "float": "float",
@@ -110,6 +110,7 @@ _DB_TYPE = {
         "int": "INTEGER",
         "bigint": "BIGINT",
         "float": "FLOAT",
+        "vector": "VECTOR",
         "timestamp": "TIMESTAMP",
         "timestamptz": "TIMESTAMPTZ",
         "date": "DATE",
@@ -152,12 +153,15 @@ class Column:
 
     def __init__(self, name: str, dtype: str):
         self.name = name.strip()
+        dtype = dtype.strip()
         if "[" in dtype:
             dtype, dims = dtype.split("[", 1)
-            self.dtype = dtype.strip()
             self.dims = "[" + dims.strip()
+        elif dtype.lower().startswith("vector(") and dtype.endswith(")"):
+            # pgvector uses vector(n), while regular SQL arrays use []
+            dtype, dims = dtype.split("(", 1)
+            self.dims = "(" + dims.strip()
         else:
-            self.dtype = dtype.strip()
             self.dims = ""
         try:
             self.dtype = _TYPE_ALIAS[dtype.strip().lower()]
@@ -170,7 +174,11 @@ class Column:
     def eq(self, other):
         if not isinstance(other, Column):
             return False
-        return self.name == other.name and self.dtype == other.dtype
+        return (
+            self.name == other.name
+            and self.dtype == other.dtype
+            and self.dims == other.dims
+        )
 
     def python_type(self):
         res = None
@@ -181,6 +189,8 @@ class Column:
                 res = str
             case "float":
                 res = float
+            case "vector":
+                res = list[float]
             case "timestamp" | "timestamptz":
                 res = datetime
             case "bool":
@@ -196,6 +206,8 @@ class Column:
             case _:
                 raise RuntimeError("Unexpected error")
 
+        # Vector dimensions are encoded in parentheses and describe the
+        # length of the vector, not another Python container dimension.
         for c in self.dims:
             if c == "[":
                 res = list[res]
