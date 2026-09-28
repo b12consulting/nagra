@@ -307,9 +307,9 @@ class ParamToken(Token):
     def __init__(self, value):
         # Remove braces
         self.value = value[1:-1]
-        # TODO self.value placeholder name we should use it to apply
-        # param, for example when we do:
-        # select.where('(= col {my_input})').execute(my_input=42)
+
+    def get_arg(self):
+        return self.value or None
 
     def _eval(self, env, flavor, *args):
         placeholder = "%s" if flavor == "postgresql" else "?"

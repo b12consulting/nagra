@@ -7,8 +7,13 @@ from typing import Optional, Union, TYPE_CHECKING
 
 from nagra import Statement, Schema
 from nagra.exceptions import ValidationError
-from nagra.sexpr import AST, AggToken
-from nagra.utils import snake_to_pascal, get_table_from_dataclass, iter_dataclass_cols
+from nagra.sexpr import AST, AggToken, ParamToken
+from nagra.utils import (
+    snake_to_pascal,
+    get_table_from_dataclass,
+    iter_dataclass_cols,
+    resolve_args,
+)
 
 if TYPE_CHECKING:
     from nagra.table import Env, Table
@@ -42,6 +47,8 @@ class Select:
         self.groupby_ast = tuple()
         self.order_ast = tuple()
         self.order_directions = tuple()
+        self._args = tuple()
+        self._kwargs = {}
         self.columns = tuple()
         self.columns_ast = tuple()
         self.query_columns = tuple()
@@ -66,6 +73,8 @@ class Select:
         cln.groupby_ast = self.groupby_ast
         cln.order_ast = self.order_ast
         cln.order_directions = self.order_directions
+        cln._args = self._args
+        cln._kwargs = self._kwargs.copy()
         cln._limit = self._limit
         cln._offset = self._offset
         cln._aliases = self._aliases
@@ -76,6 +85,12 @@ class Select:
     def where(self, *conditions: str):
         cln = self.clone()
         cln.where_asts += tuple(AST.parse(cond) for cond in conditions)
+        return cln
+
+    def args(self, *args, **kwargs):
+        cln = self.clone()
+        cln._args += args
+        cln._kwargs.update(kwargs)
         return cln
 
     def aliases(self, *names: str):
@@ -380,14 +395,40 @@ class Select:
             record = dict(zip(self.columns, row))
             yield autonest(record)
 
+    def _placeholder_names(self):
+        """
+        Return placeholder names in SQL order; ``None`` represents
+        `{}`.
+        """
+        groupby_ast = tuple(self.groupby_ast or self.infer_groupby())
+        asts = (
+            self.distinct_on_ast
+            + self.columns_ast
+            + self.where_asts
+            + groupby_ast
+            + self.order_ast
+        )
+        return [
+            token.value or None
+            for ast in asts
+            for token in ast.chain()
+            if isinstance(token, ParamToken)
+        ]
+
     def execute(self, *args):
-        return self.trn.execute(self.stm(), args)
+        names = self._placeholder_names()
+        resolved = tuple(resolve_args(self._args + args, self._kwargs, names))
+        return self.trn.execute(self.stm(), resolved)
 
     def executemany(self, args):
         return self.trn.executemany(self.stm(), args)
 
     def one(self, *args):
-        return self.trn.execute(self.stm(), args).fetchone()
+        names = self._placeholder_names()
+        resolved = tuple(resolve_args(self._args + args, self._kwargs, names))
+        return self.trn.execute(
+            self.stm(), resolved,
+        ).fetchone()
 
     def __iter__(self):
         return iter(self.execute())

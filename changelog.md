@@ -2,6 +2,27 @@
 # Changelog
 
 ### Unreleased
+
+- Add chainable `.args()` support with positional and named parameters for
+  select, delete, upsert, insert, and update queries, e.g.
+
+  ``` python
+  temp = Table.get("temperature")
+  select = temp.select(
+      "value",
+  ).where(
+      "(< value {})",
+      "(= city.name {name})",
+  ).args(
+      0,
+      name="Brussels",
+  )
+  result = select.execute() # Result will contain the all
+                            # values below zero for Brussels
+  ```
+
+  Write queries also accept keyword values directly, as in
+  `city_table.upsert(sunny, name="Madrid").execute("yes")`.
 - Add support for AI embeddings indexes with PGVector.
   You can now define a table like this:
 

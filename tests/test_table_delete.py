@@ -56,3 +56,11 @@ def test_delete_cascade(transaction, person, skill):
     # Same, but with an  arg
     person.delete("(= name {})").execute("Yankee")
     assert list(skill) == []
+
+
+def test_delete_supports_chainable_named_args(transaction, person):
+    person.upsert("name").executemany([("Alice",), ("Bob",)])
+
+    person.delete("(= name {name})").args(name="Alice").execute()
+
+    assert list(person.select("name")) == [("Bob",)]

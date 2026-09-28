@@ -54,6 +54,31 @@ def test_simple_upsert(cacheable_transaction, person):
     assert rows == [("Big Bob", None), ("Bob", "Big Bob")]
 
 
+def test_write_queries_support_chainable_named_args(transaction, person):
+    person.upsert("name").args(name="Alice").execute()
+    person.insert("name").args(name="Bob").execute()
+
+    person.update("name", "parent").args(name="Alice", parent=None).execute()
+    person.upsert("name", "parent.name").args(
+        "Alice", **{"parent.name": "Bob"}
+    ).execute()
+
+    assert sorted(person.select("name", "parent.name")) == [
+        ("Alice", "Bob"),
+        ("Bob", None),
+    ]
+
+
+def test_write_factory_accepts_keyword_values(transaction, person):
+    parent_id = person.upsert(name="Parent").execute()
+    person.upsert("name", parent=parent_id).execute("Child")
+
+    assert list(person.select("name", "parent.name")) == [
+        ("Parent", None),
+        ("Child", "Parent"),
+    ]
+
+
 def test_insert(cacheable_transaction, person):
     # First upsert
     upsert = person.upsert("name")

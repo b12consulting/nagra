@@ -2,7 +2,8 @@ from collections.abc import Iterable
 from typing import Optional, TYPE_CHECKING
 
 from nagra import Statement
-from nagra.sexpr import AST
+from nagra.sexpr import AST, ParamToken
+from nagra.utils import resolve_args
 
 if TYPE_CHECKING:
     from nagra.table import Table, Env
@@ -17,6 +18,8 @@ class Delete:
         self.trn = trn
         self.env = env
         self._where = list(where)
+        self._args = tuple()
+        self._kwargs = {}
 
     def clone(
         self,
@@ -35,10 +38,18 @@ class Delete:
             trn=trn,
             where=where,
         )
+        cln._args = self._args
+        cln._kwargs = self._kwargs.copy()
         return cln
 
     def where(self, *conditions: str):
         return self.clone(where=conditions)
+
+    def args(self, *args, **kwargs):
+        cln = self.clone()
+        cln._args += args
+        cln._kwargs.update(kwargs)
+        return cln
 
     def stm(self):
         asts = [AST.parse(cond) for cond in self._where]
@@ -55,8 +66,24 @@ class Delete:
     def __call__(self):
         return self.execute()
 
+    def _placeholder_names(self):
+        """
+        Return where-clause names in order; ``None`` represents
+        `{}`.
+        """
+        return [
+            token.value or None
+            for condition in self._where
+            for token in AST.parse(condition).chain()
+            if isinstance(token, ParamToken)
+        ]
+
     def execute(self, *args):
-        return self.trn.execute(self.stm(), args)
+        names = self._placeholder_names()
+        resolved = tuple(resolve_args(self._args + args, self._kwargs, names))
+        return self.trn.execute(
+            self.stm(), resolved,
+        )
 
     def executemany(self, args):
         return self.trn.executemany(self.stm(), args)
