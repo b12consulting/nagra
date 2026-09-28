@@ -23,15 +23,16 @@ class WriterMixin:
     def __init__(self):
         self.groups, self.resolve_stm = self.prepare()
 
-    def _resolve_values(self, values):
-        if not self._kwargs:
+    def _resolve_values(self, values, kwargs=None):
+        query_kwargs = self._kwargs | (kwargs or {})
+        if not query_kwargs:
             return self._args + values
 
         placeholder_names = [
-            column if column in self._kwargs else None for column in self.columns
+            column if column in query_kwargs else None for column in self.columns
         ]
         return tuple(
-            resolve_args(self._args + values, self._kwargs, placeholder_names)
+            resolve_args(self._args + values, query_kwargs, placeholder_names)
         )
 
     def prepare(self):
@@ -57,8 +58,8 @@ class WriterMixin:
             resolve_stm[col] = select.stm()
         return groups, resolve_stm
 
-    def execute(self, *values):
-        ids = self.executemany([self._resolve_values(values)])
+    def execute(self, *values, **kwargs):
+        ids = self.executemany([self._resolve_values(values, kwargs)])
         if ids:
             return ids[0]
 

@@ -78,9 +78,10 @@ class Delete:
             if isinstance(token, ParamToken)
         ]
 
-    def execute(self, *args):
+    def execute(self, *args, **kwargs):
         names = self._placeholder_names()
-        resolved = tuple(resolve_args(self._args + args, self._kwargs, names))
+        query_kwargs = self._kwargs | kwargs
+        resolved = tuple(resolve_args(self._args + args, query_kwargs, names))
         return self.trn.execute(
             self.stm(), resolved,
         )
