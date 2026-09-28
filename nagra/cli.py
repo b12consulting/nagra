@@ -24,6 +24,14 @@ def select(args, schema):
         eq_args.append(v)
 
     select = table.select(*cols)
+    aliases = list(chain.from_iterable(getattr(args, "alias", [])))
+    if aliases:
+        if len(aliases) > len(cols):
+            raise ValueError("More aliases were provided than selected columns")
+        headers = [d[0] for d in select.dtypes()]
+        aliases = aliases + headers[len(aliases) :]
+        select = select.aliases(*aliases)
+
     # Chain all where conditions (we allow multiple --where args)
     where = eq_where + args.where
     if where:
@@ -34,7 +42,7 @@ def select(args, schema):
         orderby = chain.from_iterable(args.orderby)
         select = select.orderby(*orderby)
     rows = list(select.execute(*eq_args))
-    headers = [d[0] for d in select.dtypes()]
+    headers = [d[0] for d in select.dtypes(*(aliases or []))]
 
     print_table(rows, headers, args.pivot, format=args.table_fmt)
 
@@ -138,6 +146,15 @@ def run():
     parser_select = subparsers.add_parser("select")
     parser_select.add_argument("table")
     parser_select.add_argument("columns", nargs="*")
+    parser_select.add_argument(
+        "--alias",
+        "-A",
+        type=str,
+        action="append",
+        default=[],
+        nargs="*",
+        help="Alias selected columns",
+    )
     parser_select.add_argument("--where", "-W", type=str, action="append", default=[])
     parser_select.add_argument("--limit", "-L", type=int)
     parser_select.add_argument(
