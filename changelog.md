@@ -17,7 +17,7 @@
       0,
       name="Brussels",
   )
-  result = select.execute() # Result will contain the all
+  result = select.execute() # Result will contain all the
                             # values below zero for Brussels
   ```
 
