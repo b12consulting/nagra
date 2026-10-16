@@ -7,6 +7,10 @@ class NoActiveTransaction(BaseException):
         super().__init__(msg)
 
 
+class TransactionReenterError(BaseException):
+    pass
+
+
 class UnresolvedFK(BaseException):
     pass
 

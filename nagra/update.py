@@ -8,7 +8,7 @@ from nagra.exceptions import ValidationError
 from nagra.transaction import Transaction
 from nagra.upsert import Upsert
 from nagra.writer import WriterMixin
-from nagra.utils import snake_to_pascal, get_table_from_dataclass, iter_dataclass_cols
+from nagra.utils import get_table_from_dataclass, iter_dataclass_cols
 
 
 if TYPE_CHECKING:
@@ -29,6 +29,8 @@ class Update(WriterMixin):
         self.lenient = lenient or []
         self._check = list(check)
         self.trn = trn
+        self._args = tuple()
+        self._kwargs = {}
         super().__init__()
 
     def clone(
@@ -48,6 +50,14 @@ class Update(WriterMixin):
             lenient=self.lenient,
             check=check,
         )
+        cln._args = self._args
+        cln._kwargs = self._kwargs.copy()
+        return cln
+
+    def args(self, *args, **kwargs):
+        cln = self.clone()
+        cln._args += args
+        cln._kwargs.update(kwargs)
         return cln
 
     def check(self, *conditions: str):

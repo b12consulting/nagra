@@ -1,8 +1,45 @@
-import datetime
+from datetime import datetime
 import pytest
 
 from nagra import Transaction
 from nagra.utils import strip_lines
+
+
+def test_vector_cosine_distance(transaction, vector_document):
+    if transaction.flavor != "postgresql":
+        pytest.skip("pgvector is only supported by PostgreSQL")
+
+    vector_document.insert("name", "embedding").executemany(
+        [
+            ("identical", "[1,0,0]"),
+            ("orthogonal", "[0,1,0]"),
+            ("opposite", "[-1,0,0]"),
+        ]
+    )
+
+    query = "[1,0,0]"
+    rows = list(
+        vector_document
+        .select("name", "(<=> embedding {})")
+        .orderby("(<=> embedding {})")
+        .execute(query, query)
+    )
+
+    assert [name for name, _distance in rows] == [
+        "identical",
+        "orthogonal",
+        "opposite",
+    ]
+    assert [distance for _name, distance in rows] == pytest.approx([0.0, 1.0, 2.0])
+
+
+def test_vector_cosine_distance_with_list(transaction, vector_document):
+    if transaction.flavor != "postgresql":
+        pytest.skip("pgvector is only supported by PostgreSQL")
+
+    vector_document.insert("name", "embedding").execute(
+        "list", [1.0, 0.0, 0.0]
+    )
 
 
 def test_simple_select(person):
@@ -18,11 +55,11 @@ def test_select_with_join(person):
         "SELECT",
         '"person"."name", "parent_1"."name"',
         'FROM "person"',
-        'LEFT JOIN "person" as parent_0 ON (',
-        'parent_0."id" = "person"."parent"',
+        'LEFT JOIN "person" as "parent_0" ON (',
+        '"parent_0"."id" = "person"."parent"',
         ")",
-        'LEFT JOIN "person" as parent_1 ON (',
-        'parent_1."id" = "parent_0"."parent"',
+        'LEFT JOIN "person" as "parent_1" ON (',
+        '"parent_1"."id" = "parent_0"."parent"',
         ")",
         ";",
     ]
@@ -105,6 +142,40 @@ def test_select_with_where(person):
     ]
 
 
+def test_select_args_are_chainable_and_append_to_execute_args(transaction, person):
+    person.upsert("name").executemany([("Alice",), ("Bob",)])
+
+    select = person.select("name").where("(or (= name {}) (= name {}))")
+    bound = select.args("Alice").args("Nobody")
+
+    assert [row[0] for row in bound.execute()] == ["Alice"]
+    assert sorted(row[0] for row in select.args("Alice").execute("Bob")) == [
+        "Alice",
+        "Bob",
+    ]
+
+
+def test_select_args_support_named_and_mixed_arguments(transaction, person):
+    person.upsert("name").executemany([("Alice",), ("Bob",)])
+
+    named = person.select("name").where("(= name {name})")
+    assert list(named.args(name="Bob").execute()) == [("Bob",)]
+
+    mixed = person.select("name").where("(or (= name {name}) (= name {}))")
+    assert sorted(row[0] for row in mixed.args("Alice", name="Bob").execute()) == [
+        "Alice",
+        "Bob",
+    ]
+
+
+def test_select_execute_supports_named_arguments(transaction, person):
+    person.upsert("name").executemany([("Alice",), ("Bob",)])
+
+    select = person.select("name").where("(= name {name})")
+
+    assert list(select.execute(name="Bob")) == [("Bob",)]
+
+
 def test_select_where_and_join(person):
     select = person.select("name").where("(= parent.name 'foo')")
     stm = select.stm()
@@ -113,8 +184,8 @@ def test_select_where_and_join(person):
         "SELECT",
         '"person"."name"',
         'FROM "person"',
-        'LEFT JOIN "person" as parent_0 ON (',
-        'parent_0."id" = "person"."parent"',
+        'LEFT JOIN "person" as "parent_0" ON (',
+        '"parent_0"."id" = "person"."parent"',
         ")",
         "WHERE",
         '"parent_0"."name" = \'foo\'',
@@ -173,8 +244,8 @@ def test_orderby(person):
     stm = person.select("name").orderby("parent.name").stm()
     res = " ".join(strip_lines(stm))
     assert res == (
-        'SELECT "person"."name" FROM "person" LEFT JOIN "person" as parent_0 ON ( '
-        'parent_0."id" = "person"."parent" ) ORDER BY "parent_0"."name" asc ;'
+        'SELECT "person"."name" FROM "person" LEFT JOIN "person" as "parent_0" ON ( '
+        '"parent_0"."id" = "person"."parent" ) ORDER BY "parent_0"."name" asc ;'
     )
 
 
@@ -190,16 +261,16 @@ def test_o2m_stm(person, org):
     res = strip_lines(stm)
     expected = [
         "SELECT",
-        '"person"."name", "orgs_0"."name", "parent_1"."name", ' '"parent_2"."name"',
+        '"person"."name", "orgs_0"."name", "parent_1"."name", "parent_2"."name"',
         'FROM "person"',
-        'LEFT JOIN "org" as orgs_0 ON (',
-        'orgs_0."person" = "person"."id"',
+        'LEFT JOIN "org" as "orgs_0" ON (',
+        '"orgs_0"."person" = "person"."id"',
         ")",
-        'LEFT JOIN "person" as parent_1 ON (',
-        'parent_1."id" = "person"."parent"',
+        'LEFT JOIN "person" as "parent_1" ON (',
+        '"parent_1"."id" = "person"."parent"',
         ")",
-        'LEFT JOIN "person" as parent_2 ON (',
-        'parent_2."id" = "parent_1"."parent"',
+        'LEFT JOIN "person" as "parent_2" ON (',
+        '"parent_2"."id" = "parent_1"."parent"',
         ")",
         ";",
     ]
@@ -217,11 +288,11 @@ def test_o2m_stm(person, org):
         "SELECT",
         '"person"."name", "orgs_0"."country", "skills_1"."name"',
         'FROM "person"',
-        'LEFT JOIN "org" as orgs_0 ON (',
-        'orgs_0."person" = "person"."id"',
+        'LEFT JOIN "org" as "orgs_0" ON (',
+        '"orgs_0"."person" = "person"."id"',
         ")",
-        'LEFT JOIN "skill" as skills_1 ON (',
-        'skills_1."person" = "person"."id"',
+        'LEFT JOIN "skill" as "skills_1" ON (',
+        '"skills_1"."person" = "person"."id"',
         ")",
         ";",
     ]
@@ -239,11 +310,11 @@ def test_o2m_stm(person, org):
         "SELECT",
         '"org"."name", "person_0"."name", "skills_1"."name"',
         'FROM "org"',
-        'LEFT JOIN "person" as person_0 ON (',
-        'person_0."id" = "org"."person"',
+        'LEFT JOIN "person" as "person_0" ON (',
+        '"person_0"."id" = "org"."person"',
         ")",
-        'LEFT JOIN "skill" as skills_1 ON (',
-        'skills_1."person" = "person_0"."id"',
+        'LEFT JOIN "skill" as "skills_1" ON (',
+        '"skills_1"."person" = "person_0"."id"',
         ")",
         ";",
     ]
@@ -257,11 +328,11 @@ def test_o2m_stm(person, org):
         "SELECT",
         '"person"."name", "addresses_1"."city"',
         'FROM "person"',
-        'LEFT JOIN "org" as orgs_0 ON (',
-        'orgs_0."person" = "person"."id"',
+        'LEFT JOIN "org" as "orgs_0" ON (',
+        '"orgs_0"."person" = "person"."id"',
         ")",
-        'LEFT JOIN "address" as addresses_1 ON (',
-        'addresses_1."org" = "orgs_0"."id"',
+        'LEFT JOIN "address" as "addresses_1" ON (',
+        '"addresses_1"."org" = "orgs_0"."id"',
         ")",
         ";",
     ]
@@ -280,6 +351,8 @@ def test_o2m_select(transaction, person, org, address):
             ("Beirut", "Beta"),
         ]
     )
+    # if transaction.flavor == "mssql":
+    #     breakpoint()
     rows = list(
         person.select("name", "orgs.addresses.city").orderby("orgs.addresses.city")
     )
@@ -301,18 +374,19 @@ def test_agg(transaction, temperature):
     assert len(rows) == 2
 
     # String concat
-    is_pg = Transaction.current().flavor == "postgresql"
-    if is_pg:
-        select = temperature.select("(string_agg city ',')")
-    else:
-        select = temperature.select("(group_concat city)")
+    match Transaction.current().flavor:
+        case "postgresql" | "mssql":
+            select = temperature.select("(string_agg city ',')")
+        case "sqlite":
+            select = temperature.select("(group_concat city)")
+
     rows = list(select)
     assert len(rows) == 1
     (record,) = rows
     assert record[0] in ("Berlin,London", "London,Berlin")
 
     # Strings into array
-    if is_pg:
+    if Transaction.current().flavor == "postgresql":
         (record,) = list(temperature.select("(array_agg city)"))
         assert sorted(record[0]) == ["Berlin", "London"]
 
@@ -334,29 +408,32 @@ def test_agg(transaction, temperature):
     assert records == {"Berlin": 20.0, "London": 24.0}
 
     # Json agg
-    if is_pg:
+    if Transaction.current().flavor == "postgresql":
         select = temperature.select("(json_object_agg city value)")
         (record,) = list(select)
         assert record[0] == {"Berlin": 10, "London": 12}
 
 
 def test_date_op(transaction, temperature):
-    is_pg = Transaction.current().flavor == "postgresql"
-
     temperature.upsert("timestamp", "city", "value").executemany(
         [
             ("1970-01-02", "Berlin", 10),
             ("1970-01-02", "London", 12),
         ]
     )
-    if is_pg:
-        select = temperature.select("(extract 'year' timestamp)")
-        records = list(select)
-        assert records[0][0] == 1970
-    else:
-        select = temperature.select("(strftime '%Y' timestamp)")
-        records = list(select)
-        assert records[0][0] == "1970"
+    match Transaction.current().flavor:
+        case "postgresql":
+            select = temperature.select("(extract 'year' timestamp)")
+            records = list(select)
+            assert records[0][0] == 1970
+        case "mssql":
+            select = temperature.select("(year timestamp)")
+            records = list(select)
+            assert records[0][0] == 1970
+        case "sqlite":
+            select = temperature.select("(strftime '%Y' timestamp)")
+            records = list(select)
+            assert records[0][0] == "1970"
     assert len(records) == 2
 
 
@@ -369,7 +446,7 @@ def test_to_dict(transaction, temperature):
         ]
     )
     # Read data
-    expected_date = datetime.datetime(1970, 1, 2, 0, 0)
+    expected_date = datetime(1970, 1, 2, 0, 0)
     if transaction.flavor == "sqlite":
         expected_date = str(expected_date.date())
 
@@ -398,11 +475,7 @@ def test_select_alias(transaction, temperature):
             ("1970-01-02", "London", 12),
         ]
     )
-    select = (
-        temperature.select()
-        .orderby("city")
-        .aliases("t", "c", "v")
-    )
+    select = temperature.select().orderby("city").aliases("t", "c", "v")
 
     # Check record keys
     records = list(select.to_dict())
@@ -458,12 +531,60 @@ def test_to_nested_dict(transaction, person, nest_with_param):
 
 def test_any_and_values(transaction, person):
     person.insert("id", "name").execute(1, "one")
-    select = person.select("id").where("(in id (values {} {}))")
-    res = list(select.execute(1, 2))
-    assert res == [(1,)]
+    if transaction.flavor != "mssql":
+        # VALUES is not supported by mssql
+        select = person.select("id").where("(in id (values {} {}))")
+        res = list(select.execute(1, 2))
+        assert res == [(1,)]
 
-    if transaction.flavor != "sqlite":
-        # ANY is not supported by sqlite
+    if transaction.flavor == "postgresql":
+        # ANY is only supported by postgres
+
         select = person.select("id").where("(= id (any {}))")
         res = list(select.execute([1, 2]))
         assert res == [(1,)]
+
+
+def test_distinct_on(transaction, person):
+    if transaction.flavor != "postgresql":
+        pytest.skip("Disctinct on is only supported by PostgreSQL")
+
+    person.insert("name").execute("one")
+    person.insert("name", "parent.name").executemany(
+        [
+            ("two", "one"),
+            ("three", "one"),
+        ]
+    )
+
+    select = (
+        person.select("name")
+        .distinct_on("parent.name")
+        .orderby(
+            "parent.name",
+            "name",
+        )
+        .where(
+            "(isnot parent null)",
+        )
+    )
+    assert list(select) == [("three",)]
+
+
+def test_select_distinct(transaction, temperature):
+    if transaction.flavor == "mssql":
+        pytest.skip("Disctinct on is not supported by MSSQL")
+
+    temperature.insert("city", "timestamp", "value").executemany(
+        [
+            ("Brussels", "2025-10-03", 11),
+            ("Amsterdam", "2025-10-03", 11),
+        ]
+    )
+
+    select = temperature.select_distinct(
+        "timestamp",
+        "value",
+    )
+    dt = datetime(2025, 10, 3) if transaction.flavor == "postgresql" else "2025-10-03"
+    assert list(select) == [(dt, 11)]

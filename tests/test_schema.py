@@ -5,13 +5,14 @@ import pytest
 from nagra import Table, Schema
 from nagra.table import Column
 from nagra.exceptions import IncorrectSchema
+from nagra.transaction import Transaction
+from nagra.view import View
 
 
 HERE = Path(__file__).parent
 
 
 def test_toml_loader():
-
     # With a Path
     src = HERE / "assets" / "sample_schema.toml"
     test_schema = Schema.from_toml(src)
@@ -28,6 +29,13 @@ def test_toml_loader():
     user_table = Table.get("user", schema=test_schema)
     blog_table = Table.get("blog", schema=test_schema)
     assert user_table is not None
+
+    # accessors
+    assert test_schema.get_table("user") == user_table
+    with pytest.raises(KeyError):
+        test_schema.get_table("does_not_exist")
+    with pytest.raises(KeyError):
+        test_schema.get_view("user")
 
     assert list(user_table.columns) == [
         "first_name",
@@ -63,13 +71,32 @@ def test_toml_loader():
             schema=test_schema,
         )
 
+    # Views
+    top_user_view = test_schema.get_view("top_user")
+    assert list(top_user_view.columns) == ["user"]
+    assert isinstance(top_user_view, View)
+
     # Test reset
     test_schema.reset()
     assert test_schema.tables == {}
 
 
-def test_setup():
-    pass  # TODO test generated sql
+def test_toml_generation():
+    # Start from schema
+    src = HERE / "assets" / "sample_schema.toml"
+    test_schema = Schema.from_toml(src)
+    Table(
+        "nullable_table",
+        columns={"key": "uuid"},
+        natural_key=["key"],
+        nullable=["key"],
+        schema=test_schema,
+    )
+
+    clone_toml = test_schema.generate_toml()
+    clone_schema = Schema()
+    clone_schema.load_toml(clone_toml)
+    assert test_schema.eq(clone_schema)
 
 
 def test_bogus_fk(empty_transaction):
@@ -97,10 +124,53 @@ def test_incorrect_nk(empty_transaction):
         )
 
 
-def test_create_tables(empty_transaction):
-    # Associate schema with the transaction
-    schema = Schema.default
+def test_inconsistent_nullable(empty_transaction):
+    with pytest.raises(IncorrectSchema):
+        Table(
+            "bad_nullable",
+            columns={
+                "key": "uuid",
+                "name": "varchar",
+            },
+            not_null=["key"],
+            nullable=["key"],
+        )
 
+
+def test_nullable_not_in_natural_key(empty_transaction):
+    with pytest.raises(IncorrectSchema):
+        Table(
+            "bad_nullable_nk",
+            columns={
+                "key": "uuid",
+                "name": "varchar",
+            },
+            natural_key=["key"],
+            nullable=["name"],
+        )
+
+
+def test_table_eq_includes_nullable():
+    nullable_schema = Schema()
+    nullable_table = Table(
+        "nullable_table",
+        columns={"key": "uuid", "name": "varchar"},
+        natural_key=["key"],
+        nullable=["key"],
+        schema=nullable_schema,
+    )
+    required_schema = Schema()
+    required_table = Table(
+        "nullable_table",
+        columns={"key": "uuid", "name": "varchar"},
+        natural_key=["key"],
+        schema=required_schema,
+    )
+
+    assert nullable_table.eq(required_table) is False
+
+
+def test_create_tables(schema, empty_transaction):
     # Make sure we start from empty db
     assert not schema._db_columns(trn=empty_transaction)
     schema.create_tables(trn=empty_transaction)
@@ -111,7 +181,7 @@ def test_create_tables(empty_transaction):
     assert sorted(post["person"]) == ["id", "name", "parent"]
 
     # Add a column to existing table
-    person = Table.get("person")
+    person = schema.tables["person"]
     person.columns["email"] = Column("email", "varchar")
     schema.create_tables(trn=empty_transaction)
     post = schema._db_columns(trn=empty_transaction)
@@ -132,19 +202,18 @@ def test_custom_id_type(empty_transaction):
         },
         schema=sch,
     )
-    with empty_transaction:
-        sch.drop()
-        sch.create_tables()
-        row_id = city.upsert("id", "name").execute("this-is-an-uuid", "test")
-        assert row_id == "this-is-an-uuid"
-        assert list(city.select()) == [("this-is-an-uuid", "test")]
+
+    sch.drop()
+    sch.create_tables()
+    row_id = city.upsert("id", "name").execute("this-is-an-uuid", "test")
+    assert row_id == "this-is-an-uuid"
+    assert list(city.select()) == [("this-is-an-uuid", "test")]
 
 
-def test_schema_from_nagra_db(transaction):
+def test_schema_from_nagra_db(transaction: Transaction):
     """
     Check introspection of a nagra created tables.
     """
-    schema = Schema()
     tables = [
         "address",
         "country",
@@ -157,9 +226,19 @@ def test_schema_from_nagra_db(transaction):
         "population",
         "skill",
         "temperature",
+        "temperature_no_nk_pk",
+        "value",
     ]
+    schema = Schema()
     schema.introspect_db()
-    assert sorted(schema.tables) == tables
+    if transaction.flavor == "mssql":
+        # We ignore table with array for mssql
+        tables.remove("parameter")
+    if transaction.flavor == "postgresql":
+        # add table with nullable natural key columns
+        tables.append("temperature_nullable_nk")
+        tables.append("vector_document")
+    assert sorted(schema.tables) == sorted(tables)
     assert all(schema.tables[n].is_view for n in ["max_pop", "min_pop"])
 
     views = [
@@ -171,16 +250,19 @@ def test_schema_from_nagra_db(transaction):
     # Check simple table
     person = schema.get("person")
     assert list(person.columns) == ["id", "name", "parent"]
-    if transaction.flavor == "postgresql":
-        expected = ["bigint", "str", "int"]
-    else:
+    if transaction.flavor == "sqlite":
         expected = ["int", "str", "int"]
+    else:
+        expected = ["bigint", "str", "bigint"]
+
     assert [c.dtype for c in person.columns.values()] == expected
     assert person.foreign_keys == {"parent": "person"}
     assert person.primary_key == "id"
     assert person.natural_key == ["name"]
 
     # Check table with arrays
+    if transaction.flavor == "mssql":
+        pytest.skip("MSSQL does not support array columns")
     parameter = schema.get("parameter")
     assert list(parameter.columns) == ["id", "name", "timestamps", "values"]
     if transaction.flavor == "postgresql":
@@ -197,7 +279,7 @@ def test_schema_from_nagra_db(transaction):
     assert parameter.natural_key == ["name"]
 
 
-def test_schema_from_db(transaction):
+def test_schema_from_db(transaction: Transaction):
     """
     Check introspection on various coner cases
     """
@@ -213,7 +295,7 @@ def test_schema_from_db(transaction):
         # One column of the natural key is a foreign key
         """
         CREATE TABLE visit (
-           patient_id int primary key CONSTRAINT fk_patient REFERENCES patient(patient_id),
+           patient_id int primary key CONSTRAINT fk_visit_patient REFERENCES patient(patient_id),
            visit_date date
         )
         """,
@@ -241,7 +323,10 @@ def test_schema_from_db(transaction):
     assert visit.foreign_keys == {"patient_id": "patient"}
 
 
-def test_suspend_fk(transaction):
+def test_suspend_fk(transaction: Transaction):
+    if transaction.flavor == "mssql":
+        pytest.skip("Support for disabling foreign keys with mssql not implemented")
+
     # Skip sqlite
     is_sqlite = transaction.flavor == "sqlite"
 
@@ -262,3 +347,27 @@ def test_suspend_fk(transaction):
     assert sorted(after) == ["person", "skill"]
     assert sorted(before["person"]) == ["fk_parent"]
     assert sorted(after["person"]) == ["fk_parent"]
+
+
+def test_default_columns():
+    schema = Schema()
+    table = Table(
+        "my_table",
+        columns={
+            "id": "bigint",
+            "name": "varchar",
+            "description": "text",
+            "data": "blob",
+        },
+        primary_key="id",
+        natural_key=["name"],
+        schema=schema,
+    )
+
+    assert list(table.default_columns()) == ["id", "name", "description", "data"]
+    assert list(table.default_columns(skip_pk=True)) == ["name", "description", "data"]
+    assert list(table.default_columns(skip_blob=True)) == ["id", "name", "description"]
+    assert list(table.default_columns(skip_pk=True, skip_blob=True)) == [
+        "name",
+        "description",
+    ]

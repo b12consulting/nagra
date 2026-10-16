@@ -51,6 +51,7 @@ from nagra.transaction import Transaction
 from nagra.update import Update
 from nagra.copy import copy_from
 from nagra.upsert import Upsert
+from nagra.utils import quote_identifier
 
 if TYPE_CHECKING:
     from pandas import DataFrame
@@ -65,18 +66,25 @@ _TYPE_ALIAS = {
     "double precision": "float",
     "timestamptz": "timestamptz",
     "timestamp": "timestamp",
+    "varbinary": "blob",
     "datetime": "timestamp",
-    "smallint": "smallint",
+    "nvarchar": "str",
+    "smallint": "int",
     "boolean": "bool",
+    "decimal": "float",
     "integer": "int",
     "numeric": "float",
+    "tinyint": "int",
     "varchar": "str",
     "bigint": "bigint",
-    "vector": "float []",
+    "vector": "vector",
     "bytea": "blob",
     "bytes": "blob",
     "float": "float",
     "jsonb": "json",
+    "money": "float",
+    "nchar": "str",
+    "char": "str",
     "blob": "blob",
     "cidr": "str",
     "inet": "str",
@@ -87,6 +95,11 @@ _TYPE_ALIAS = {
     "text": "str",
     "uuid": "uuid",
     "int": "int",
+    "bit": "bool",
+    "uniqueidentifier": "uuid",
+    "datetime2": "timestamp",
+    "smalldatetime": "timestamp",
+    "datetimeoffset": "timestamptz",
     "str": "str",
     "": "str",
 }
@@ -98,6 +111,7 @@ _DB_TYPE = {
         "bigint": "BIGINT",
         "smallint": "SMALLINT",
         "float": "FLOAT",
+        "vector": "VECTOR",
         "timestamp": "TIMESTAMP",
         "timestamptz": "TIMESTAMPTZ",
         "date": "DATE",
@@ -120,6 +134,20 @@ _DB_TYPE = {
         "json": "JSON",
         "blob": "BLOB",
     },
+    "mssql": {
+        "str": "NVARCHAR(200)",  # Could use MAX here but then it is not usable as index
+        "int": "INT",
+        "bigint": "BIGINT",
+        "smallint": "SMALLINT",
+        "float": "FLOAT",
+        "timestamp": "DATETIME2",
+        "timestamptz": "DATETIMEOFFSET",
+        "date": "DATE",
+        "bool": "BIT",
+        "uuid": "UNIQUEIDENTIFIER",
+        "json": "NVARCHAR(MAX)",
+        "blob": "VARBINARY(MAX)",
+    },
 }
 
 
@@ -128,28 +156,44 @@ class Column:
 
     def __init__(self, name: str, dtype: str):
         self.name = name.strip()
+        dtype = dtype.strip()
         if "[" in dtype:
             dtype, dims = dtype.split("[", 1)
-            self.dtype = dtype.strip()
             self.dims = "[" + dims.strip()
+        elif dtype.lower().startswith("vector(") and dtype.endswith(")"):
+            # pgvector uses vector(n), while regular SQL arrays use []
+            dtype, dims = dtype.split("(", 1)
+            self.dims = "(" + dims.strip()
         else:
-            self.dtype = dtype.strip()
             self.dims = ""
         try:
             self.dtype = _TYPE_ALIAS[dtype.strip().lower()]
         except KeyError:
             self.dtype = "str"
-            warnings.warn(f"Type '{dtype}' not supported (for column '{name}'), falling back to string type.")
+            warnings.warn(
+                f"Type '{dtype}' not supported (for column '{name}'), falling back to string type."
+            )
+
+    def eq(self, other):
+        if not isinstance(other, Column):
+            return False
+        return (
+            self.name == other.name
+            and self.dtype == other.dtype
+            and self.dims == other.dims
+        )
 
     def python_type(self):
         res = None
         match self.dtype:
-            case "int" | "bigint":
+            case "int" | "bigint" | "smallint":
                 res = int
             case "str":
                 res = str
             case "float":
                 res = float
+            case "vector":
+                res = list[float]
             case "timestamp" | "timestamptz":
                 res = datetime
             case "bool":
@@ -165,6 +209,8 @@ class Column:
             case _:
                 raise RuntimeError("Unexpected error")
 
+        # Vector dimensions are encoded in parentheses and describe the
+        # length of the vector, not another Python container dimension.
         for c in self.dims:
             if c == "[":
                 res = list[res]
@@ -178,23 +224,38 @@ class Table:
         name: str,
         columns: dict,
         natural_key: Optional[list[str]] = None,
-        foreign_keys: Optional[dict] = None,
+        foreign_keys: Optional[dict[str, str]] = None,
         not_null: Optional[list[str]] = None,
+        nullable: Optional[list[str]] = None,
         one2many: Optional[dict] = None,
-        default: Optional[dict] = None,
+        default: Optional[dict[str, str]] = None,
         primary_key: Optional[str] = "id",
         schema: Schema = Schema.default,
         is_view: Optional[bool] = False,
     ):
+        """Define a table and add it to a schema.
+
+        Args:
+            name: Table name.
+            columns: Mapping of column names to Nagra type declarations.
+            natural_key: Columns forming the table's unique natural key.
+            foreign_keys: Mapping of local column names to referenced table names.
+            not_null: Columns that must not contain NULL values.
+            nullable: Natural-key columns allowed to contain NULL values.
+            one2many: Mapping of aliases to related table and column paths.
+            default: Mapping of column names to default values or expressions.
+            primary_key: Primary-key column name, or ``None`` for no primary key.
+            schema: Schema to which the table is added.
+            is_view: Whether this definition represents a database view.
+        """
         self.name = name
-        self.columns = {name: Column(name, dtype) for name, dtype in columns.items()}
-        self.natural_key = natural_key or list(columns)
+        self.columns: dict[str, Column] = {
+            name: Column(name, dtype) for name, dtype in columns.items()
+        }
+        self.natural_key = natural_key or []
         self.foreign_keys = foreign_keys or {}
-        self.not_null = (
-            set(self.natural_key)
-            | set(not_null or [])
-            | set([primary_key])
-        )
+        self.not_null = set(not_null or [])
+        self.nullable = set(nullable or [])
         self.one2many = one2many or {}
         self.default = default or {}
         self.primary_key = primary_key
@@ -218,6 +279,27 @@ class Table:
                     " referenced in natural key"
                 )
 
+        if unknown := self.nullable.difference(self.natural_key):
+            raise IncorrectSchema(
+                f"Table '{name}': columns {unknown} marked nullable but not in natural key"
+            )
+
+        if overlap := self.not_null.intersection(self.nullable):
+            raise IncorrectSchema(
+                f"Table '{name}': columns {overlap} cannot be both not null and nullable"
+            )
+
+        self._required = (
+            self.not_null
+            | ({self.primary_key} if self.primary_key else set())
+            | (set(self.natural_key) - self.nullable)
+        )
+
+        # natural key and primary can be both unset/empty,
+        # but it may be undesirable
+        if not self.primary_key and not self.natural_key:
+            warnings.warn(f"Table '{name}': no primary key or natural key defined")
+
         # Add table to schema
         self.schema.add_table(self.name, self)
 
@@ -228,12 +310,15 @@ class Table:
         """
         return schema.tables[name]
 
-    def select(self, *columns, trn=None):
+    def select(self, *columns, distinct: bool = False, trn=None):
         trn = trn or Transaction.current()
         if not columns:
             columns = self.default_columns()
-        slct = Select(self, *columns, trn=trn, env=Env(self))
+        slct = Select(self, *columns, distinct=distinct, trn=trn, env=Env(self))
         return slct
+
+    def select_distinct(self, *columns, trn=None):
+        return self.select(*columns, distinct=True, trn=trn)
 
     def delete(self, where=None, trn=None):
         trn = trn or Transaction.current()
@@ -247,6 +332,7 @@ class Table:
         *columns,
         trn: Optional[Transaction] = None,
         lenient: Union[bool, list[str]] = False,
+        **values,
     ):
         """
         Create an upsert object based on the given columns, if
@@ -259,34 +345,45 @@ class Table:
 
         If lenient is set to True all foreign keys will be treated as such.
         """
-        if not columns:
+        if values:
+            columns = tuple(columns) + tuple(c for c in values if c not in columns)
+        elif not columns:
             columns = self.default_columns()
         trn = trn or Transaction.current()
-        return Upsert(self, *columns, trn=trn, env=Env(self), lenient=lenient)
+        upsert = Upsert(self, *columns, trn=trn, env=Env(self), lenient=lenient)
+        return upsert.args(**values) if values else upsert
 
     def update(
         self,
         *columns,
         trn: Optional[Transaction] = None,
         lenient: Union[bool, list[str]] = False,
+        **values,
     ):
-        if not columns:
+        if values:
+            columns = tuple(columns) + tuple(c for c in values if c not in columns)
+        elif not columns:
             columns = self.default_columns()
         trn = trn or Transaction.current()
-        return Update(self, *columns, trn=trn, lenient=lenient)
+        update = Update(self, *columns, trn=trn, lenient=lenient)
+        return update.args(**values) if values else update
 
     def insert(
         self,
         *columns,
         trn: Optional[Transaction] = None,
         lenient: Union[bool, list[str]] = False,
+        **values,
     ):
         """
         Provide an insert-only statement (won't raise error if
         record already exists). See `Table.upsert` for `lenient` role.
         """
         trn = trn or Transaction.current()
-        return self.upsert(*columns, trn=trn, lenient=lenient).insert_only()
+        insert = self.upsert(
+            *columns, trn=trn, lenient=lenient, **values
+        ).insert_only()
+        return insert
 
     def copy_from(
         self,
@@ -306,32 +403,38 @@ class Table:
         stmt = Statement("drop_table", trn.flavor, name=self.name)
         trn.execute(stmt())
 
-    def required(self, col_name):
-        return (
-            col_name in self.natural_key
-            or col_name in self.not_null
-            or col_name == self.primary_key
-        )
+    def required(self, col_name: str) -> bool:
+        return col_name in self._required
 
-    def default_columns(self, nk_only: bool = False):
+    def default_columns(self, compact: bool = False, skip_pk=False, skip_blob=False):
         """
         Return the list of default column for the current
         table. Used by `Table.select` and `Table.upsert` when no
         columns are provided.
         """
-        columns = self.natural_key if nk_only else self.columns
+        if compact:
+            columns = self.natural_key or [self.primary_key]
+        else:
+            columns = self.columns
+
         for column in columns:
+            # Skip pk if asked
+            if skip_pk and column in self.primary_key:
+                continue
+            # Skip blobs
+            if skip_blob and self.columns[column].dtype == "blob":
+                continue
             # Escape literals (nul, true, false)
             if column in AST.literals:
                 yield f".{column}"
                 continue
             # Handle non foreign keys
-            if column not in self.foreign_keys or nk_only:
+            if column not in self.foreign_keys or compact:
                 yield column
                 continue
             # FK
             ftable = self.schema.get(self.foreign_keys[column])
-            yield from (f"{column}.{k}" for k in ftable.default_columns(nk_only=True))
+            yield from (f"{column}.{k}" for k in ftable.default_columns(compact=True))
 
     def join(self, env: "Env"):
         for prefix, alias in env.refs.items():
@@ -386,11 +489,55 @@ class Table:
                 res[name] = db_type[col.dtype] + col.dims
         return res
 
+    @property
+    def has_array(self):
+        """
+        Return True if at least one column is an array
+        """
+        return any(c.dims for c in self.columns.values())
+
+    @property
+    def primary_key_is_identity(self):
+        col = self.columns.get(self.primary_key)
+        if not col and self.primary_key == "id":
+            # TODO id type shouldn't be implicit
+            return True
+        return col.dtype in ("int", "bigint")
+
     def __iter__(self):
         return iter(self.select())
 
     def __repr__(self):
         return f"<Table {self.name}>"
+
+    def eq(self, other):
+        """
+        Return True is `self` is equivalent to `other`, so if all
+        attributes themselves are equivalent.
+        """
+        if id(self) == id(other):
+            return True
+        if not isinstance(other, Table):
+            return False
+
+        ok = all(
+            (
+                self.name == other.name,
+                all(
+                    a.eq(b)
+                    for a, b in zip(self.columns.values(), other.columns.values())
+                ),
+                self.primary_key == other.primary_key,
+                self.natural_key == other.natural_key,
+                self.foreign_keys == other.foreign_keys,
+                self.not_null == other.not_null,
+                self.nullable == other.nullable,
+                self.one2many == other.one2many,
+                self.default == other.default,
+                self.is_view == other.is_view,
+            )
+        )
+        return ok
 
 
 class Env:
@@ -398,16 +545,18 @@ class Env:
         self.table = table
         self.refs = refs or {}
 
-    def add_ref(self, path):
+    def add_ref(self, path, flavor):
         *head, name, tail = path
         prefix = tuple([*head, name])
         table_alias = self.refs.get(prefix)
         if not table_alias:
             if len(prefix) >= 2:
-                self.add_ref(prefix)
+                self.add_ref(prefix, flavor)
             table_alias = f"{name}_{len(self.refs)}"
             self.refs[prefix] = table_alias
-        return f'"{table_alias}"."{tail}"'
+        alias = quote_identifier(table_alias, flavor)
+        column = quote_identifier(tail, flavor)
+        return f"{alias}.{column}"
 
     def __repr__(self):
         content = repr(self.refs)

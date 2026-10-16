@@ -8,9 +8,11 @@ except ImportError:
     DataFrame = None
 
 from nagra import Statement, Schema
+from nagra.exceptions import ValidationError
 from nagra.transaction import Transaction
 from nagra.writer import WriterMixin
-from nagra.utils import snake_to_pascal, get_table_from_dataclass, iter_dataclass_cols
+from nagra.utils import get_table_from_dataclass, iter_dataclass_cols
+
 
 if TYPE_CHECKING:
     from nagra.table import Table, Env
@@ -34,6 +36,8 @@ class Upsert(WriterMixin):
         self._check = list(check)
         self.trn = trn
         self.env = env
+        self._args = tuple()
+        self._kwargs = {}
         super().__init__()
 
     def clone(
@@ -57,6 +61,14 @@ class Upsert(WriterMixin):
             insert_only=insert_only,
             check=check,
         )
+        cln._args = self._args
+        cln._kwargs = self._kwargs.copy()
+        return cln
+
+    def args(self, *args, **kwargs):
+        cln = self.clone()
+        cln._args += args
+        cln._kwargs.update(kwargs)
         return cln
 
     def insert_only(self):
@@ -67,9 +79,28 @@ class Upsert(WriterMixin):
 
     def stm(self):
         pk = self.table.primary_key
-        conflict_key = [pk] if pk in self.groups else self.table.natural_key
+        with_pk = pk in self.groups
+        conflict_key = [pk] if with_pk else self.table.natural_key
+
+        # Default to primary key if present in given columns
+        if not conflict_key and not self._insert_only:
+            msg = (
+                "Neither primary key nor natural key present in the set of "
+                f"columns to upsert (table: {self.table.name})"
+            )
+            raise ValidationError(msg)
+
         columns = self.groups
         do_update = False if self._insert_only else len(columns) > len(conflict_key)
+
+        # FIXME we should raise an explicit exception when we do
+        # ON-CONFLICT and no nk or pk is given
+
+        set_identity = (
+            self.trn.flavor == "mssql"
+            and with_pk
+            and self.table.primary_key_is_identity
+        )
         stm = Statement(
             "upsert",
             self.trn.flavor,
@@ -78,6 +109,7 @@ class Upsert(WriterMixin):
             conflict_key=conflict_key,
             do_update=do_update,
             returning=[pk] if pk else self.table.natural_key,
+            set_identity=set_identity,
         )
         return stm()
 

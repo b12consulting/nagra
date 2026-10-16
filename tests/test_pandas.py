@@ -1,7 +1,9 @@
 import zoneinfo
 from datetime import datetime, date
-from uuid import UUID
 from pandas import concat, DataFrame, to_datetime
+from uuid import UUID
+
+import pytest
 
 from nagra import Transaction
 
@@ -33,6 +35,9 @@ def test_to_pandas(transaction, temperature):
 
 
 def test_from_pandas(transaction, kitchensink):
+    if transaction.flavor == "mssql":
+        pytest.skip("TZ-aware timestamps are not supported by MSSQL")
+
     df = DataFrame(
         {
             "varchar": ["ham"],
@@ -85,7 +90,7 @@ def test_from_pandas(transaction, kitchensink):
             "F1172BD3-0A1D-422E-8ED6-8DC2D0F8C11C",
             "max",
             "true",
-            "blob",
+            b"blob",
         )
 
     # SELECT with operator
@@ -94,9 +99,9 @@ def test_from_pandas(transaction, kitchensink):
             "(date_bin '5 days' timestamptz '1900-01-01')",
         ).to_pandas()
         new_df.columns = ["ts"]
-        assert str(new_df.ts.dtype) == 'datetime64[ns, Europe/Brussels]'
+        assert str(new_df.ts.dtype) == "datetime64[ns, Europe/Brussels]"
         ts = new_df.ts[0]
-        assert ts.isoformat() == '1969-12-30T01:00:00+01:00'
+        assert ts.isoformat() == "1969-12-30T01:00:00+01:00"
         # NOTE the above result is expected:
         # ```
         # =# SELECT date_bin('5 days', TIMESTAMPTZ '1970-01-01 00:00:00+00', '1900-01-01');
@@ -112,5 +117,5 @@ def test_from_pandas(transaction, kitchensink):
             "(- int int)",
         ).to_pandas()
         new_df.columns = ["float", "int"]
-        assert str(new_df.float.dtype) == 'float64'
-        assert str(new_df.int.dtype) == 'int64'
+        assert str(new_df.float.dtype) == "float64"
+        assert str(new_df.int.dtype) == "int64"

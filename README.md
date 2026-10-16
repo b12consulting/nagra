@@ -10,11 +10,12 @@ Optional dependency targets:
 - pandas support: `pandas`
 - polars support: `polars`
 - PostgreSQL: `pg`
+- MSSQL Server: `mssql`
 - to install all optional dependencies: `all`
 
 For example:
 
-    pip install nagra[polars,pg]
+    pip install nagra[polars,pg,mssql]
 
 # Crash course
 
@@ -125,7 +126,7 @@ an atomic semantic (either all statement are successful and the
 changes are commited or the transaction is rollbacked).
 
 Example of other values possible for transaction parameters:
-`sqlite://some-file.db`, `postgresql://user:pwd@host/dbname`.
+`sqlite://some-file.db`, `postgresql://user:pwd@host/dbname`, `mssql://user:pwd@host:1433/dbname`.
 
 We first add cities:
 
@@ -244,11 +245,45 @@ To install the project in editable mode along with all the optional dependencies
 as well as the dependencies needed for development (testing, linting, ...),
 clone the project and run:
 
-    [uv ] pip install --group dev -e '.[all]'
+    [uv] pip install --group dev -e .
 
 Or, to use stock uv functionalities:
 
-    uv sync --extra all
+    uv sync
+
+To run the tests, you will need a local PostgreSQL cluster running (install it e.g. with `brew install postgresql`),
+containing a database `nagra`. You can create it using the command `createdb nagra`. 
+Then, simply run
+
+    [uv run] pytest
+
+## Testing setup
+
+In order to run the test suite you will need a local Postgresql
+instance, with an empty nagra db:
+
+    createdb nagra
+
+You will also need a Sql Server, run it with docker:
+
+    docker run --platform linux/amd64 --cap-add SYS_PTRACE  -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=p4ssw0rD" -p 1433:1433  -d mcr.microsoft.com/mssql/server
+    sqlcmd -S 127.0.0.1,1433 -d master -C -P p4ssw0rD -U sa
+
+And in the sqlcmd shell, run:
+
+    create database nagra
+    go
+
+You might also need to install the ODBC drivers for MSSQL using:
+
+    brew tap microsoft/mssql-release https://github.com/Microsoft/homebrew-mssql-release
+    brew update
+    HOMEBREW_ACCEPT_EULA=Y brew install msodbcsql18 mssql-tools18
+
+To skip some database systems when running the tests, run e.g.:
+
+    pytest --skip-dsns mssql
+
 
 # Miscellaneous
 

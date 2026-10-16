@@ -1,4 +1,7 @@
+import pytest
+
 from nagra import Statement
+from nagra.exceptions import IncorrectSchema
 from nagra.utils import strip_lines
 from nagra.schema import Schema
 from nagra.table import Table
@@ -22,47 +25,119 @@ def test_create_table(empty_transaction):
         schema=schema,
     )
     lines = list(schema.setup_statements(trn=empty_transaction))
-    create_table, add_name, add_score, create_idx = map(strip_lines, lines)
+    create_table, create_idx = map(strip_lines, lines)
 
-    if flavor == "postgresql":
-        assert create_table == [
-            'CREATE TABLE  "my_table" (',
-            '"custom_id" BIGSERIAL PRIMARY KEY',
-            ");",
-        ]
-    else:
-        assert create_table == [
-            'CREATE TABLE  "my_table" (',
-            '"custom_id"  INTEGER PRIMARY KEY',
-            ");",
-        ]
-    assert add_name == ['ALTER TABLE "my_table"', 'ADD COLUMN "name" TEXT NOT NULL']
+    match flavor:
+        case "postgresql":
+            assert create_table == [
+                'CREATE TABLE  "my_table" (',
+                '"custom_id" BIGSERIAL PRIMARY KEY',
+                ",",
+                '"name" TEXT',
+                "NOT NULL",
+                ",",
+                '"score" INTEGER',
+                "NOT NULL",
+                "DEFAULT 0",
+                ");",
+            ]
+        case "sqlite":
+            assert create_table == [
+                'CREATE TABLE  "my_table" (',
+                '"custom_id" INTEGER PRIMARY KEY',
+                ",",
+                '"name" TEXT',
+                "NOT NULL",
+                ",",
+                '"score" INTEGER',
+                "NOT NULL",
+                "DEFAULT 0",
+                ");",
+            ]
+        case "mssql":
+            assert create_table == [
+                "CREATE TABLE [my_table] (",
+                "[custom_id] BIGINT IDENTITY(1,1) PRIMARY KEY",
+                ",",
+                "[name] NVARCHAR(200)",
+                "NOT NULL",
+                ",",
+                "[score] INT",
+                "NOT NULL",
+                "DEFAULT 0",
+                ");",
+            ]
+    match flavor:
+        case "postgresql" | "sqlite":
+            assert create_idx == [
+                'CREATE UNIQUE INDEX my_table_idx ON "my_table" (',
+                '"name"',
+                ")",
+                ";",
+            ]
+        case "mssql":
+            assert create_idx == [
+                "CREATE UNIQUE INDEX [my_table_idx] ON [my_table] ([name]",
+                ")",
+                ";",
+            ]
 
-    assert add_score == [
-        'ALTER TABLE "my_table"',
-        'ADD COLUMN "score" INTEGER NOT NULL',
-        "DEFAULT 0",
-    ]
-    assert create_idx == [
-        'CREATE UNIQUE INDEX my_table_idx ON "my_table" (',
-        '"name"',
+
+def test_create_table_with_vector(empty_transaction, vector_document):
+    if empty_transaction.flavor != "postgresql":
+        pytest.skip("pgvector is only supported by PostgreSQL")
+
+    schema = Schema(tables={vector_document.name: vector_document})
+
+    extension, create_table, create_idx, vector_idx = map(
+        strip_lines, schema.setup_statements(trn=empty_transaction)
+    )
+    assert extension == ["CREATE EXTENSION IF NOT EXISTS vector;"]
+    assert create_table == [
+        'CREATE TABLE  "vector_document" (',
+        '"id" BIGSERIAL PRIMARY KEY',
+        ",",
+        '"name" TEXT',
+        "NOT NULL",
+        ",",
+        '"embedding" VECTOR(3)',
         ");",
     ]
+    assert create_idx == [
+        'CREATE UNIQUE INDEX vector_document_idx ON "vector_document" (',
+        '"name"',
+        ")",
+        ";",
+    ]
+    assert vector_idx == [
+        'CREATE INDEX "vector_document_embedding_hnsw_idx" ON "vector_document" USING HNSW',
+        '("embedding" vector_cosine_ops);',
+    ]
+
+
+def test_nullable_natural_key_backend_support(empty_transaction):
+    schema = Schema()
+    Table(
+        "nullable_table",
+        columns={"key": "uuid"},
+        natural_key=["key"],
+        nullable=["key"],
+        schema=schema,
+    )
+
+    if empty_transaction.flavor == "postgresql":
+        list(schema.setup_statements(trn=empty_transaction))
+    else:
+        with pytest.raises(IncorrectSchema, match="only supported for postgresql"):
+            list(schema.setup_statements(trn=empty_transaction))
 
 
 def test_create_table_pk_is_fk(empty_transaction):
     flavor = empty_transaction.flavor
     schema = Schema()
-    Table(  # Regular table
-        "concept",
-        columns={
-            "name": "varchar",
-        },
-        natural_key=["name"],
-        primary_key="concept_id",
-        schema=schema,
-    )
-    Table(  # Table with no primary key and a fk in the nk
+    # Table with no natural key and a fk in the primary key
+    # It should be created second
+    Table(
         "score",
         columns={
             "concept": "bigint",
@@ -74,31 +149,54 @@ def test_create_table_pk_is_fk(empty_transaction):
         },
         schema=schema,
     )
+    Table(  # Regular table
+        "concept",
+        columns={
+            "name": "varchar",
+        },
+        natural_key=["name"],
+        primary_key="concept_id",
+        schema=schema,
+    )
     lines = list(schema.setup_statements(trn=empty_transaction))
-    if flavor == "postgresql":
-        assert lines == [
-            'CREATE TABLE  "concept" (\n  "concept_id" BIGSERIAL PRIMARY KEY\n);',
-            'CREATE TABLE  "score" (\n'
-            '  "concept" BIGINT PRIMARY KEY\n'
-            '   CONSTRAINT fk_concept REFERENCES "concept"("concept_id")\n'
-            ");",
-            'ALTER TABLE "concept"\n ADD COLUMN "name" TEXT NOT NULL',
-            'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER NOT NULL',
-            'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
-            'CREATE UNIQUE INDEX score_idx ON "score" (\n  "concept", "score"\n);',
-        ]
-    else:
-        assert lines == [
-            'CREATE TABLE  "concept" (\n  "concept_id"  INTEGER PRIMARY KEY\n);',
-            'CREATE TABLE  "score" (\n'
-            '  "concept"  INTEGER PRIMARY KEY\n'
-            '   CONSTRAINT fk_concept REFERENCES "concept"("concept_id")\n'
-            ");",
-            'ALTER TABLE "concept"\n ADD COLUMN "name" TEXT NOT NULL\n',
-            'ALTER TABLE "score"\n ADD COLUMN "score" INTEGER NOT NULL\n',
-            'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n);',
-            'CREATE UNIQUE INDEX score_idx ON "score" (\n  "concept", "score"\n);',
-        ]
+
+    match flavor:
+        case "postgresql":
+            assert lines == [
+                'CREATE TABLE  "concept" (\n   "concept_id" BIGSERIAL PRIMARY KEY\n'
+                '    , \n\n   "name" TEXT\n    NOT NULL\n);',
+                'CREATE TABLE  "score" (\n   "concept" BIGINT PRIMARY KEY\n'
+                '    CONSTRAINT fk_concept REFERENCES "concept"("concept_id") ON DELETE CASCADE\n'
+                '    , \n\n   "score" INTEGER\n);',
+                'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n)\n;',
+            ]
+        case "sqlite":
+            assert lines == [
+                'CREATE TABLE  "concept" (\n   "concept_id" INTEGER PRIMARY KEY\n'
+                '    , \n\n   "name" TEXT\n    NOT NULL\n);',
+                'CREATE TABLE  "score" (\n   "concept" INTEGER PRIMARY KEY\n'
+                '    CONSTRAINT fk_concept REFERENCES "concept"("concept_id") ON DELETE CASCADE\n'
+                '    , \n\n   "score" INTEGER\n);',
+                'CREATE UNIQUE INDEX concept_idx ON "concept" (\n  "name"\n)\n;',
+            ]
+        case "mssql":
+            assert lines == [
+                "CREATE TABLE [concept] (\n"
+                "   [concept_id] BIGINT IDENTITY(1,1) PRIMARY KEY\n"
+                "    , \n\n"
+                "   [name] NVARCHAR(200)\n"
+                "    NOT NULL\n"
+                ");",
+                "CREATE TABLE [score] (\n"
+                "   [concept] BIGINT PRIMARY KEY\n"
+                "    CONSTRAINT fk_concept REFERENCES [concept]([concept_id]) ON DELETE "
+                "CASCADE\n"
+                "    , \n"
+                "\n"
+                "   [score] INT\n"
+                ");",
+                "CREATE UNIQUE INDEX [concept_idx] ON [concept] ([name]\n)\n;",
+            ]
 
 
 def test_create_table_no_pk(empty_transaction):
@@ -112,7 +210,7 @@ def test_create_table_no_pk(empty_transaction):
         natural_key=["name"],
         schema=schema,
     )
-    Table(  # Table with no primary key and a fk in the nk
+    Table(  #  Table with no primary key and a fk in the nk
         "score",
         columns={
             "concept": "bigint",
@@ -128,54 +226,118 @@ def test_create_table_no_pk(empty_transaction):
     lines = list(schema.setup_statements(trn=empty_transaction))
     (
         create_concept,
-        create_score_table,
-        add_concept_name,
-        add_score,
+        create_score,
+        add_score_concept_fk,
         create_concept_idx,
         create_score_idx,
     ) = map(strip_lines, lines)
 
-    if flavor == "postgresql":
-        assert create_concept == [
-            'CREATE TABLE  "concept" (',
-            '"id" BIGSERIAL PRIMARY KEY',
-            ");",
-        ]
+    match flavor:
+        case "postgresql":
+            assert create_concept == [
+                'CREATE TABLE  "concept" (',
+                '"id" BIGSERIAL PRIMARY KEY',
+                ",",
+                '"name" TEXT',
+                "NOT NULL",
+                ");",
+            ]
+            assert add_score_concept_fk == [
+                'ALTER TABLE "score"',
+                'ADD COLUMN "concept" BIGINT NOT NULL',
+                'CONSTRAINT fk_concept REFERENCES "concept"("id") ON DELETE CASCADE;',
+            ]
+        case "sqlite":
+            assert create_concept == [
+                'CREATE TABLE  "concept" (',
+                '"id" INTEGER PRIMARY KEY',
+                ",",
+                '"name" TEXT',
+                "NOT NULL",
+                ");",
+            ]
+            assert add_score_concept_fk == [
+                'ALTER TABLE "score"',
+                'ADD COLUMN "concept" INTEGER NOT NULL',
+                'CONSTRAINT fk_concept REFERENCES "concept"("id") ON DELETE CASCADE;',
+            ]
+        case "postgresql" | "sqlite":
+            assert create_score == [
+                'CREATE TABLE  "score" (',
+                '"score" INTEGER',
+                ");",
+            ]
+        case "mssql":
+            assert create_concept == [
+                "CREATE TABLE [concept] (",
+                "[id] BIGINT IDENTITY(1,1) PRIMARY KEY",
+                ",",
+                "[name] NVARCHAR(200)",
+                "NOT NULL",
+                ");",
+            ]
+            assert create_score == [
+                "CREATE TABLE [score] (",
+                "[score] INT",
+                ");",
+            ]
 
-        assert create_score_table == [
-            'CREATE TABLE  "score" (',
-            '"concept"  BIGINT NOT NULL',
-            'CONSTRAINT fk_concept REFERENCES "concept"("id")',
-            ");",
-        ]
-    else:
-        assert create_concept == [
-            'CREATE TABLE  "concept" (',
-            '"id"  INTEGER PRIMARY KEY',
-            ");",
-        ]
+    match flavor:
+        case "postgresql" | "sqlite":
+            assert create_concept_idx == [
+                'CREATE UNIQUE INDEX concept_idx ON "concept" (',
+                '"name"',
+                ")",
+                ";",
+            ]
+            assert create_score_idx == [
+                'CREATE UNIQUE INDEX score_idx ON "score" (',
+                '"concept"',
+                ")",
+                ";",
+            ]
+        case "mssql":
+            assert create_concept_idx == [
+                "CREATE UNIQUE INDEX [concept_idx] ON [concept] ([name]",
+                ")",
+                ";",
+            ]
+            assert create_score_idx == [
+                "CREATE UNIQUE INDEX [score_idx] ON [score] ([concept]",
+                ")",
+                ";",
+            ]
 
-        assert create_score_table == [
-            'CREATE TABLE  "score" (',
-            '"concept"  INTEGER NOT NULL',
-            'CONSTRAINT fk_concept REFERENCES "concept"("id")',
-            ");",
-        ]
-    assert add_concept_name == [
-        'ALTER TABLE "concept"',
-        'ADD COLUMN "name" TEXT NOT NULL',
-    ]
-    assert add_score == ['ALTER TABLE "score"', 'ADD COLUMN "score" INTEGER']
-    assert create_concept_idx == [
-        'CREATE UNIQUE INDEX concept_idx ON "concept" (',
-        '"name"',
-        ");",
-    ]
-    assert create_score_idx == [
-        'CREATE UNIQUE INDEX score_idx ON "score" (',
-        '"concept"',
-        ");",
-    ]
+
+def test_create_table_no_pk_nk(empty_transaction):
+    flavor = empty_transaction.flavor
+    schema = Schema()
+    with pytest.warns(UserWarning):
+        Table(  #  Table with no primary key or natural key
+            "score",
+            columns={
+                "score": "int",
+            },
+            natural_key=None,
+            primary_key=None,
+            schema=schema,
+        )
+    lines = list(schema.setup_statements(trn=empty_transaction))
+    (create_score,) = map(strip_lines, lines)
+
+    match flavor:
+        case "postgresql" | "sqlite":
+            assert create_score == [
+                'CREATE TABLE  "score" (',
+                '"score" INTEGER',
+                ");",
+            ]
+        case "mssql":
+            assert create_score == [
+                "CREATE TABLE [score] (",
+                "[score] INT",
+                ");",
+            ]
 
 
 def test_create_unique_index():
@@ -185,5 +347,29 @@ def test_create_unique_index():
     assert lines == [
         'CREATE UNIQUE INDEX my_table_idx ON "my_table" (',
         '"name"',
-        ");",
+        ")",
+        ";",
     ]
+
+
+def test_create_nullable_unique_index(dsn):
+    stmt = Statement("create_unique_index").table("my_table").natural_key(["name"])
+    if "postgresql" in dsn:
+        stmt = stmt.nulls_not_distinct(True)
+    doc = stmt()
+    lines = strip_lines(doc)
+    if "postgresql" in dsn:
+        assert lines == [
+            'CREATE UNIQUE INDEX my_table_idx ON "my_table" (',
+            '"name"',
+            ")",
+            "NULLS NOT DISTINCT",
+            ";",
+        ]
+    else:
+        assert lines == [
+            'CREATE UNIQUE INDEX my_table_idx ON "my_table" (',
+            '"name"',
+            ")",
+            ";",
+        ]
