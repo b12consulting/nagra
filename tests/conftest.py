@@ -8,7 +8,7 @@ from nagra import Table, Transaction, Schema, View  # noqa: E402
 DSNs = {
     "postgresql": "postgresql:///nagra",
     "sqlite": "sqlite://",
-    "mssql": "mssql://sa:p4ssw0rD@127.0.0.1/nagra?trust_server_certificate=yes",
+    "mssql": "mssql://sa:p4ssw0rD@127.0.0.1/nagra?trust_server_certificate=yes&encrypt=no",
     # "yugabyte": "postgresql://yugabyte:yugabyte@localhost:5433/nagra"
     # "duckdb": "duckdb://",
 }

@@ -201,9 +201,11 @@ def mssql_connection_string(dsn: str) -> str:
 
     driver = q("driver", "ODBC Driver 18 for SQL Server")
     trustservercertificate = q("trust_server_certificate", "no")
+    encrypt = q("encrypt", "yes")
     parts = [
         f"DRIVER={{{driver}}}",
         f"TrustServerCertificate={{{trustservercertificate}}}",
+        f"Encrypt={{{encrypt}}}"
     ]
 
     host = parsed.hostname or "localhost"
