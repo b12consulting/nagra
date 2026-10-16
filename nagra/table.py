@@ -109,6 +109,7 @@ _DB_TYPE = {
         "str": "TEXT",
         "int": "INTEGER",
         "bigint": "BIGINT",
+        "smallint": "SMALLINT",
         "float": "FLOAT",
         "vector": "VECTOR",
         "timestamp": "TIMESTAMP",
@@ -123,6 +124,7 @@ _DB_TYPE = {
         "str": "TEXT",
         "int": "INTEGER",
         "bigint": "INTEGER",
+        "smallint": "INTEGER",
         "float": "FLOAT",
         "timestamp": "DATETIME",
         "timestamptz": "DATETIME",
@@ -136,6 +138,7 @@ _DB_TYPE = {
         "str": "NVARCHAR(200)",  # Could use MAX here but then it is not usable as index
         "int": "INT",
         "bigint": "BIGINT",
+        "smallint": "SMALLINT",
         "float": "FLOAT",
         "timestamp": "DATETIME2",
         "timestamptz": "DATETIMEOFFSET",
@@ -183,7 +186,7 @@ class Column:
     def python_type(self):
         res = None
         match self.dtype:
-            case "int" | "bigint":
+            case "int" | "bigint" | "smallint":
                 res = int
             case "str":
                 res = str

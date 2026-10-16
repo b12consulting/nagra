@@ -41,6 +41,7 @@
   extension. And when that table will be created, an HNSW index will
   be automatically added.
 
+- Fix support for introspection on smallint columns
 
 ### 0.11 (released 2026-09-08)
 
@@ -114,7 +115,6 @@
 - Fix string escape of field aliases
 - Fixed duplicates when inserting from polars in a table with no
   natural key.
-
 
 
 ### 0.8 (released 2025-09-24)
